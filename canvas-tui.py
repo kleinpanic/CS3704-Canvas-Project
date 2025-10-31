@@ -16,9 +16,9 @@ MAX_RETRIES = int(os.environ.get("HTTP_MAX_RETRIES", "5"))
 BACKOFF_FACTOR = float(os.environ.get("HTTP_BACKOFF", "0.4"))
 
 DAYS_AHEAD = int(os.environ.get("DAYS_AHEAD", "7"))
-PAST_HOURS = int(os.environ.get("PAST_HOURS", "72"))  # recent past window for unsubmitted items
+PAST_HOURS = int(os.environ.get("PAST_HOURS", "72"))
 REFRESH_COOLDOWN = float(os.environ.get("REFRESH_COOLDOWN", "2.0"))
-AUTO_REFRESH_SEC = int(os.environ.get("AUTO_REFRESH_SEC", "300"))  # 0 disables
+AUTO_REFRESH_SEC = int(os.environ.get("AUTO_REFRESH_SEC", "300"))
 DOWNLOAD_DIR = os.environ.get("DOWNLOAD_DIR")
 DEFAULT_BLOCK_MIN = int(os.environ.get("DEFAULT_BLOCK_MIN", "60"))
 EXPORT_DIR = os.path.expanduser(os.environ.get("EXPORT_DIR", "~/.local/share/canvas-tui"))
@@ -60,7 +60,7 @@ def _load_config():
         DEFAULT_BLOCK_MIN = int(cfg.get("default_block_min", DEFAULT_BLOCK_MIN))
         PAST_HOURS = int(cfg.get("past_hours", PAST_HOURS))
         ANN_PAST_DAYS = int(cfg.get("ann_past_days", ANN_PAST_DAYS))
-        ANN_FUTURE_DAYS = int(cfg.get("ann_future_days", ANN_FUTURE_DAYS))
+        ANN_FUTURE_DAYS = int(cfg.get("ann_futuredays", ANN_FUTURE_DAYS)) if "ann_futuredays" in cfg else int(cfg.get("ann_future_days", ANN_FUTURE_DAYS))
     except Exception:
         pass
 
@@ -86,6 +86,8 @@ STATE.setdefault("visibility", {})
 STATE.setdefault("priority", {})
 STATE.setdefault("bucket", {})
 STATE.setdefault("pomo_end_ts", None)
+STATE.setdefault("cache_items", [])
+STATE.setdefault("cache_announcements", [])
 
 # ---------- HTTP ----------
 import requests
@@ -137,7 +139,9 @@ def get_all(url: str, params: Dict[str, Any]) -> List[Dict[str, Any]]:
             raise SystemExit("Unauthorized (401). Check CANVAS_TOKEN.")
         r.raise_for_status()
         page = r.json()
-        if isinstance(page, list): items.extend(page)
+        if not page:
+            pass
+        elif isinstance(page, list): items.extend(page)
         else: items.append(page)
         links = parse_link_header(r.headers.get("Link", ""))
         if "next" in links:
@@ -195,14 +199,13 @@ def _notify(summary: str, body: str = ""):
         try: subprocess.Popen(["notify-send", summary, body])
         except Exception: pass
     else:
-        # terminal bell fallback
         try: print("\a", end="", flush=True)
         except Exception: pass
 
 # ---------- Canvas fetch ----------
 def fetch_planner_items_window() -> List[Dict[str, Any]]:
     now = dt.datetime.now(ZoneInfo(USER_TZ))
-    start = _iso(now - dt.timedelta(hours=PAST_HOURS))  # include recent past
+    start = _iso(now - dt.timedelta(hours=PAST_HOURS))
     end = _iso((now + dt.timedelta(days=DAYS_AHEAD)).replace(hour=23, minute=59, second=59, microsecond=0))
     url = urljoin(BASE_URL, "/api/v1/planner/items")
     params = {"start_date": start, "end_date": end, "per_page": 100}
@@ -229,7 +232,6 @@ def fetch_submission(course_id: int, assignment_id: int) -> Optional[Dict[str, A
     return None
 
 def fetch_discussion_or_announcement(course_id: int, topic_id: int) -> Optional[Dict[str, Any]]:
-    # Announcements are discussion_topics with "announcement": true
     url = urljoin(BASE_URL, f"/api/v1/courses/{course_id}/discussion_topics/{topic_id}")
     r = S.get(url, params={"include[]": ["all_dates", "sections", "sections_user_count"]}, timeout=HTTP_TIMEOUT)
     if r.status_code == 200:
@@ -271,16 +273,36 @@ def fetch_announcements_window(course_ids: List[int]) -> List[Dict[str, Any]]:
     params["context_codes[]"] = [f"course_{cid}" for cid in course_ids]
     return get_all(url, params)
 
+# ---------- Keys ----------
+def stable_item_key(course_id, plannable_id, ptype) -> str:
+    return f"{int(course_id) if course_id else ''}:{int(plannable_id) if plannable_id else ''}:{(ptype or '').lower()}"
+
+def item_key_legacy(course_id, plannable_id, ptype, title) -> str:
+    return f"{course_id}:{plannable_id}:{ptype}:{abs(hash(title))}"
+
+def migrate_visibility_keys_if_needed(items: List[Dict[str, Any]]):
+    vis = STATE.get("visibility", {})
+    moved = 0
+    for it in items:
+        legacy = it.get("_legacy_key")
+        stable = it["key"]
+        if legacy and legacy in vis and stable not in vis:
+            vis[stable] = vis[legacy]
+            moved += 1
+    if moved:
+        for it in items:
+            lk = it.get("_legacy_key")
+            if lk and lk in vis:
+                vis.pop(lk, None)
+        STATE["visibility"] = vis
+        _save_state(STATE)
+
 # ---------- Normalize ----------
 def best_due(pl: Dict[str, Any], ptype: str) -> Optional[str]:
-    # Prefer real due; for discussion/announcement use posted/created as proxy
     for k in ("due_at","lock_at","todo_date","start_at","end_at","published_at","posted_at","created_at","available_at"):
         v = pl.get(k)
         if v: return v
     return None
-
-def item_key(course_id, plannable_id, ptype, title) -> str:
-    return f"{course_id}:{plannable_id}:{ptype}:{abs(hash(title))}"
 
 def normalize_items(raw: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     course_ids = sorted({x.get("course_id") for x in raw if x.get("course_id")})
@@ -293,7 +315,6 @@ def normalize_items(raw: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     for x in raw:
         ptype = (x.get("plannable_type") or "").lower()
         pl = x.get("plannable") or {}
-        # Mark announcements explicitly
         if ptype == "discussion_topic" and (pl.get("is_announcement") or x.get("is_announcement") or pl.get("announcement")):
             ptype = "announcement"
         due_iso = best_due(pl, ptype) or ""
@@ -309,9 +330,11 @@ def normalize_items(raw: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         url_abs = absolute_url(x.get("html_url","/"))
         points = pl.get("points_possible") if ptype=="assignment" else None
         title = pl.get("title") or pl.get("name") or "(untitled)"
-        key = item_key(course_id, x.get("plannable_id"), ptype, title)
+        legacy_key = item_key_legacy(course_id, x.get("plannable_id"), ptype, title)
+        key = stable_item_key(course_id, x.get("plannable_id"), ptype)
         out.append({
             "key": key,
+            "_legacy_key": legacy_key,
             "ptype": ptype,
             "title": title,
             "course_code": course_code or str(course_id or ""),
@@ -345,7 +368,7 @@ def normalize_announcements(raw: List[Dict[str, Any]], course_cache: Dict[int, T
         ts = a.get("posted_at") or a.get("delayed_post_at") or a.get("created_at") or ""
         url_abs = absolute_url(a.get("html_url") or a.get("url") or "/")
         out.append({
-            "key": item_key(course_id, a.get("id"), "announcement", title),
+            "key": stable_item_key(course_id, a.get("id"), "announcement"),
             "ptype": "announcement",
             "title": title,
             "course_code": code or str(course_id or ""),
@@ -360,11 +383,34 @@ def normalize_announcements(raw: List[Dict[str, Any]], course_cache: Dict[int, T
             "status_flags": [],
             "raw_plannable": a,
         })
+    # newest first
     def sortkey(it):
         try: return dt.datetime.strptime(it["due_at"], "%m/%d/%Y %H:%M")
-        except Exception: return dt.datetime.max
-    out.sort(key=sortkey)
+        except Exception: return dt.datetime.min
+    out.sort(key=sortkey, reverse=True)
     return out
+
+# ---------- Warm cache helpers ----------
+def _serialize_simple(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    keep = ("key","ptype","title","course_code","course_name","due_at","due_rel","due_iso","url","course_id","plannable_id","points","status_flags","raw_plannable")
+    out = []
+    for it in items:
+        out.append({k: it.get(k) for k in keep})
+    return out
+
+def _fetch_all_data_sync() -> Tuple[Dict[int, Tuple[str,str]], List[Dict[str,Any]], List[Dict[str,Any]]]:
+    course_cache = fetch_current_courses()
+    raw = fetch_planner_items_window()
+    all_items = normalize_items(raw)
+    items = [it for it in all_items if it["ptype"] not in ("announcement","calendar_event","planner_note")]
+    items = CanvasTUI._apply_past_filter_static(items)
+    ann_raw = []
+    try:
+        ann_raw = fetch_announcements_window(list(course_cache.keys()))
+    except Exception:
+        ann_raw = []
+    announcements = normalize_announcements(ann_raw, course_cache)
+    return course_cache, items, announcements
 
 # ---------- TUI ----------
 from textual.app import App, ComposeResult
@@ -373,13 +419,12 @@ from textual.containers import Horizontal, Vertical
 from textual.screen import Screen, ModalScreen
 from textual.events import Key
 
-# --- Modal prompts (async-safe) ---
+# --- Modal prompts ---
 class InputPrompt(ModalScreen[str]):
     BINDINGS = [("enter","accept","OK"), ("escape","cancel","Cancel")]
     def __init__(self, title: str, placeholder: str = "", default: str = ""):
         super().__init__()
         self._title = title; self._placeholder = placeholder; self._default = default
-
     def compose(self) -> ComposeResult:
         yield Static(self._title, id="prompt-title")
         self.inp = Input(placeholder=self._placeholder, value=self._default, id="prompt-input")
@@ -387,11 +432,10 @@ class InputPrompt(ModalScreen[str]):
         with Horizontal(id="prompt-buttons"):
             yield Button("OK", id="ok")
             yield Button("Cancel", id="cancel")
-
     def on_mount(self): self.inp.focus()
     def on_button_pressed(self, ev: Button.Pressed):
         self.dismiss(self.inp.value.strip() if ev.button.id == "ok" else "")
-    def on_input_submitted(self, ev: Input.Submitted):
+    def on_input_submitted(self, _ev: Input.Submitted):
         self.dismiss(self.inp.value.strip())
     def action_accept(self): self.dismiss(self.inp.value.strip())
     def action_cancel(self): self.dismiss("")
@@ -408,7 +452,7 @@ class ConfirmPath(ModalScreen[Tuple[bool, str]]):
     def on_mount(self): self.inp.focus()
     def on_button_pressed(self, ev: Button.Pressed):
         self.dismiss((ev.button.id == "yes", self.inp.value.strip() if ev.button.id == "yes" else ""))
-    def on_input_submitted(self, ev: Input.Submitted):
+    def on_input_submitted(self, _ev: Input.Submitted):
         self.dismiss((True, self.inp.value.strip()))
     def action_accept(self): self.dismiss((True, self.inp.value.strip()))
     def action_cancel(self): self.dismiss((False, ""))
@@ -417,7 +461,7 @@ class LoadingScreen(ModalScreen[None]):
     def compose(self) -> ComposeResult:
         yield Static("[b]Loading Canvas data…[/b]\n[dim]Please wait[/dim]")
 
-# --- Details Screen (async fill; fixed naming) ---
+# --- Details Screen (assignments/discussions generic) ---
 class DetailsScreen(Screen):
     BINDINGS = [("backspace", "pop", "Back"), ("escape","pop","Back"), ("w", "download", "Download"), ("enter", "open", "Open")]
     def __init__(self, owner_app, item: Dict[str, Any]):
@@ -426,20 +470,21 @@ class DetailsScreen(Screen):
         self.item = item
         self.links: List[Tuple[str,str]] = []
         self._loaded = False
-
     def compose(self) -> ComposeResult:
         with Vertical():
             self.head = Static(id="d-head"); yield self.head
             self.body = RichLog(highlight=True, wrap=True, id="d-body"); yield self.body
             self.link_table = DataTable(zebra_stripes=True, id="d-links"); yield self.link_table
-
+            yield Footer()
     def on_mount(self):
         it = self.item
         self.head.update(f"[b]{it['title']}[/b] ({it['course_code']} — {it['course_name']})")
         self.link_table.clear(columns=True); self.link_table.add_columns("Label","URL")
         self.body.write("[dim]Loading details…[/dim]")
         threading.Thread(target=self._load_details, daemon=True).start()
-
+    def on_key(self, event: Key) -> None:
+        if event.key == "backspace":
+            event.stop(); self.app.pop_screen()
     def _load_details(self):
         it = self.item
         ad = sub = disc = None
@@ -452,7 +497,6 @@ class DetailsScreen(Screen):
         except Exception:
             pass
         self.app.call_from_thread(self._render_details, ad, sub, disc)
-
     def _render_details(self, ad, sub, disc):
         self.body.clear(); self.link_table.clear(columns=True); self.link_table.add_columns("Label","URL")
         it = self.item
@@ -462,7 +506,7 @@ class DetailsScreen(Screen):
             sc = float(sub.get("score")); pct = (100.0*sc/float(it["points"])) if it["points"] else 0.0
             score_line = f" • Score: {sc:.2f}/{float(it['points']):.2f} ({pct:.0f}%)"
         self.links = [("Open in browser", it["url"])]
-        lines = [f"Type: {it['ptype']} • Due: {due} ({rel}) • Points: {pts}{score_line}",
+        lines = [f"Type: {it['ptype']} • When: {due} ({rel}) • Points: {pts}{score_line}",
                  f"Status: {', '.join(it['status_flags']) if it['status_flags'] else '-'}",
                  f"URL: {it['url']}"]
         if ad:
@@ -487,26 +531,24 @@ class DetailsScreen(Screen):
             try: self.link_table.cursor_coordinate=(0,0)
             except Exception: pass
         self._loaded = True
-
     def _selected_link(self) -> Optional[str]:
         if self.link_table.cursor_row is None or not self.links: return None
         return self.links[self.link_table.cursor_row][1]
-
     def action_open(self):
         url = self._selected_link() or self.item.get("url")
         if not url: return
         try: webbrowser.open(url, new=2)
         except Exception: pass
-
     def action_download(self):
         if not self._loaded: return
         self._owner._async_download_from_links(self.item, self.links)  # type: ignore
     def action_pop(self): self.app.pop_screen()
 
-# --- Syllabus Screen (HTML/PDF preview) ---
+# --- Syllabus Screen (single-line list + right preview) ---
 class SyllabiScreen(Screen):
+    # Use unique action name to avoid App's Enter binding
     BINDINGS = [("backspace", "pop", "Back"), ("escape","pop","Back"),
-                ("enter", "open", "Preview/View"), ("w", "save", "Save"),
+                ("enter", "syl_open", "Preview/View"), ("w", "save", "Save"),
                 ("b","browser","Open in browser"), ("v","view_native","Open native viewer")]
     def __init__(self, owner_app, courses: Dict[int, Tuple[str,str]]):
         super().__init__(); self._owner = owner_app
@@ -516,28 +558,59 @@ class SyllabiScreen(Screen):
         self.curr_file: Optional[Dict[str,Any]]=None
         self.curr_preview_text: Optional[str]=None
         self.curr_browser_url: Optional[str]=None
+        self._row_to_cid: List[int] = []
+        self.body: Optional[RichLog] = None
 
     def compose(self) -> ComposeResult:
-        with Horizontal():
-            self.table = DataTable(zebra_stripes=True); yield self.table
-            self.body = RichLog(highlight=True, wrap=True); yield self.body
+        with Vertical(id="syl-root"):
+            with Horizontal(id="syl-split"):
+                self.table = DataTable(zebra_stripes=True, id="syl-list"); yield self.table
+                # stable wrapper; child RichLog is ephemeral, no id to avoid DuplicateIds
+                self.preview = Vertical(id="syl-preview"); yield self.preview
+            yield Footer()
 
     def on_mount(self):
-        self.table.add_columns("Course","Name")
+        self.table.clear(columns=True)
+        self.table.add_columns("Course")
+        self.table.cursor_type = "row"
+        self._row_to_cid.clear()
         for cid,(code,name) in sorted(self.courses.items(), key=lambda kv: (kv[1][0], kv[0])):
-            self.table.add_row(str(code or cid), name or "")
+            self.table.add_row(f"{code or cid} — {name or ''}")
+            self._row_to_cid.append(cid)
         try: self.table.cursor_coordinate=(0,0)
         except Exception: pass
+        cid = self._selected_course()
+        if cid is not None:
+            self._open_async(int(cid))
+
+    def on_key(self, event: Key) -> None:
+        if event.key == "backspace":
+            event.stop(); self.app.pop_screen()
+
+    def _container(self) -> Vertical:
+        return self.query_one("#syl-preview", Vertical)
+
+    def _reset_preview(self):
+        cont = self._container()
+        try:
+            for child in list(cont.children):
+                child.remove()
+        except Exception:
+            pass
+        self.body = RichLog(highlight=True, wrap=True)
+        cont.mount(self.body)
 
     def _selected_course(self) -> Optional[int]:
-        if self.table.cursor_row is None: return None
-        code = self.table.get_cell_at(self.table.cursor_row,0).value
-        for cid,(cc,_) in self.courses.items():
-            if str(cc or cid) == str(code): return cid
+        row = self.table.cursor_row
+        if row is None: return None
+        if 0 <= row < len(self._row_to_cid):
+            return self._row_to_cid[row]
         return None
 
     def _render_text(self, text: str):
-        self.body.clear(); self.body.write(text)
+        self._reset_preview()
+        assert self.body is not None
+        self.body.write(text)
 
     def _pdftotext_available(self) -> bool:
         return shutil.which("pdftotext") is not None
@@ -589,7 +662,7 @@ class SyllabiScreen(Screen):
                         fid = f.get("id")
                         if fid is not None: cand[fid] = f
                 files = list(cand.values())
-                def is_pdf(f): 
+                def is_pdf(f):
                     ct = str(f.get("content-type","")).lower()
                     name = (f.get("display_name") or f.get("filename") or "").lower()
                     return ct.endswith("pdf") or name.endswith(".pdf")
@@ -607,15 +680,16 @@ class SyllabiScreen(Screen):
             self.app.call_from_thread(self._render_text, text)
         threading.Thread(target=worker, daemon=True).start()
 
-    def action_open(self):
+    # New action name bound to Enter
+    def action_syl_open(self):
         cid = self._selected_course()
         if cid is not None and cid != self.curr_id:
             self._open_async(int(cid)); return
-        # If a file candidate is selected, preview it
         if self.curr_browser_url:
             self._render_text("[dim]Downloading + converting PDF…[/dim]")
             self._preview_pdf_from_url(self.curr_browser_url)
 
+    # Keep for 'w' binding etc.
     def action_save(self):
         if self.curr_html and self.curr_id:
             code,_ = self.courses.get(self.curr_id,("", "Course"))
@@ -623,6 +697,7 @@ class SyllabiScreen(Screen):
             path = os.path.join(dstdir, "Syllabus.html")
             with open(path, "w", encoding="utf-8") as f: f.write(self.curr_html)
             if OPEN_AFTER_DL and shutil.which("xdg-open"): subprocess.Popen(["xdg-open", path])
+            assert self.body is not None
             self.body.write(f"\nSaved → {path}")
             return
         if self.curr_file and self.curr_id and self.curr_browser_url:
@@ -638,9 +713,9 @@ class SyllabiScreen(Screen):
                             for chunk in resp.iter_content(chunk_size=65536):
                                 if chunk: f.write(chunk)
                     if OPEN_AFTER_DL and shutil.which("xdg-open"): subprocess.Popen(["xdg-open", path])
-                    self.app.call_from_thread(self.body.write, f"\nSaved → {path}")
+                    self.app.call_from_thread(lambda: (self.body and self.body.write(f"\nSaved → {path}")))
                 except Exception as e:
-                    self.app.call_from_thread(self.body.write, f"\nDownload failed: {e}")
+                    self.app.call_from_thread(lambda: (self.body and self.body.write(f"\nDownload failed: {e}")))
             threading.Thread(target=worker, daemon=True).start()
 
     def action_browser(self):
@@ -663,54 +738,132 @@ class SyllabiScreen(Screen):
         except Exception:
             pass
 
-# --- Announcements view ---
+    def on_data_table_cursor_moved(self, _event):
+        cid = self._selected_course()
+        if cid is not None and cid != self.curr_id:
+            self._open_async(int(cid))
+
+# --- Announcements list (single pane) ---
 class AnnouncementsScreen(Screen):
+    # unique action name to avoid App 'enter' binding collision
     BINDINGS = [("backspace","pop","Back"), ("escape","pop","Back"),
-                ("enter","open_details","Open details"), ("o","open_in_browser","Open in browser"),
+                ("enter","ann_open","Open"), ("o","open_in_browser","Open in browser"),
                 ("w","download","Download attachments")]
     def __init__(self, owner_app, announcements: List[Dict[str,Any]]):
         super().__init__(); self._owner = owner_app; self._anns = announcements
 
     def compose(self) -> ComposeResult:
-        with Horizontal():
-            self.table = DataTable(zebra_stripes=True); yield self.table
-            self.body = RichLog(highlight=True, wrap=True); yield self.body
+        with Vertical(id="ann-root"):
+            self.table = DataTable(zebra_stripes=True, id="ann-table"); yield self.table
+            yield Footer()
 
     def on_mount(self):
-        self.table.add_columns("When","Course","Title")
+        self.table.clear(columns=True)
+        self.table.add_columns("Announcement")
+        self.table.cursor_type = "row"
         for it in self._anns:
-            self.table.add_row(it["due_at"] or "-", it["course_code"], it["title"])
+            self.table.add_row(self._fmt_row(it))
         try: self.table.cursor_coordinate=(0,0)
         except Exception: pass
-        self._preview()
+        self.table.focus()
+
+    def on_key(self, event: Key) -> None:
+        if event.key == "enter":
+            event.stop(); self.action_ann_open()
+        elif event.key == "backspace":
+            event.stop(); self.app.pop_screen()
+
+    def _fmt_row(self, it: Dict[str, Any]) -> str:
+        when = it.get("due_at") or "-"
+        rel  = f" ({it.get('due_rel')})" if it.get("due_rel") else ""
+        code = it.get("course_code") or ""
+        title = it.get("title") or "(announcement)"
+        return f"{when} — {code} — {title}{rel}"
 
     def _sel(self) -> Optional[Dict[str,Any]]:
-        if self.table.cursor_row is None: return None
-        i = self.table.cursor_row
-        if i < 0 or i >= len(self._anns): return None
-        return self._anns[i]
+        row = self.table.cursor_row
+        if row is None: return None
+        if 0 <= row < len(self._anns): return self._anns[row]
+        return None
 
-    def _preview(self):
+    def action_ann_open(self):
         it = self._sel()
         if not it: return
-        self.body.clear()
-        self.body.write(f"[b]{it['title']}[/b]\n{it['course_code']} — {it['course_name']}\n{it['due_at'] or '-'} ({it['due_rel'] or '-'})\n{it['url']}")
-
-    def action_open_details(self):
-        it = self._sel()
-        if not it: return
-        self.app.push_screen(DetailsScreen(self._owner, it))
+        self.app.push_screen(AnnouncementDetailScreen(self._owner, it))
 
     def action_open_in_browser(self):
         it = self._sel()
         if not it: return
-        try: webbrowser.open(it["url"], new=2)
+        try: webbrowser.open(it.get("url",""), new=2)
         except Exception: pass
 
     def action_download(self):
         it = self._sel()
         if not it: return
-        self._owner._async_gather_attachments(it)  # reuse
+        self._owner._async_gather_attachments(it)
+
+# --- Announcements detail (full content) ---
+class AnnouncementDetailScreen(Screen):
+    BINDINGS = [("backspace","pop","Back"), ("escape","pop","Back"),
+                ("o","open_in_browser","Open in browser"), ("w","download","Download attachments")]
+    def __init__(self, owner_app, item: Dict[str,Any]):
+        super().__init__(); self._owner = owner_app; self.item = item
+        self.links: List[Tuple[str,str]] = []
+    def compose(self) -> ComposeResult:
+        with Vertical():
+            self.head = Static(id="a-head"); yield self.head
+            self.body = RichLog(highlight=True, wrap=True, id="a-body"); yield self.body
+            self.link_table = DataTable(zebra_stripes=True, id="a-links"); yield self.link_table
+            yield Footer()
+    def on_mount(self):
+        it = self.item
+        self.head.update(f"[b]{it['title']}[/b]\n{it['course_code']} — {it['course_name']}\n{it.get('due_at') or '-'} ({it.get('due_rel') or '-'})")
+        self.body.write("[dim]Loading announcement…[/dim]")
+        self.link_table.clear(columns=True); self.link_table.add_columns("Label","URL")
+        threading.Thread(target=self._load, daemon=True).start()
+    def on_key(self, event: Key) -> None:
+        if event.key == "backspace":
+            event.stop(); self.app.pop_screen()
+    def _load(self):
+        it = self.item
+        disc = None
+        try:
+            if it["course_id"] and it["plannable_id"]:
+                disc = fetch_discussion_or_announcement(int(it["course_id"]), int(it["plannable_id"]))
+        except Exception:
+            pass
+        def render():
+            self.body.clear()
+            text = ""
+            if disc:
+                msg_html = disc.get("message") or ""
+                text = re.sub(r"<[^>]+>", "", msg_html.replace("<br>","\n").replace("<br/>","\n")).strip()
+                for a in (disc.get("attachments") or []):
+                    lbl = a.get("display_name") or a.get("filename") or "file"
+                    url = a.get("url") or a.get("download_url") or a.get("html_url") or ""
+                    if url: self.links.append((lbl, url))
+            if not text:
+                text = "(No body content.)"
+            self.body.write(text)
+            self.links = [("Open in browser", it["url"])] + self.links
+            self.link_table.clear(columns=True); self.link_table.add_columns("Label","URL")
+            for lab, url in self.links: self.link_table.add_row(lab, url)
+            try: self.link_table.cursor_coordinate=(0,0)
+            except Exception: pass
+        self.app.call_from_thread(render)
+    def action_open_in_browser(self):
+        try:
+            webbrowser.open(self.item.get("url",""), new=2)
+        except Exception:
+            pass
+    def action_download(self):
+        files = [(lab,url,0) for (lab,url) in self.links if lab != "Open in browser"]
+        if not files:
+            return
+        dstdir_default = os.path.join(get_download_dir(), "Canvas", sanitize(self.item.get("course_code","")), sanitize(self.item.get("title","announcement")))
+        self._owner._show_confirm_path(f"{len(files)} attachment(s) detected. Confirm download directory (Enter to accept):",
+                                       dstdir_default, "dl_dir",
+                                       {"files": files, "default": dstdir_default, "item": self.item})
 
 # ---------- App ----------
 class Info(Static): pass
@@ -755,7 +908,7 @@ class Pomodoro(Static):
 
     def _safe_update(self, text: str):
         try:
-            self.app.call_from_thread(self.update, text)  # type: ignore[attr-defined]
+            self.app.call_from_thread(self.update, text)
         except Exception:
             try: self.update(text)
             except Exception: pass
@@ -791,10 +944,26 @@ class CanvasTUI(App):
     Screen { layout: horizontal; }
     Horizontal { height: 1fr; }
     Vertical#left { width: 54; border: solid #555; }
+    Vertical#right { height: 1fr; }
     DataTable { border: solid #555; }
     Static#info { padding: 1 2; }
     Static#details { padding: 1 2; border: solid #555; height: 12; }
     Static#pomodoro { padding: 1 2; border: solid #555; height: 6; }
+    Static#progress { padding: 1 2; border: solid #555; height: 6; }
+
+    /* Syllabi split */
+    #syl-root { height: 1fr; width: 1fr; }
+    #syl-split { layout: horizontal; height: 1fr; }
+    #syl-list { width: 48; min-width: 32; max-width: 80; }
+    #syl-preview { height: 1fr; overflow: auto; }
+
+    /* Announcements full width */
+    #ann-root { height: 1fr; width: 1fr; }
+    #ann-table { width: 1fr; height: 1fr; }
+
+    /* Detail bodies + link tables */
+    #d-body, #a-body { height: 1fr; overflow: auto; }
+    #d-links, #a-links { height: 8; }
     """
     BINDINGS = [
         ("q", "quit", "Quit"),
@@ -828,8 +997,8 @@ class CanvasTUI(App):
         self.filtered: Optional[List[int]] = None
         self.show_hidden = False
         self.table: Optional[DataTable] = None
-        self.info: Optional[Info] = None
-        self.details: Optional[Details] = None
+        self.info: Optional[Static] = None
+        self.details: Optional[Static] = None
         self.pomo: Optional[Pomodoro] = None
         self._refresh_lock = threading.Lock()
         self._last_refresh = 0.0
@@ -842,10 +1011,12 @@ class CanvasTUI(App):
         yield Header(show_clock=True)
         with Horizontal():
             with Vertical(id="left"):
-                self.info = Info(id="info"); yield self.info
-                self.details = Details(id="details"); yield self.details
+                self.info = Static(id="info"); yield self.info
+                self.details = Static(id="details"); yield self.details
                 self.pomo = Pomodoro(on_state_change=self._persist_pomo); yield self.pomo
-            self.table = DataTable(zebra_stripes=True); yield self.table
+            with Vertical(id="right"):
+                self.table = DataTable(zebra_stripes=True); yield self.table
+                self.progress = Static(id="progress"); yield self.progress
         yield Footer()
 
     def _persist_pomo(self, end_ts: Optional[float]):
@@ -855,9 +1026,15 @@ class CanvasTUI(App):
     # ---------- mount / teardown ----------
     def on_mount(self):
         self._setup_table()
+        try:
+            cached_items = STATE.get("cache_items") or []
+            if cached_items:
+                self.items = cached_items
+                self._render_info(); self._render_table()
+        except Exception:
+            pass
         self.push_screen(LoadingScreen())
         self.call_later(self._initial_load)
-        # resume pomodoro if present
         try:
             end_ts = STATE.get("pomo_end_ts")
             if isinstance(end_ts, (int,float)) and float(end_ts) > time.time():
@@ -884,7 +1061,11 @@ class CanvasTUI(App):
         self.table.add_columns("Due","Rel","Type","Course","Title","Pts","Status")
         self.table.cursor_type = "row"; self.table.zebra_stripes = True
 
-    def on_data_table_row_selected(self, _msg: DataTable.RowSelected) -> None:
+    # Only react to row selection from the MAIN table
+    def on_data_table_row_selected(self, msg: DataTable.RowSelected) -> None:
+        src = getattr(msg, "data_table", None) or getattr(msg, "control", None)
+        if src is not self.table:
+            return
         self.action_open_details()
 
     def on_key(self, event: Key) -> None:
@@ -961,18 +1142,44 @@ class CanvasTUI(App):
         out = []
         for it in items:
             if it["ptype"] == "announcement":
-                continue  # announcements never appear in TODO view
-            # derive timestamp for items with no explicit due
+                continue
             ts_iso = it["due_iso"]
             if not ts_iso:
                 rp = it.get("raw_plannable") or {}
                 ts_iso = rp.get("posted_at") or rp.get("created_at") or rp.get("available_at") or ""
             if not ts_iso:
-                out.append(it)  # keep undated non-announcement
+                out.append(it)
                 continue
             ts = local_dt(ts_iso)
             if ts >= cutoff:
                 if ts < now and "submitted" in it["status_flags"]:
+                    continue
+                out.append(it)
+        return out
+
+    @staticmethod
+    def _apply_past_filter_static(items: List[Dict[str,Any]]) -> List[Dict[str,Any]]:
+        now = dt.datetime.now(ZoneInfo(USER_TZ))
+        cutoff = now - dt.timedelta(hours=PAST_HOURS)
+        out = []
+        for it in items:
+            if it["ptype"] in ("announcement","calendar_event","planner_note"):
+                continue
+            rp = it.get("raw_plannable") or {}
+            ts_iso = it.get("due_iso") or rp.get("posted_at") or rp.get("created_at") or rp.get("available_at") or ""
+            if not ts_iso:
+                out.append(it)
+                continue
+            ts = local_dt(ts_iso)
+            lock_at = rp.get("lock_at")
+            if lock_at:
+                try:
+                    if "missing" in it.get("status_flags", []) and local_dt(lock_at) < now:
+                        continue
+                except Exception:
+                    pass
+            if ts >= cutoff:
+                if ts < now and "submitted" in it.get("status_flags", []):
                     continue
                 out.append(it)
         return out
@@ -992,6 +1199,18 @@ class CanvasTUI(App):
             try: self.table.cursor_coordinate = (0,0)
             except Exception: pass
 
+    def _render_progress(self):
+        total, _, _, submitted = self._stats()
+        if not total:
+            self.progress.update("[dim]Progress: 0/0[/dim]"); return
+        pct = submitted / total
+        slices = ["○","◔","◑","◕","●"]
+        i = min(int(pct * (len(slices)-1) + 0.5), len(slices)-1)
+        bar_len = 20
+        filled = int(bar_len * pct)
+        bar = "█"*filled + "░"*(bar_len-filled)
+        self.progress.update(f"Progress: {submitted}/{total}  {slices[i]} {int(pct*100)}%\n[{bar}]")
+
     # ---------- refresh ----------
     def _bg_refresh_loop(self):
         while not self._stop_bg:
@@ -1010,35 +1229,33 @@ class CanvasTUI(App):
 
     def refresh_data(self, silent: bool=False):
         if not self._refresh_lock.acquire(blocking=False): return
-        if not silent: self.details.update("[dim]Refreshing…[/dim]")
-        try:
-            # Cache active courses first (used for announcements)
-            self.course_cache = fetch_current_courses()
-            # Planner items for TODO view
-            raw = fetch_planner_items_window()
-            all_items = normalize_items(raw)
-            items = [it for it in all_items if it["ptype"] != "announcement"]
-            items = self._apply_past_filter(items)
-            self.items = items
-            # Announcements via dedicated API
-            ann_raw = []
+        if not silent:
+            self.details.update("[dim]Refreshing…[/dim]")
+        def worker():
             try:
-                ann_raw = fetch_announcements_window(list(self.course_cache.keys()))
-            except Exception:
-                ann_raw = []
-            self.announcements = normalize_announcements(ann_raw, self.course_cache)
-
-            self.filtered = None
-            self._render_info()
-            self._submission_cache.clear()
-            self._render_table()
-            if not silent:
-                self.details.update("[dim]Select an item and press Enter (full) or d (quick). Use A for announcements, S for syllabi.[/dim]")
-            self._last_refresh = time.time()
-        except Exception as e:
-            self.details.update(f"[red]Error:[/red] {e}")
-        finally:
-            self._refresh_lock.release()
+                course_cache, items, announcements = _fetch_all_data_sync()
+                migrate_visibility_keys_if_needed(items)
+                def apply_ui():
+                    self.course_cache = course_cache
+                    self.items = items
+                    self.announcements = announcements
+                    self.filtered = None
+                    self._submission_cache.clear()
+                    STATE["cache_items"] = _serialize_simple(items)
+                    STATE["cache_announcements"] = _serialize_simple(announcements)
+                    _save_state(STATE)
+                    self._render_info()
+                    self._render_table()
+                    if not silent:
+                        self.details.update("[dim]Select an item and press Enter (full) or d (quick). Use A for announcements, S for syllabi.[/dim]")
+                    self._last_refresh = time.time()
+                    self._render_progress()
+                self.call_from_thread(apply_ui)
+            except Exception as e:
+                self.call_from_thread(lambda: self.details.update(f"[red]Error:[/red] {e}"))
+            finally:
+                self._refresh_lock.release()
+        threading.Thread(target=worker, daemon=True).start()
 
     def _selected_idx(self) -> Optional[int]:
         vis = self._visible_items()
