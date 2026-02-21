@@ -629,7 +629,9 @@ GNU GENERAL PUBLIC LICENSE
  state the exclusion of warranty; and each file should have at least
  the "copyright" line and a pointer to where the full notice is found.
 
-     <one line to give the program's name and a brief idea of what it does.>
+     CanvasTUI is a cli python program installable via a makefile for the interactions of a user on the terminal with canvas.
+     It uses a canvas-API token defined in the environment variables of the user's machine, and generates a TUI interface for
+     course assignments. It offers keybinding support for interactions. 
      Copyright (C) 2025 Collin Schaufele - Kleinpanic
 
      This program is free software: you can redistribute it and/or modify
