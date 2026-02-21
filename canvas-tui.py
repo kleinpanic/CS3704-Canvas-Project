@@ -7,6 +7,7 @@ from typing import Dict, Any, List, Optional, Tuple
 from urllib.parse import urljoin, urlparse
 
 # ---------- Config & state ----------
+# config from env
 BASE_URL = os.environ.get("CANVAS_BASE_URL", "https://canvas.vt.edu").rstrip("/")
 TOKEN = os.environ.get("CANVAS_TOKEN", "")
 USER_TZ = os.environ.get("TZ", "America/New_York")
@@ -40,10 +41,12 @@ if not TOKEN:
     sys.exit(1)
 
 def _ensure_dirs():
+    # make sure folders exist
     os.makedirs(EXPORT_DIR, exist_ok=True)
     os.makedirs(CONFIG_DIR, exist_ok=True)
 
 def _load_config():
+    # load local config override if any
     global DAYS_AHEAD, REFRESH_COOLDOWN, AUTO_REFRESH_SEC, DOWNLOAD_DIR, DEFAULT_BLOCK_MIN, PAST_HOURS, ANN_PAST_DAYS, ANN_FUTURE_DAYS
     try:
         import tomllib  # 3.11+
@@ -67,6 +70,7 @@ def _load_config():
 _ensure_dirs(); _load_config()
 
 def _load_state() -> Dict[str, Any]:
+    # state cache on disk
     if os.path.exists(STATE_PATH):
         try:
             with open(STATE_PATH, "r", encoding="utf-8") as f:
@@ -76,6 +80,7 @@ def _load_state() -> Dict[str, Any]:
     return {}
 
 def _save_state(st: Dict[str, Any]) -> None:
+    # atomic save
     tmp = STATE_PATH + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(st, f, indent=2)
@@ -90,6 +95,7 @@ STATE.setdefault("cache_items", [])
 STATE.setdefault("cache_announcements", [])
 
 # ---------- HTTP ----------
+# shared session and retries
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
@@ -113,9 +119,11 @@ S.mount("https://", adapter); S.mount("http://", adapter)
 
 # ---------- Helpers ----------
 def _iso(ts: dt.datetime) -> str:
+    # iso in utc
     return ts.astimezone(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 def parse_link_header(link_value: str) -> Dict[str, str]:
+    # parse pagination links
     out: Dict[str, str] = {}
     if not link_value: return out
     parts = [p.strip() for p in link_value.split(",")]
@@ -132,6 +140,7 @@ def parse_link_header(link_value: str) -> Dict[str, str]:
     return out
 
 def get_all(url: str, params: Dict[str, Any]) -> List[Dict[str, Any]]:
+    # walk paged api
     items: List[Dict[str, Any]] = []
     while True:
         r = S.get(url, params=params, timeout=HTTP_TIMEOUT)
@@ -151,23 +160,28 @@ def get_all(url: str, params: Dict[str, Any]) -> List[Dict[str, Any]]:
     return items
 
 def absolute_url(html_url: str) -> str:
+    # make full url
     if html_url.startswith(("http://", "https://")): return html_url
     return urljoin(BASE_URL, html_url)
 
 def sanitize(s: str) -> str:
+    # safe file name
     s = re.sub(r"[\\/:\*\?\"<>\|]+", "_", s)
     s = re.sub(r"\s+", " ", s).strip()
     return s or "untitled"
 
 def local_dt(iso_str: str) -> dt.datetime:
+    # parse to local tz
     return dt.datetime.fromisoformat(iso_str.replace("Z","+00:00")).astimezone(ZoneInfo(USER_TZ))
 
 def _fmt_local(ts_iso: str) -> str:
+    # human time
     t = local_dt(ts_iso)
     try:   return t.strftime("%-m/%-d/%Y %H:%M")  # linux
     except Exception: return t.strftime("%m/%d/%Y %H:%M")
 
 def rel_time(target: dt.datetime) -> str:
+    # relative time string
     now = dt.datetime.now(ZoneInfo(USER_TZ))
     s = int((target-now).total_seconds())
     sign = 1 if s >= 0 else -1
@@ -183,6 +197,7 @@ def rel_time(target: dt.datetime) -> str:
         return f"{m}m ago"
 
 def get_download_dir() -> str:
+    # use xdg download dir if set
     if DOWNLOAD_DIR: return os.path.expanduser(DOWNLOAD_DIR)
     xdg = os.path.expanduser("~/.config/user-dirs.dirs")
     if os.path.exists(xdg):
@@ -195,6 +210,7 @@ def get_download_dir() -> str:
     return os.path.expanduser("~/Downloads")
 
 def _notify(summary: str, body: str = ""):
+    # desktop notify or beep
     if shutil.which("notify-send"):
         try: subprocess.Popen(["notify-send", summary, body])
         except Exception: pass
@@ -204,6 +220,7 @@ def _notify(summary: str, body: str = ""):
 
 # ---------- Canvas fetch ----------
 def fetch_planner_items_window() -> List[Dict[str, Any]]:
+    # planner items in date window
     now = dt.datetime.now(ZoneInfo(USER_TZ))
     start = _iso(now - dt.timedelta(hours=PAST_HOURS))
     end = _iso((now + dt.timedelta(days=DAYS_AHEAD)).replace(hour=23, minute=59, second=59, microsecond=0))
@@ -212,6 +229,7 @@ def fetch_planner_items_window() -> List[Dict[str, Any]]:
     return get_all(url, params)
 
 def fetch_course_name(course_id: int) -> Tuple[str, str]:
+    # course code and name
     url = urljoin(BASE_URL, f"/api/v1/courses/{course_id}")
     r = S.get(url, timeout=HTTP_TIMEOUT)
     if r.status_code == 200:
@@ -220,11 +238,13 @@ def fetch_course_name(course_id: int) -> Tuple[str, str]:
     return "", ""
 
 def fetch_assignment_details(course_id: int, assignment_id: int) -> Dict[str, Any]:
+    # full assignment data
     url = urljoin(BASE_URL, f"/api/v1/courses/{course_id}/assignments/{assignment_id}")
     r = S.get(url, timeout=HTTP_TIMEOUT); r.raise_for_status()
     return r.json()
 
 def fetch_submission(course_id: int, assignment_id: int) -> Optional[Dict[str, Any]]:
+    # user submission
     url = urljoin(BASE_URL, f"/api/v1/courses/{course_id}/assignments/{assignment_id}/submissions/self")
     r = S.get(url, timeout=HTTP_TIMEOUT)
     if r.status_code == 200:
@@ -232,6 +252,7 @@ def fetch_submission(course_id: int, assignment_id: int) -> Optional[Dict[str, A
     return None
 
 def fetch_discussion_or_announcement(course_id: int, topic_id: int) -> Optional[Dict[str, Any]]:
+    # discussion or announcement
     url = urljoin(BASE_URL, f"/api/v1/courses/{course_id}/discussion_topics/{topic_id}")
     r = S.get(url, params={"include[]": ["all_dates", "sections", "sections_user_count"]}, timeout=HTTP_TIMEOUT)
     if r.status_code == 200:
@@ -239,6 +260,7 @@ def fetch_discussion_or_announcement(course_id: int, topic_id: int) -> Optional[
     return None
 
 def fetch_course_syllabus(course_id: int) -> Optional[str]:
+    # html syllabus
     url = urljoin(BASE_URL, f"/api/v1/courses/{course_id}")
     r = S.get(url, params={"include[]": "syllabus_body"}, timeout=HTTP_TIMEOUT)
     if r.status_code == 200:
@@ -246,6 +268,7 @@ def fetch_course_syllabus(course_id: int) -> Optional[str]:
     return None
 
 def search_course_files(course_id: int, term: str) -> List[Dict[str, Any]]:
+    # file search
     url = urljoin(BASE_URL, f"/api/v1/courses/{course_id}/files")
     params = {"search_term": term, "per_page": 50}
     try:
@@ -254,6 +277,7 @@ def search_course_files(course_id: int, term: str) -> List[Dict[str, Any]]:
         return []
 
 def fetch_current_courses() -> Dict[int, Tuple[str, str]]:
+    # active course list
     url = urljoin(BASE_URL, "/api/v1/courses")
     params = {"enrollment_state": "active", "per_page": 100}
     courses = get_all(url, params)
@@ -265,6 +289,7 @@ def fetch_current_courses() -> Dict[int, Tuple[str, str]]:
     return out
 
 def fetch_announcements_window(course_ids: List[int]) -> List[Dict[str, Any]]:
+    # announcements in date window
     now = dt.datetime.now(ZoneInfo(USER_TZ))
     start = _iso(now - dt.timedelta(days=ANN_PAST_DAYS))
     end = _iso((now + dt.timedelta(days=ANN_FUTURE_DAYS)).replace(hour=23, minute=59, second=59, microsecond=0))
@@ -275,12 +300,15 @@ def fetch_announcements_window(course_ids: List[int]) -> List[Dict[str, Any]]:
 
 # ---------- Keys ----------
 def stable_item_key(course_id, plannable_id, ptype) -> str:
+    # stable key per item
     return f"{int(course_id) if course_id else ''}:{int(plannable_id) if plannable_id else ''}:{(ptype or '').lower()}"
 
 def item_key_legacy(course_id, plannable_id, ptype, title) -> str:
+    # legacy key for migration
     return f"{course_id}:{plannable_id}:{ptype}:{abs(hash(title))}"
 
 def migrate_visibility_keys_if_needed(items: List[Dict[str, Any]]):
+    # move old keys to new ones
     vis = STATE.get("visibility", {})
     moved = 0
     for it in items:
@@ -299,12 +327,14 @@ def migrate_visibility_keys_if_needed(items: List[Dict[str, Any]]):
 
 # ---------- Normalize ----------
 def best_due(pl: Dict[str, Any], ptype: str) -> Optional[str]:
+    # pick first date field
     for k in ("due_at","lock_at","todo_date","start_at","end_at","published_at","posted_at","created_at","available_at"):
         v = pl.get(k)
         if v: return v
     return None
 
 def normalize_items(raw: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    # normalize planner items
     course_ids = sorted({x.get("course_id") for x in raw if x.get("course_id")})
     course_cache: Dict[int, Tuple[str, str]] = {}
     for cid in course_ids:
@@ -351,12 +381,14 @@ def normalize_items(raw: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         })
 
     def sortkey(it):
+        # sort by due time
         try: return dt.datetime.strptime(it["due_at"], "%m/%d/%Y %H:%M")
         except Exception: return dt.datetime.max
     out.sort(key=sortkey)
     return out
 
 def normalize_announcements(raw: List[Dict[str, Any]], course_cache: Dict[int, Tuple[str, str]]) -> List[Dict[str, Any]]:
+    # normalize announcements
     out: List[Dict[str, Any]] = []
     for a in raw:
         course_id = a.get("course_id")
@@ -392,6 +424,7 @@ def normalize_announcements(raw: List[Dict[str, Any]], course_cache: Dict[int, T
 
 # ---------- Warm cache helpers ----------
 def _serialize_simple(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    # keep cache small
     keep = ("key","ptype","title","course_code","course_name","due_at","due_rel","due_iso","url","course_id","plannable_id","points","status_flags","raw_plannable")
     out = []
     for it in items:
@@ -399,6 +432,7 @@ def _serialize_simple(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return out
 
 def _fetch_all_data_sync() -> Tuple[Dict[int, Tuple[str,str]], List[Dict[str,Any]], List[Dict[str,Any]]]:
+    # one shot fetch for ui
     course_cache = fetch_current_courses()
     raw = fetch_planner_items_window()
     all_items = normalize_items(raw)
@@ -421,6 +455,7 @@ from textual.events import Key
 
 # --- Modal prompts ---
 class InputPrompt(ModalScreen[str]):
+    # simple text input
     BINDINGS = [("enter","accept","OK"), ("escape","cancel","Cancel")]
     def __init__(self, title: str, placeholder: str = "", default: str = ""):
         super().__init__()
@@ -441,6 +476,7 @@ class InputPrompt(ModalScreen[str]):
     def action_cancel(self): self.dismiss("")
 
 class ConfirmPath(ModalScreen[Tuple[bool, str]]):
+    # confirm download path
     BINDINGS = [("enter","accept","Download"), ("escape","cancel","Cancel")]
     def __init__(self, msg: str, default_path: str):
         super().__init__(); self.msg = msg; self.default_path = default_path
@@ -458,11 +494,13 @@ class ConfirmPath(ModalScreen[Tuple[bool, str]]):
     def action_cancel(self): self.dismiss((False, ""))
 
 class LoadingScreen(ModalScreen[None]):
+    # loading overlay
     def compose(self) -> ComposeResult:
         yield Static("[b]Loading Canvas data…[/b]\n[dim]Please wait[/dim]")
 
 # --- Details Screen (assignments/discussions generic) ---
 class DetailsScreen(Screen):
+    # item details view
     BINDINGS = [("backspace", "pop", "Back"), ("escape","pop","Back"), ("w", "download", "Download"), ("enter", "open", "Open")]
     def __init__(self, owner_app, item: Dict[str, Any]):
         super().__init__()
@@ -486,6 +524,7 @@ class DetailsScreen(Screen):
         if event.key == "backspace":
             event.stop(); self.app.pop_screen()
     def _load_details(self):
+        # fetch on background thread
         it = self.item
         ad = sub = disc = None
         try:
@@ -498,6 +537,7 @@ class DetailsScreen(Screen):
             pass
         self.app.call_from_thread(self._render_details, ad, sub, disc)
     def _render_details(self, ad, sub, disc):
+        # render detail body
         self.body.clear(); self.link_table.clear(columns=True); self.link_table.add_columns("Label","URL")
         it = self.item
         due = it["due_at"] or "-"; rel = it["due_rel"] or "-"; pts = it["points"] if it["points"] is not None else "-"
@@ -546,6 +586,7 @@ class DetailsScreen(Screen):
 
 # --- Syllabus Screen (single-line list + right preview) ---
 class SyllabiScreen(Screen):
+    # course syllabi list + preview
     # Use unique action name to avoid App's Enter binding
     BINDINGS = [("backspace", "pop", "Back"), ("escape","pop","Back"),
                 ("enter", "syl_open", "Preview/View"), ("w", "save", "Save"),
@@ -613,9 +654,11 @@ class SyllabiScreen(Screen):
         self.body.write(text)
 
     def _pdftotext_available(self) -> bool:
+        # optional tool
         return shutil.which("pdftotext") is not None
 
     def _preview_pdf_from_url(self, url: str):
+        # download and convert pdf
         def worker():
             try:
                 with S.get(url, timeout=HTTP_TIMEOUT) as r:
@@ -645,6 +688,7 @@ class SyllabiScreen(Screen):
         threading.Thread(target=worker, daemon=True).start()
 
     def _open_async(self, cid: int):
+        # load syllabus async
         self._render_text("[dim]Loading syllabus…[/dim]")
         def worker():
             html = None; files = []
@@ -691,6 +735,7 @@ class SyllabiScreen(Screen):
 
     # Keep for 'w' binding etc.
     def action_save(self):
+        # save syllabus file
         if self.curr_html and self.curr_id:
             code,_ = self.courses.get(self.curr_id,("", "Course"))
             dstdir = os.path.join(get_download_dir(), "Canvas", sanitize(code or str(self.curr_id))); os.makedirs(dstdir, exist_ok=True)
@@ -719,6 +764,7 @@ class SyllabiScreen(Screen):
             threading.Thread(target=worker, daemon=True).start()
 
     def action_browser(self):
+        # open html or file in browser
         if self.curr_browser_url:
             try: webbrowser.open(self.curr_browser_url, new=2)
             except Exception: pass
@@ -729,6 +775,7 @@ class SyllabiScreen(Screen):
             except Exception: pass
 
     def action_view_native(self):
+        # open pdf in native viewer
         if not self.curr_browser_url: return
         try:
             with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as f:
@@ -745,6 +792,7 @@ class SyllabiScreen(Screen):
 
 # --- Announcements list (single pane) ---
 class AnnouncementsScreen(Screen):
+    # announcements list view
     # unique action name to avoid App 'enter' binding collision
     BINDINGS = [("backspace","pop","Back"), ("escape","pop","Back"),
                 ("enter","ann_open","Open"), ("o","open_in_browser","Open in browser"),
@@ -804,6 +852,7 @@ class AnnouncementsScreen(Screen):
 
 # --- Announcements detail (full content) ---
 class AnnouncementDetailScreen(Screen):
+    # full announcement view
     BINDINGS = [("backspace","pop","Back"), ("escape","pop","Back"),
                 ("o","open_in_browser","Open in browser"), ("w","download","Download attachments")]
     def __init__(self, owner_app, item: Dict[str,Any]):
@@ -870,6 +919,7 @@ class Info(Static): pass
 class Details(Static): pass
 
 class Pomodoro(Static):
+    # simple timer
     def __init__(self, on_state_change=None):
         super().__init__(id="pomodoro")
         self._timer_lock = threading.Lock()
@@ -880,6 +930,7 @@ class Pomodoro(Static):
         self.update("[dim]Pomodoro: stopped[/dim]")
 
     def start(self, minutes: int):
+        # start timer
         with self._timer_lock:
             self._end_ts = time.time() + max(1, int(minutes))*60
             self._stop = False
@@ -891,6 +942,7 @@ class Pomodoro(Static):
                 self._safe_update(self.render_status())
 
     def resume_until(self, end_ts: float):
+        # restore timer
         with self._timer_lock:
             self._end_ts = float(end_ts)
             self._stop = False
@@ -900,6 +952,7 @@ class Pomodoro(Static):
             self._safe_update(self.render_status())
 
     def stop(self):
+        # stop timer
         with self._timer_lock:
             self._end_ts = None
             self._stop = True
@@ -907,6 +960,7 @@ class Pomodoro(Static):
             self._safe_update("[dim]Pomodoro: stopped[/dim]")
 
     def _safe_update(self, text: str):
+        # thread safe update
         try:
             self.app.call_from_thread(self.update, text)
         except Exception:
@@ -914,6 +968,7 @@ class Pomodoro(Static):
             except Exception: pass
 
     def render_status(self) -> str:
+        # build status line
         if self._end_ts is None:
             return "[dim]Pomodoro: stopped[/dim]"
         remaining = max(0, int(self._end_ts - time.time()))
@@ -925,6 +980,7 @@ class Pomodoro(Static):
         return f"Pomodoro: {m:02d}:{s:02d}  {bar}"
 
     def _run(self):
+        # tick loop
         while True:
             with self._timer_lock:
                 if self._stop:
@@ -940,6 +996,7 @@ class Pomodoro(Static):
             time.sleep(1)
 
 class CanvasTUI(App):
+    # main app
     CSS = """
     Screen { layout: horizontal; }
     Horizontal { height: 1fr; }
@@ -1020,11 +1077,13 @@ class CanvasTUI(App):
         yield Footer()
 
     def _persist_pomo(self, end_ts: Optional[float]):
+        # save timer state
         STATE["pomo_end_ts"] = end_ts
         _save_state(STATE)
 
     # ---------- mount / teardown ----------
     def on_mount(self):
+        # load cached data and start refresh
         self._setup_table()
         try:
             cached_items = STATE.get("cache_items") or []
@@ -1046,6 +1105,7 @@ class CanvasTUI(App):
             self._bg_refresh_thread.start()
 
     def _initial_load(self):
+        # first load with spinner
         try:
             self.refresh_data()
         finally:
@@ -1056,6 +1116,7 @@ class CanvasTUI(App):
 
     # ---------- table ----------
     def _setup_table(self):
+        # table columns
         assert self.table is not None
         self.table.clear(columns=True)
         self.table.add_columns("Due","Rel","Type","Course","Title","Pts","Status")
@@ -1078,6 +1139,7 @@ class CanvasTUI(App):
             elif event.key == "P": self.action_pomo_custom()
 
     def _stats(self) -> Tuple[int,int,int,int]:
+        # simple counts
         total = len(self.items)
         now = dt.datetime.now(ZoneInfo(USER_TZ))
         today = now.strftime("%m/%d/%Y")
@@ -1090,6 +1152,7 @@ class CanvasTUI(App):
         return total, due_today, overdue, submitted
 
     def _render_info(self):
+        # header block
         now = dt.datetime.now(ZoneInfo(USER_TZ))
         total, due_today, overdue, submitted = self._stats()
         prog = f"{submitted}/{total}" if total else "0/0"
@@ -1103,6 +1166,7 @@ class CanvasTUI(App):
         self.info.update(s)
 
     def _visible_items(self) -> List[Dict[str, Any]]:
+        # hide or filter
         base = self.items
         if not self.show_hidden:
             base = [it for it in base if STATE["visibility"].get(it["key"], 0) != 2]
@@ -1111,6 +1175,7 @@ class CanvasTUI(App):
         return [base[i] for i in range(len(base)) if i in idxs]
 
     def _color_for_item(self, it: Dict[str,Any]) -> str:
+        # status color
         if "submitted" in it["status_flags"]: return "green"
         if not it["due_iso"]: return "white"
         now = dt.datetime.now(ZoneInfo(USER_TZ))
@@ -1123,6 +1188,7 @@ class CanvasTUI(App):
         return "white"
 
     def _pts_cell(self, it: Dict[str,Any]) -> str:
+        # points display
         pts = it["points"]
         if "graded" in it["status_flags"] and it["course_id"] and it["plannable_id"] and pts:
             key = (int(it["course_id"]), int(it["plannable_id"]))
@@ -1137,6 +1203,7 @@ class CanvasTUI(App):
         return f"{pts:.0f}" if isinstance(pts, (int,float)) else "-"
 
     def _apply_past_filter(self, items: List[Dict[str,Any]]) -> List[Dict[str,Any]]:
+        # drop old items
         now = dt.datetime.now(ZoneInfo(USER_TZ))
         cutoff = now - dt.timedelta(hours=PAST_HOURS)
         out = []
@@ -1159,6 +1226,7 @@ class CanvasTUI(App):
 
     @staticmethod
     def _apply_past_filter_static(items: List[Dict[str,Any]]) -> List[Dict[str,Any]]:
+        # same filter for cache load
         now = dt.datetime.now(ZoneInfo(USER_TZ))
         cutoff = now - dt.timedelta(hours=PAST_HOURS)
         out = []
@@ -1185,6 +1253,7 @@ class CanvasTUI(App):
         return out
 
     def _render_table(self):
+        # build rows
         assert self.table is not None
         self.table.clear()
         for it in self._visible_items():
@@ -1200,6 +1269,7 @@ class CanvasTUI(App):
             except Exception: pass
 
     def _render_progress(self):
+        # progress bar
         total, _, _, submitted = self._stats()
         if not total:
             self.progress.update("[dim]Progress: 0/0[/dim]"); return
@@ -1213,6 +1283,7 @@ class CanvasTUI(App):
 
     # ---------- refresh ----------
     def _bg_refresh_loop(self):
+        # auto refresh loop
         while not self._stop_bg:
             time.sleep(AUTO_REFRESH_SEC)
             if self._stop_bg: break
@@ -1220,6 +1291,7 @@ class CanvasTUI(App):
             except Exception: pass
 
     def action_refresh(self):
+        # manual refresh
         now = time.time()
         if (now - self._last_refresh) < REFRESH_COOLDOWN:
             self.details.update(f"[yellow]Refresh ignored:[/yellow] cooldown {REFRESH_COOLDOWN:.1f}s"); return
@@ -1228,6 +1300,7 @@ class CanvasTUI(App):
         self.refresh_data()
 
     def refresh_data(self, silent: bool=False):
+        # fetch data async
         if not self._refresh_lock.acquire(blocking=False): return
         if not silent:
             self.details.update("[dim]Refreshing…[/dim]")
@@ -1258,24 +1331,29 @@ class CanvasTUI(App):
         threading.Thread(target=worker, daemon=True).start()
 
     def _selected_idx(self) -> Optional[int]:
+        # current row index
         vis = self._visible_items()
         if not vis or not self.table: return None
         if self.table.cursor_row is None: return None
         return self.table.cursor_row
 
     def _selected_item(self) -> Optional[Dict[str,Any]]:
+        # current item
         vis = self._visible_items(); idx = self._selected_idx()
         if idx is None or idx >= len(vis): return None
         return vis[idx]
 
     # ---------- Prompt plumbing ----------
     def _show_input(self, title: str, placeholder: str, default: str, kind: str, ctx: Dict[str,Any]):
+        # input modal
         scr = InputPrompt(title, placeholder, default); self._pending[id(scr)] = (kind, ctx); self.push_screen(scr)
 
     def _show_confirm_path(self, msg: str, default_path: str, kind: str, ctx: Dict[str,Any]):
+        # path modal
         scr = ConfirmPath(msg, default_path); self._pending[id(scr)] = (kind, ctx); self.push_screen(scr)
 
     def on_screen_dismissed(self, event) -> None:
+        # handle modal results
         entry = self._pending.pop(id(event.screen), None)
         if not entry: return
         kind, ctx = entry
@@ -1316,12 +1394,14 @@ class CanvasTUI(App):
 
     # ---------- async helpers ----------
     def _async_download_from_links(self, item: Dict[str,Any], links: List[Tuple[str,str]]):
+        # downloads from details view
         files = [(lab, url, 0) for (lab, url) in links if lab != "Open in browser"]
         dstdir_default = os.path.join(get_download_dir(), "Canvas", sanitize(item["course_code"]), sanitize(item["title"]))
         msg = f"{len(files)} attachment(s) detected. Confirm download directory (Enter to accept):"
         self._show_confirm_path(msg, dstdir_default, "dl_dir", {"files": files, "default": dstdir_default, "item": item})
 
     def _async_gather_attachments(self, it: Dict[str,Any]):
+        # collect attachment urls
         self.details.update("[dim]Scanning attachments…[/dim]")
         def worker():
             files: List[Tuple[str,str,int]] = []
@@ -1353,6 +1433,7 @@ class CanvasTUI(App):
         threading.Thread(target=worker, daemon=True).start()
 
     def _async_do_download(self, files: List[Tuple[str,str,int]], dstdir: str):
+        # download files to disk
         self.details.update("[dim]Downloading…[/dim]")
         def worker():
             okc, fail, total = 0, 0, 0
@@ -1373,12 +1454,14 @@ class CanvasTUI(App):
 
     # ---------- actions ----------
     def action_open(self):
+        # open in browser
         it = self._selected_item()
         if not it: return
         try: webbrowser.open(it["url"], new=2)
         except Exception: pass
 
     def action_quick_preview(self):
+        # quick details
         it = self._selected_item()
         if not it: return
         pts = "-" if it["points"] is None else f"{it['points']:.0f}"
@@ -1392,11 +1475,13 @@ class CanvasTUI(App):
         self.details.update(s)
 
     def action_open_details(self):
+        # full details screen
         it = self._selected_item()
         if not it: return
         self.push_screen(DetailsScreen(self, it))
 
     def action_yank_url(self):
+        # copy url to clipboard
         it = self._selected_item()
         if not it: return
         url = it["url"]; copied = False
@@ -1410,14 +1495,17 @@ class CanvasTUI(App):
         self.details.update("[green]Copied URL[/green]" if copied else f"[yellow]Copy failed[/yellow]: {url}")
 
     def action_download(self):
+        # download attachments
         it = self._selected_item()
         if not it: return
         self._async_gather_attachments(it)
 
     def _ics_escape(self, s: str) -> str:
+        # escape ics chars
         return s.replace("\\","\\\\").replace(";","\\;").replace(",","\\,").replace("\n","\\n")
 
     def _ics_event_for_item(self, it: Dict[str,Any]) -> Optional[str]:
+        # build ics event
         if not it["due_iso"]: return None
         due = local_dt(it["due_iso"]); start = due - dt.timedelta(minutes=DEFAULT_BLOCK_MIN)
         def ics_dt(ts: dt.datetime) -> str: return ts.astimezone(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
@@ -1437,6 +1525,7 @@ class CanvasTUI(App):
         ])
 
     def _export_all_ics(self) -> str:
+        # write full ics
         os.makedirs(EXPORT_DIR, exist_ok=True)
         events = [self._ics_event_for_item(it) for it in self.items]
         ics = "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//canvas-tui//EN\n" + "\n".join([e for e in events if e]) + "\nEND:VCALENDAR\n"
@@ -1444,6 +1533,7 @@ class CanvasTUI(App):
         return EXPORT_ICS
 
     def action_export_ics(self):
+        # export ics only
         try:
             path = self._export_all_ics()
             self.details.update(f"[green]ICS exported[/green]: {path}")
@@ -1451,6 +1541,7 @@ class CanvasTUI(App):
             self.details.update(f"[red]ICS export failed:[/red] {e}")
 
     def action_export_ics_and_import(self):
+        # export and import to calcurse
         try:
             path = self._export_all_ics()
             if shutil.which("calcurse"):
@@ -1465,6 +1556,7 @@ class CanvasTUI(App):
             self.details.update(f"[red]ICS export/import failed:[/red] {e}")
 
     def action_open_course(self):
+        # open course page
         it = self._selected_item()
         if not it: return
         m = re.search(r"/courses/(\d+)", it["url"])
@@ -1476,11 +1568,13 @@ class CanvasTUI(App):
             self.details.update("[yellow]No course link found[/yellow]")
 
     def action_filter(self):
+        # filter list
         if self.filtered is not None:
             self.filtered = None; self._render_table(); self.details.update("[dim]Filter cleared[/dim]"); return
         self._show_input("Filter (title/course/type):", "", "", "filter", {})
 
     def action_toggle_hide(self):
+        # hide or unhide item
         it = self._selected_item()
         if not it: return
         vis = STATE["visibility"].get(it["key"], 0)
@@ -1490,6 +1584,7 @@ class CanvasTUI(App):
         self._render_table()
 
     def action_toggle_show_hidden(self):
+        # toggle hidden view
         self.show_hidden = not self.show_hidden
         self._render_table()
         self.details.update("[dim]Showing hidden[/dim]" if self.show_hidden else "[dim]Hidden suppressed[/dim]")
@@ -1514,4 +1609,3 @@ class CanvasTUI(App):
 
 if __name__ == "__main__":
     CanvasTUI().run()
-
