@@ -9,7 +9,9 @@ from textual.screen import Screen
 from textual.widgets import Footer, Static
 
 HELP_TEXT = """\
-[bold cyan]━━━ Canvas TUI — Keyboard Reference ━━━[/bold cyan]
+[bold cyan]━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[/bold cyan]
+[bold cyan]        Canvas TUI — Keyboard Reference       [/bold cyan]
+[bold cyan]━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[/bold cyan]
 
 [bold]Navigation[/bold]
   [cyan]↑ ↓[/cyan]       Move through items
@@ -18,7 +20,7 @@ HELP_TEXT = """\
   [cyan]Bksp/Esc[/cyan]  Go back from any screen
 
 [bold]Actions[/bold]
-  [cyan]o[/cyan]         Open selected item in browser
+  [cyan]o[/cyan]         Open item in browser
   [cyan]g[/cyan]         Open course page in browser
   [cyan]y[/cyan]         Copy URL to clipboard
   [cyan]w[/cyan]         Download attachments
@@ -30,10 +32,15 @@ HELP_TEXT = """\
   [cyan]x[/cyan]         Cycle: visible → dim → hidden
   [cyan]H[/cyan]         Show/hide hidden items
 
+  [dim]Filter syntax: course:CS3214 type:assignment status:graded[/dim]
+  [dim]Short prefixes: c: t: s: has:points has:due[/dim]
+
 [bold]Views[/bold]
   [cyan]S[/cyan]         Syllabi browser
   [cyan]A[/cyan]         Announcements
   [cyan]G[/cyan]         Grades overview
+  [cyan]F[/cyan]         File manager
+  [cyan]W[/cyan]         Calendar week view
   [cyan]?[/cyan]         This help screen
 
 [bold]Pomodoro Timer[/bold]
