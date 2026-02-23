@@ -8,6 +8,7 @@ ignore = [
     "E741",     # ambiguous variable names (single-letter vars in compact code)
     "B008",     # function call in default arg
     "SIM108",   # ternary instead of if/else
+    "RUF012",   # mutable class attrs — standard pattern for Textual BINDINGS/CSS
 ]
 
 [lint.per-file-ignores]
