@@ -56,6 +56,18 @@ CANVAS_LOGO = """[cyan]
 [/cyan]"""
 
 
+_TYPE_ICONS: dict[str, str] = {
+    "assignment": "📝 assign",
+    "quiz": "📋 quiz",
+    "discussion": "💬 discuss",
+    "discussion_topic": "💬 discuss",
+    "announcement": "📢 announce",
+    "calendar_event": "📅 event",
+    "planner_note": "📌 note",
+    "wiki_page": "📄 page",
+}
+
+
 class CanvasTUI(App):
     """Main Canvas TUI application."""
 
@@ -190,7 +202,6 @@ class CanvasTUI(App):
         ("w", "download", "Download attachments"),
         ("c", "export_ics", "Export ICS"),
         ("C", "export_ics_and_import", "Export+calcurse -i"),
-        ("ctrl+c", "export_ics_and_import", "Add all to calendar"),
         ("g", "open_course", "Open course"),
         ("/", "filter", "Filter"),
         ("x", "toggle_hide", "Hide/Unhide"),
@@ -353,18 +364,19 @@ class CanvasTUI(App):
                 self.action_pomo_custom()
 
     def _stats(self) -> tuple[int, int, int, int]:
-        total = len(self.items)
+        """Compute stats in a single pass over items."""
         now = dt.datetime.now(ZoneInfo(self.cfg.user_tz))
         today = now.strftime("%m/%d/%Y")
-
-        def _is_overdue(it: CanvasItem) -> bool:
-            if "submitted" in it.status_flags:
-                return False
-            return it.due_rel.endswith("ago")
-
-        due_today = sum(1 for it in self.items if it.due_at.startswith(today))
-        overdue = sum(1 for it in self.items if _is_overdue(it))
-        submitted = sum(1 for it in self.items if "submitted" in it.status_flags)
+        total = len(self.items)
+        due_today = overdue = submitted = 0
+        for it in self.items:
+            is_submitted = "submitted" in it.status_flags
+            if is_submitted:
+                submitted += 1
+            if it.due_at.startswith(today):
+                due_today += 1
+            if not is_submitted and it.due_rel.endswith("ago"):
+                overdue += 1
         return total, due_today, overdue, submitted
 
     def _render_info(self) -> None:
@@ -411,18 +423,22 @@ class CanvasTUI(App):
             return t.upcoming
         return t.normal
 
+    def _prefetch_submissions(self) -> None:
+        """Prefetch submissions for graded items during refresh (background-safe)."""
+        for it in self.items:
+            if "graded" in it.status_flags and it.course_id and it.plannable_id and it.points:
+                key = (int(it.course_id), int(it.plannable_id))
+                if key not in self._submission_cache:
+                    with contextlib.suppress(Exception):
+                        sub = self.api.fetch_submission(*key)
+                        if sub:
+                            self._submission_cache[key] = sub
+
     def _pts_cell(self, it: CanvasItem) -> str:
         pts = it.points
         if "graded" in it.status_flags and it.course_id and it.plannable_id and pts:
             key = (int(it.course_id), int(it.plannable_id))
             sub = self._submission_cache.get(key)
-            if not sub:
-                try:
-                    sub = self.api.fetch_submission(*key)
-                except Exception:
-                    sub = None
-                if sub:
-                    self._submission_cache[key] = sub
             if sub and sub.get("score") is not None:
                 sc = float(sub["score"])
                 pct = (100.0 * sc / float(pts)) if pts else 0.0
@@ -437,7 +453,8 @@ class CanvasTUI(App):
             self.table.add_row("-", "-", "-", "-", "[dim]No items matching filters[/dim]", "-", "-")
             return
         for it in visible:
-            tcell = f"[{self._color_for_item(it)}]{it.ptype}[/]"
+            ptype_display = _TYPE_ICONS.get(it.ptype, it.ptype)
+            tcell = f"[{self._color_for_item(it)}]{ptype_display}[/]"
             vis = self.state.get_visibility(it.key)
             title = it.title if vis == 0 else f"[dim]{it.title}[/]"
             row = [
@@ -513,6 +530,10 @@ class CanvasTUI(App):
                 # Migrate legacy keys
                 key_map = {it.legacy_key: it.key for it in items if it.legacy_key}
                 self.state.migrate_visibility_keys(key_map)
+
+                # Prefetch submissions for graded items (in background thread)
+                self.items = items  # Temporarily set for prefetch
+                self._prefetch_submissions()
 
                 def apply_ui() -> None:
                     self.course_cache = course_cache
