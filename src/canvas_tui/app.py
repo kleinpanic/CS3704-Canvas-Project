@@ -32,11 +32,13 @@ from .screens import (
     AnnouncementsScreen,
     ConfirmPath,
     DetailsScreen,
+    FileManagerScreen,
     GradesScreen,
     HelpScreen,
     InputPrompt,
     LoadingScreen,
     SyllabiScreen,
+    WeekViewScreen,
 )
 from .state import StateManager
 from .theme import DARK_THEME, LIGHT_THEME, ThemeColors, get_theme
@@ -126,6 +128,31 @@ class CanvasTUI(App):
     #grades-summary { padding: 1 2; height: auto; max-height: 8; border-bottom: solid #30363d; }
     #grades-table { height: 1fr; }
 
+    /* === Files === */
+    #files-root { height: 1fr; width: 1fr; }
+    #files-breadcrumb { height: 1; padding: 0 1; background: #161b22; }
+    #files-split { layout: horizontal; height: 1fr; }
+    #files-courses { width: 1fr; min-width: 20; max-width: 36; border-right: solid #30363d; }
+    #files-content { width: 3fr; }
+    #files-table { height: 1fr; }
+    #files-status { height: 1; padding: 0 1; background: #161b22; }
+
+    /* === Week view === */
+    #week-root { height: 1fr; width: 1fr; }
+    #week-label { height: 2; padding: 0 2; }
+    #week-grid {
+        grid-size: 7 1;
+        grid-gutter: 0 1;
+        height: 1fr;
+        padding: 0 1;
+    }
+    .day-cell {
+        height: 1fr;
+        border: solid #30363d;
+        padding: 0 1;
+        overflow-y: auto;
+    }
+
     /* === Detail screens === */
     #d-head, #a-head { padding: 1 2; height: auto; border-bottom: solid #30363d; }
     #d-body, #a-body { height: 1fr; overflow: auto; padding: 1 2; }
@@ -176,6 +203,8 @@ class CanvasTUI(App):
         ("S", "open_syllabi", "Syllabi"),
         ("A", "open_announcements", "Announcements"),
         ("G", "open_grades", "Grades"),
+        ("F", "open_files", "Files"),
+        ("W", "open_week", "Week view"),
         ("T", "toggle_theme", "Theme"),
         ("question_mark", "show_help", "Help"),
     ]
@@ -901,6 +930,17 @@ class CanvasTUI(App):
             self.details.update("[dim]No announcements in window[/dim]")
             return
         self.push_screen(AnnouncementsScreen(self, self.announcements))
+
+    def action_open_files(self) -> None:
+        """Open file manager screen."""
+        if not self.course_cache:
+            self.details.update("[yellow]No courses cached yet — refresh first[/yellow]")
+            return
+        self.push_screen(FileManagerScreen(self, self.course_cache))
+
+    def action_open_week(self) -> None:
+        """Open calendar week view."""
+        self.push_screen(WeekViewScreen(self, self.items))
 
 
 def main() -> None:
