@@ -62,6 +62,24 @@ class TestResponseCache:
         assert stats["size_kb"] > 0
 
 
+    def test_purge_expired(self, tmp_dir):
+        cache = ResponseCache(tmp_dir, default_ttl=0)
+        cache.put("old1", "data1")
+        cache.put("old2", "data2")
+        import time
+        time.sleep(0.1)
+        removed = cache.purge_expired(max_age_sec=0)
+        assert removed == 2
+        assert cache.stats()["entries"] == 0
+
+    def test_purge_keeps_fresh(self, tmp_dir):
+        cache = ResponseCache(tmp_dir, default_ttl=3600)
+        cache.put("fresh", "data")
+        removed = cache.purge_expired(max_age_sec=3600)
+        assert removed == 0
+        assert cache.stats()["entries"] == 1
+
+
 class TestCacheKey:
     def test_basic(self):
         k = cache_key("/api/v1/courses", {"per_page": 100})

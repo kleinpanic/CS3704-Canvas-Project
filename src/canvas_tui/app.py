@@ -216,6 +216,7 @@ class CanvasTUI(App):
         ("G", "open_grades", "Grades"),
         ("F", "open_files", "Files"),
         ("W", "open_week", "Week view"),
+        ("s", "cycle_sort", "Sort"),
         ("T", "toggle_theme", "Theme"),
         ("question_mark", "show_help", "Help"),
     ]
@@ -247,6 +248,7 @@ class CanvasTUI(App):
         self._pending: dict[str, tuple[str, dict[str, Any]]] = {}
         self._error_count = 0
         self._theme: ThemeColors = get_theme("dark")
+        self._sort_key = "due"  # "due", "course", "type", "title"
         self._notifier = DueNotifier(
             tz=self.cfg.user_tz,
             get_items=lambda: list(self.items),
@@ -326,6 +328,20 @@ class CanvasTUI(App):
 
     def _initial_load(self) -> None:
         try:
+            # Validate token before first fetch
+            if not self.api.validate_token():
+                self.call_from_thread(
+                    lambda: self.details.update(
+                        "[red bold]Token validation failed![/red bold]\n"
+                        "Check CANVAS_TOKEN and CANVAS_BASE_URL.\n"
+                        "Press r to retry after fixing."
+                    )
+                )
+                with contextlib.suppress(Exception):
+                    self.pop_screen()
+                return
+            # Purge stale cache on startup
+            self._response_cache.purge_expired(86400)
             self.refresh_data()
         finally:
             with contextlib.suppress(Exception):
@@ -398,9 +414,20 @@ class CanvasTUI(App):
         base = self.items
         if not self.show_hidden:
             base = [it for it in base if self.state.get_visibility(it.key) != 2]
-        if self.filtered is None:
-            return base
-        return [base[i] for i in range(len(base)) if i in self.filtered]
+        if self.filtered is not None:
+            base = [base[i] for i in range(len(base)) if i in self.filtered]
+        return self._apply_sort(base)
+
+    def _apply_sort(self, items: list[CanvasItem]) -> list[CanvasItem]:
+        """Sort items by current sort key."""
+        if self._sort_key == "course":
+            return sorted(items, key=lambda it: (it.course_code.lower(), it.due_iso or "9999"))
+        if self._sort_key == "type":
+            return sorted(items, key=lambda it: (it.ptype, it.due_iso or "9999"))
+        if self._sort_key == "title":
+            return sorted(items, key=lambda it: it.title.lower())
+        # Default: due date
+        return sorted(items, key=lambda it: it.due_iso or "9999")
 
     def _color_for_item(self, it: CanvasItem) -> str:
         t = self._theme
@@ -879,6 +906,14 @@ class CanvasTUI(App):
             self.details.update("[yellow]No courses cached yet — refresh first[/yellow]")
             return
         self.push_screen(GradesScreen(self, self.course_cache))
+
+    def action_cycle_sort(self) -> None:
+        """Cycle through sort modes."""
+        modes = ["due", "course", "type", "title"]
+        idx = modes.index(self._sort_key) if self._sort_key in modes else 0
+        self._sort_key = modes[(idx + 1) % len(modes)]
+        self._render_table()
+        self.details.update(f"[dim]Sorted by: {self._sort_key}[/dim]")
 
     def action_toggle_theme(self) -> None:
         """Toggle between dark and light themes."""

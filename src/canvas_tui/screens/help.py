@@ -52,6 +52,7 @@ HELP_TEXT = """\
 
 [bold]General[/bold]
   [cyan]r[/cyan]         Refresh data from Canvas
+  [cyan]s[/cyan]         Cycle sort: due → course → type → title
   [cyan]T[/cyan]         Toggle dark/light theme
   [cyan]q[/cyan]         Quit
 

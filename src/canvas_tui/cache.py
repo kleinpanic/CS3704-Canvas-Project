@@ -79,6 +79,27 @@ class ResponseCache:
         except Exception:
             pass
 
+    def purge_expired(self, max_age_sec: int = 86400) -> int:
+        """Remove cache entries older than max_age_sec. Returns count removed."""
+        removed = 0
+        now = time.time()
+        try:
+            for f in os.listdir(self._dir):
+                if not f.endswith(".json"):
+                    continue
+                path = os.path.join(self._dir, f)
+                try:
+                    with open(path, encoding="utf-8") as fh:
+                        entry = json.load(fh)
+                    if now - entry.get("ts", 0) > max_age_sec:
+                        os.remove(path)
+                        removed += 1
+                except Exception:
+                    pass
+        except Exception:
+            pass
+        return removed
+
     def stats(self) -> dict[str, Any]:
         """Return cache stats."""
         total = 0
