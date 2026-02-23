@@ -23,6 +23,7 @@ from textual.events import Key
 from textual.widgets import DataTable, Footer, Header, Static
 
 from .api import CanvasAPI
+from .cache import ResponseCache
 from .config import Config, ensure_dirs, load_config
 from .filtering import FilterQuery, filter_items, format_filter_summary
 from .models import CanvasItem
@@ -183,7 +184,9 @@ class CanvasTUI(App):
         super().__init__()
         self.cfg: Config = load_config()
         ensure_dirs(self.cfg)
-        self.api: CanvasAPI = CanvasAPI(self.cfg)
+        cache_dir = os.path.join(self.cfg.export_dir, "cache")
+        self._response_cache = ResponseCache(cache_dir, default_ttl=900)
+        self.api: CanvasAPI = CanvasAPI(self.cfg, response_cache=self._response_cache)
         self.state: StateManager = StateManager(self.cfg.state_path)
 
         self.items: list[CanvasItem] = []
@@ -239,7 +242,10 @@ class CanvasTUI(App):
             else "Last refresh: never"
         )
         err_str = f"Errors: {self._error_count}" if self._error_count else ""
-        parts = [p for p in [refresh_str, rate_str, err_str, extra] if p]
+        offline_str = "[yellow]⚡ OFFLINE[/yellow]" if self.api.is_offline else ""
+        cache_stats = self._response_cache.stats()
+        cache_str = f"Cache: {cache_stats['entries']} ({cache_stats['size_kb']}KB)"
+        parts = [p for p in [offline_str, refresh_str, rate_str, cache_str, err_str, extra] if p]
         self.status_bar.update(" │ ".join(parts))
 
     # ---------- mount / teardown ----------

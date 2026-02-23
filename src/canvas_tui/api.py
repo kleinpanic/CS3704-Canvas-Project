@@ -12,19 +12,23 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
+from .cache import ResponseCache, cache_key
 from .config import Config
 
 
 class CanvasAPI:
     """Canvas LMS REST API client.
 
-    Handles authentication, pagination, retries, and rate-limit headers.
+    Handles authentication, pagination, retries, rate-limit headers, and caching.
     """
 
-    def __init__(self, cfg: Config) -> None:
+    def __init__(self, cfg: Config, response_cache: ResponseCache | None = None) -> None:
         self.cfg = cfg
         self._session = self._build_session()
         self._rate_limit_remaining: int | None = None
+        self._cache = response_cache
+        self._offline = False
+        self._no_cache = False
 
     def _build_session(self) -> requests.Session:
         """Create a requests session with retry and auth headers."""
@@ -93,6 +97,34 @@ class CanvasAPI:
                 out[rel] = url
         return out
 
+    @property
+    def is_offline(self) -> bool:
+        """Whether last fetch fell back to stale cache."""
+        return self._offline
+
+    def _cached_get_all(self, ck: str, url: str, params: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+        """get_all with cache layer. On network failure, returns stale cache."""
+        if self._cache and not self._no_cache:
+            cached, stale = self._cache.get(ck, allow_stale=True)
+            if cached is not None and not stale:
+                self._offline = False
+                return cached
+
+        try:
+            data = self.get_all(url, params)
+            self._offline = False
+            if self._cache and not self._no_cache:
+                self._cache.put(ck, data)
+            return data
+        except Exception:
+            # Network failure — try stale cache
+            if self._cache:
+                cached, _ = self._cache.get(ck, allow_stale=True)
+                if cached is not None:
+                    self._offline = True
+                    return cached
+            raise
+
     def get_all(self, url: str, params: dict[str, Any] | None = None) -> list[dict[str, Any]]:
         """Walk paginated Canvas API endpoint."""
         items: list[dict[str, Any]] = []
@@ -132,7 +164,7 @@ class CanvasAPI:
     # ---------- High-level Canvas endpoints ----------
 
     def fetch_planner_items(self) -> list[dict[str, Any]]:
-        """Fetch planner items in the configured date window."""
+        """Fetch planner items in the configured date window (cached)."""
         tz = ZoneInfo(self.cfg.user_tz)
         now = dt.datetime.now(tz)
         start = _iso(now - dt.timedelta(hours=self.cfg.past_hours))
@@ -141,17 +173,15 @@ class CanvasAPI:
                 hour=23, minute=59, second=59, microsecond=0
             )
         )
-        return self.get_all(
-            self._url("/api/v1/planner/items"),
-            {"start_date": start, "end_date": end, "per_page": 100},
-        )
+        params = {"start_date": start, "end_date": end, "per_page": 100}
+        ck = cache_key("planner_items", params)
+        return self._cached_get_all(ck, self._url("/api/v1/planner/items"), params)
 
     def fetch_current_courses(self) -> dict[int, tuple[str, str]]:
-        """Fetch active courses. Returns {course_id: (code, name)}."""
-        raw = self.get_all(
-            self._url("/api/v1/courses"),
-            {"enrollment_state": "active", "per_page": 100},
-        )
+        """Fetch active courses (cached). Returns {course_id: (code, name)}."""
+        params = {"enrollment_state": "active", "per_page": 100}
+        ck = cache_key("courses", params)
+        raw = self._cached_get_all(ck, self._url("/api/v1/courses"), params)
         out: dict[int, tuple[str, str]] = {}
         for c in raw:
             cid = c.get("id")
