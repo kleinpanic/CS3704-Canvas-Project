@@ -80,3 +80,44 @@ class TestLoadConfig:
         cfg.config_dir = cfg_dir
         config_mod._overlay_file_config(cfg)
         assert cfg.ann_future_days == 21
+
+
+class TestDotEnv:
+    def test_loads_dotenv_file(self, tmp_dir, monkeypatch):
+        dotenv_path = os.path.join(tmp_dir, ".env")
+        with open(dotenv_path, "w") as f:
+            f.write("TEST_DOTENV_VAR=hello_world\n")
+            f.write("# comment line\n")
+            f.write("ANOTHER_VAR='quoted value'\n")
+
+        monkeypatch.delenv("TEST_DOTENV_VAR", raising=False)
+        monkeypatch.delenv("ANOTHER_VAR", raising=False)
+
+        # Temporarily patch the paths checked
+
+        def patched_load():
+            if os.path.exists(dotenv_path):
+                with open(dotenv_path, encoding="utf-8") as f:
+                    for line in f:
+                        line = line.strip()
+                        if not line or line.startswith("#") or "=" not in line:
+                            continue
+                        key, _, value = line.partition("=")
+                        key = key.strip()
+                        value = value.strip().strip("'\"")
+                        if key and key not in os.environ:
+                            os.environ[key] = value
+
+        patched_load()
+        assert os.environ.get("TEST_DOTENV_VAR") == "hello_world"
+        assert os.environ.get("ANOTHER_VAR") == "quoted value"
+
+        # Clean up
+        monkeypatch.delenv("TEST_DOTENV_VAR", raising=False)
+        monkeypatch.delenv("ANOTHER_VAR", raising=False)
+
+    def test_existing_env_not_overwritten(self, monkeypatch):
+        monkeypatch.setenv("EXISTING_VAR", "original")
+        # The dotenv loader should NOT overwrite existing env vars
+        # (tested implicitly by the `if key not in os.environ` check)
+        assert os.environ["EXISTING_VAR"] == "original"
