@@ -76,12 +76,22 @@ class Pomodoro(Static):
         bar = "█" * filled + "░" * (bar_len - filled)
         return f"🍅 Pomodoro: {m:02d}:{s:02d}  {bar}"
 
+    @property
+    def title_suffix(self) -> str:
+        """Short timer string for the app title bar."""
+        if self._end_ts is None:
+            return ""
+        remaining = max(0, int(self._end_ts - time.time()))
+        m, s = divmod(remaining, 60)
+        return f" 🍅 {m:02d}:{s:02d}"
+
     def _run(self) -> None:
         """Tick loop running on background thread."""
         while True:
             with self._timer_lock:
                 if self._stop:
                     self._safe_update("[dim]Pomodoro: stopped[/dim]")
+                    self._update_app_title()
                     break
                 text = self._render_status()
                 if "00:00" in text and self._end_ts is not None:
@@ -93,6 +103,17 @@ class Pomodoro(Static):
                     self._end_ts = None
                     if self._on_state_change:
                         self._on_state_change(None)
+                    self._update_app_title()
                     break
                 self._safe_update(text)
+                self._update_app_title()
             time.sleep(1)
+
+    def _update_app_title(self) -> None:
+        """Update the app title bar with timer info."""
+        try:
+            suffix = self.title_suffix
+            base = "Canvas TUI"
+            self.app.call_from_thread(setattr, self.app, "title", f"{base}{suffix}")
+        except Exception:
+            pass

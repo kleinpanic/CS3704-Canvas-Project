@@ -28,6 +28,7 @@ from .config import Config, ensure_dirs, load_config
 from .filtering import FilterQuery, filter_items, format_filter_summary
 from .models import CanvasItem
 from .normalize import apply_past_filter, normalize_announcements, normalize_items, serialize_items
+from .notifications import DueNotifier
 from .screens import (
     AnnouncementsScreen,
     ConfirmPath,
@@ -236,6 +237,10 @@ class CanvasTUI(App):
         self._pending: dict[str, tuple[str, dict[str, Any]]] = {}
         self._error_count = 0
         self._theme: ThemeColors = get_theme("dark")
+        self._notifier = DueNotifier(
+            tz=self.cfg.user_tz,
+            get_items=lambda: list(self.items),
+        )
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -307,6 +312,7 @@ class CanvasTUI(App):
             self._bg_refresh_thread.start()
 
         self._update_status_bar()
+        self._notifier.start()
 
     def _initial_load(self) -> None:
         try:
@@ -317,6 +323,7 @@ class CanvasTUI(App):
 
     def on_unmount(self) -> None:
         self._stop_bg = True
+        self._notifier.stop()
 
     # ---------- table ----------
     def _setup_table(self) -> None:
@@ -945,7 +952,28 @@ class CanvasTUI(App):
 
 def main() -> None:
     """Entry point for the Canvas TUI application."""
-    CanvasTUI().run()
+    from .cli import handle_non_tui_commands, parse_args
+
+    args = parse_args()
+
+    # Handle non-TUI commands first
+    if handle_non_tui_commands(args):
+        return
+
+    app = CanvasTUI()
+
+    # Apply CLI overrides
+    if args.no_cache:
+        app.api._no_cache = True
+    if args.days_ahead is not None:
+        app.cfg.days_ahead = args.days_ahead
+    if args.past_hours is not None:
+        app.cfg.past_hours = args.past_hours
+    if args.theme == "light":
+        app._theme = LIGHT_THEME
+        app.dark = False
+
+    app.run()
 
 
 if __name__ == "__main__":
