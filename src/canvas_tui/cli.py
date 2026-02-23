@@ -57,6 +57,11 @@ examples:
         help="Export all items to ICS file and exit (no TUI)",
     )
     p.add_argument(
+        "--validate-token",
+        action="store_true",
+        help="Validate Canvas API token and exit",
+    )
+    p.add_argument(
         "--theme",
         choices=["dark", "light"],
         default="dark",
@@ -83,7 +88,26 @@ def handle_non_tui_commands(args: argparse.Namespace) -> bool:
     if args.export_ics:
         _export_ics_and_exit(args)
         return True
+    if args.validate_token:
+        _validate_token_and_exit()
+        return True
     return False
+
+
+def _validate_token_and_exit() -> None:
+    """Validate token and exit."""
+    from .api import CanvasAPI
+    from .config import load_config
+
+    cfg = load_config()
+    api = CanvasAPI(cfg)
+    print(f"Validating token against {cfg.base_url}…")
+    if api.validate_token():
+        print("✅ Token is valid!")
+        sys.exit(0)
+    else:
+        print("❌ Token validation failed. Check CANVAS_TOKEN and CANVAS_BASE_URL.")
+        sys.exit(1)
 
 
 def _export_ics_and_exit(args: argparse.Namespace) -> None:
