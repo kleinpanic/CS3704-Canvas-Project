@@ -1,158 +1,233 @@
-# Canvas-TUI
+# Canvas TUI
+
+A full-featured terminal interface for [Canvas LMS](https://www.instructure.com/canvas) — view your planner, announcements, syllabi, grades, and course files without opening a browser.
+
+```
+  ██████╗ █████╗ ███╗   ██╗██╗   ██╗ █████╗ ███████╗
+ ██╔════╝██╔══██╗████╗  ██║██║   ██║██╔══██╗██╔════╝
+ ██║     ███████║██╔██╗ ██║██║   ██║███████║███████╗
+ ██║     ██╔══██║██║╚██╗██║╚██╗ ██╔╝██╔══██║╚════██║
+ ╚██████╗██║  ██║██║ ╚████║ ╚████╔╝ ██║  ██║███████║
+  ╚═════╝╚═╝  ╚═╝╚═╝  ╚═══╝  ╚═══╝  ╚═╝  ╚═╝╚══════╝
+```
+
+## Features
+
+- **Planner View** — upcoming assignments, quizzes, discussions with color-coded urgency
+- **Grades Overview** — per-course breakdown with weighted averages, sparkline trends
+- **Announcements** — browse and read full announcement bodies with attachments
+- **Syllabi Browser** — view HTML syllabi or preview PDF files inline
+- **File Manager** — browse course files/folders, multi-select batch downloads
+- **Calendar Week View** — 7-day grid with time-based item placement
+- **Structured Filtering** — `course:CS3214 type:assignment status:graded` syntax with fuzzy search
+- **Offline Mode** — disk-backed cache with stale-while-offline fallback
+- **Pomodoro Timer** — configurable work timer with desktop notifications
+- **Due Date Alerts** — background notifications at 60/30/15 minutes before deadlines
+- **ICS Export** — export to `.ics` with optional calcurse import
+- **Dark/Light Themes** — toggle with `T`
+- **CLI Flags** — `--export-ics`, `--no-cache`, `--debug`, `--theme`, and more
 
 ## Requirements
 
-* Python 3.11+ (for `tomllib`; JSON config also supported)
-* Python deps: `requests`, `textual` (installed by `make setup`)
-* Optional helpers:
+- Python 3.11+ (for `tomllib`)
+- Dependencies: `requests`, `textual`, `urllib3`
+- Optional: `pdftotext` (for PDF syllabus preview), `keyring` (for secure token storage)
 
-  * `pdftotext` (Poppler) → syllabus PDF text preview
-  * `notify-send` → desktop notifications
-  * `xclip` or `wl-copy` → yank URL to clipboard
-  * `xdg-open` → open files after download
-  * `calcurse` → ICS import (`C` / `Ctrl+C`)
+## Installation
 
-Example packages:
-
-* Debian/Ubuntu: `sudo apt install poppler-utils xclip xdg-utils calcurse`
-* Arch: `sudo pacman -S poppler xclip xdg-utils calcurse`
-
-## Install
+### pipx (recommended)
 
 ```bash
-# from repo root
+pipx install .
+```
+
+### pip
+
+```bash
+pip install .
+```
+
+### Makefile
+
+```bash
 make install
-# binary installed to ~/.local/bin/canvas-tui
+# Installs to ~/.local/bin/canvas-tui with isolated venv
 ```
 
-Run:
+### Docker
 
 ```bash
-canvas-tui
-# or run in-place (dev)
-make run
+docker build -t canvas-tui .
+docker run -it -e CANVAS_TOKEN=your_token canvas-tui
 ```
 
-Update:
+## Configuration
 
+### Token Setup
+
+Create a Canvas access token in your Canvas profile settings → **Settings → New Access Token**.
+
+**Option 1: Environment variable (simplest)**
 ```bash
-make update
+export CANVAS_TOKEN="your_token_here"
+export CANVAS_BASE_URL="https://canvas.yourschool.edu"  # default: https://canvas.vt.edu
 ```
 
-Uninstall:
-
-```bash
-make uninstall
-# venv is kept: ~/.local/venv/canvas-tui
+**Option 2: Keyring (secure)**
+```python
+python3 -c "import keyring; keyring.set_password('canvas-tui', 'token', 'YOUR_TOKEN')"
 ```
 
-## Configure
+### Config File
 
-Set your Canvas host + token (required):
-
-```bash
-export CANVAS_BASE_URL="https://<your-canvas-host>"  # default: https://canvas.vt.edu
-export CANVAS_TOKEN="...personal access token..."
-```
-
-Optional env vars (defaults shown):
-
-```bash
-export TZ="America/New_York"
-export CANVAS_UA="canvas-tui/0.5 (textual)"
-export HTTP_TIMEOUT=20
-export HTTP_MAX_RETRIES=5
-export HTTP_BACKOFF=0.4
-
-# time window for items
-export DAYS_AHEAD=7            # future days to fetch
-export PAST_HOURS=72           # include recent past (if not submitted)
-
-# UI/refresh
-export REFRESH_COOLDOWN=2.0    # seconds
-export AUTO_REFRESH_SEC=300    # 0 disables background refresh
-
-# downloads + calendar
-export DOWNLOAD_DIR=           # default: XDG_DOWNLOAD_DIR or ~/Downloads
-export DEFAULT_BLOCK_MIN=60    # event duration before due
-export EXPORT_DIR=~/.local/share/canvas-tui
-export OPEN_AFTER_DL=0         # 1 to xdg-open after download
-export CALCURSE_IMPORT=0       # (keybinding handles this anyway)
-```
-
-Config file (overrides env defaults if present):
-
-* `~/.config/canvas-tui/config.toml` (preferred) or `config.json`
-
-**TOML example:**
+Optional TOML or JSON config at `~/.config/canvas-tui/config.toml`:
 
 ```toml
-days_ahead = 10
-past_hours = 96
-refresh_cooldown = 1.5
-auto_refresh_sec = 180
-download_dir = "/home/you/Downloads/Canvas"
-default_block_min = 45
+days_ahead = 14
+past_hours = 48
+auto_refresh_sec = 300
+ann_future_days = 30
+download_dir = "~/Downloads/Canvas"
 ```
 
-> State is saved at `~/.local/share/canvas-tui/state.json` (visibility flags, pomodoro end).
+### Environment Variables
 
-## What it does
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `CANVAS_TOKEN` | (required) | Canvas API access token |
+| `CANVAS_BASE_URL` | `https://canvas.vt.edu` | Canvas instance URL |
+| `TZ` | `America/New_York` | Timezone |
+| `DAYS_AHEAD` | `7` | Days to look ahead |
+| `PAST_HOURS` | `72` | Hours to show past items |
+| `HTTP_TIMEOUT` | `20` | HTTP request timeout (seconds) |
+| `AUTO_REFRESH_SEC` | `300` | Auto-refresh interval |
+| `DOWNLOAD_DIR` | XDG default | Download directory override |
 
-* Fetches **Planner items** for `[now - PAST_HOURS, now + DAYS_AHEAD]`.
-* Normalizes into rows: type, course, title, due date, points, status.
-* Quick/Full details, incl. assignment description and attachments.
-* **Announcements** extracted from the same window.
-* **Syllabi**: show course list → pull `syllabus_body` HTML; if absent, search course files for `*syllab*` (prefers PDF) → preview via `pdftotext` or open/download.
-* **Downloads**: scan attachments on assignments and on detail page.
-* **ICS export**: create events ending at due time, starting `DEFAULT_BLOCK_MIN` earlier; optional import into `calcurse`.
+## CLI Usage
 
-## Keybindings (main view)
+```
+canvas-tui [OPTIONS]
 
-* `↑/↓` move  `Enter` open details  `d` quick preview
-* `o` open in browser  `w` download attachments  `y` copy URL
-* `c` export ICS  `C` / `Ctrl+C` export ICS and import via `calcurse -i`
-* `g` open course page  `/` filter (toggle with `/` again)
-* `x` hide/unhide item  `H` toggle show hidden
-* `r` refresh  `q` quit
-* Pomodoro: `1` 30m, `2` 60m, `3` 120m, `P` custom minutes, `0` stop
-* Views: `A` announcements, `S` syllabi
+Options:
+  -V, --version          Show version
+  -c, --config PATH      Config file path
+  --no-cache             Disable disk cache
+  --debug                Debug mode
+  --export-ics           Export ICS and exit (no TUI)
+  --theme {dark,light}   Color theme
+  --days-ahead N         Override DAYS_AHEAD
+  --past-hours N         Override PAST_HOURS
+```
 
-**Details screen**
+## Keyboard Shortcuts
 
-* `Enter` open selected link  `w` download links  `Backspace` back
+### Navigation
+| Key | Action |
+|-----|--------|
+| `↑`/`↓` | Move through items |
+| `Enter` | Open full details |
+| `d` | Quick preview |
+| `Backspace`/`Esc` | Go back |
 
-**Announcements screen**
+### Actions
+| Key | Action |
+|-----|--------|
+| `o` | Open in browser |
+| `g` | Open course page |
+| `y` | Copy URL to clipboard |
+| `w` | Download attachments |
+| `c` | Export all to ICS |
+| `C` | Export + import to calcurse |
 
-* `Enter` open details  `o` open in browser  `w` download  `Backspace` back
+### Filtering
+| Key | Action |
+|-----|--------|
+| `/` | Toggle search filter |
+| `x` | Cycle visibility (visible → dim → hidden) |
+| `H` | Show/hide hidden items |
 
-**Syllabi screen**
+### Views
+| Key | Action |
+|-----|--------|
+| `S` | Syllabi browser |
+| `A` | Announcements |
+| `G` | Grades overview |
+| `F` | File manager |
+| `W` | Calendar week view |
+| `?` | Help screen |
 
-* `Enter` preview PDF/text or load syllabus HTML
-* `w` save  `b` open in browser  `Backspace` back
+### Pomodoro
+| Key | Action |
+|-----|--------|
+| `1` | 30 min timer |
+| `2` | 60 min timer |
+| `3` | 120 min timer |
+| `P` | Custom duration |
+| `0` | Stop timer |
 
-## Paths
+### General
+| Key | Action |
+|-----|--------|
+| `r` | Refresh data |
+| `T` | Toggle dark/light theme |
+| `q` | Quit |
 
-* Binary: `~/.local/bin/canvas-tui`
-* App: `~/.local/share/canvas-tui/canvas-tui.py`
-* Venv: `~/.local/venv/canvas-tui`
-* State/ICS: `~/.local/share/canvas-tui/{state.json, canvas.ics}`
+## Filter Syntax
 
-## Notes / Behavior
+The `/` key opens a structured filter prompt:
 
-* **Announcements window** currently uses the same time window as the main planner fetch (`PAST_HOURS` back, `DAYS_AHEAD` forward).
-* Color coding: submitted=green, overdue=red, due soon warms from orange→yellow→green→cyan, else white.
-* Points cell shows `score/points (pct%)` when graded + submission info is available.
-* Clipboard copy requires `xclip` (X11) or `wl-copy` (Wayland).
+```
+course:CS3214           Match course code or name
+type:assignment         Match item type (assignment, quiz, discussion)
+status:graded           Match status flags
+has:points              Items with points > 0
+has:due                 Items with a due date
+"free text"             Fuzzy match across all fields
+```
 
-## Troubleshooting
+Combine filters: `course:CS3214 type:assignment homework`
 
-* **Blank / freeze feeling**: network calls are threaded for details/downloads; the main refresh uses retries/backoff. If UI seems stalled, check network and logs. Increase `HTTP_TIMEOUT`, reduce `AUTO_REFRESH_SEC`, or raise `REFRESH_COOLDOWN` if your Canvas is rate-limiting.
-* **401 Unauthorized**: set `CANVAS_TOKEN` and correct `CANVAS_BASE_URL`.
-* **Syllabus preview empty**: ensure `pdftotext` is installed, or press `b` to open in browser.
-* **Clipboard copy fails**: install `xclip` or `wl-copy`.
-* **Calcurse import issues**: check `calcurse -i ~/.local/share/canvas-tui/canvas.ics` output; adjust `DEFAULT_BLOCK_MIN`.
+Short prefixes: `c:CS3214 t:quiz s:graded`
 
-## Tokens
+## Data Storage
 
-Create a **Canvas access token** in your Canvas profile settings. Export it via shell env (`CANVAS_TOKEN`) before launching.
+| Path | Contents |
+|------|----------|
+| `~/.local/share/canvas-tui/state.json` | Visibility, notes, pomodoro state |
+| `~/.local/share/canvas-tui/cache/` | API response cache (auto-purged) |
+| `~/.local/share/canvas-tui/canvas.ics` | Last ICS export |
+| `~/.config/canvas-tui/config.toml` | User configuration |
+
+## Architecture
+
+```
+src/canvas_tui/
+├── __init__.py          # Version
+├── app.py               # Main Textual App
+├── api.py               # Canvas REST API client (retry, rate-limit, cache)
+├── cache.py             # Disk-backed response cache with TTL
+├── cli.py               # argparse CLI
+├── config.py            # Config loading + validation
+├── filtering.py         # Structured filtering + fuzzy search
+├── models.py            # Typed dataclasses (CanvasItem, CourseInfo)
+├── normalize.py         # API response → CanvasItem normalization
+├── notifications.py     # Background due date alerts
+├── state.py             # Thread-safe state manager
+├── theme.py             # Dark/light theme system
+├── utils.py             # HTML stripping, date parsing, helpers
+├── screens/
+│   ├── announcements.py # Announcements list + detail
+│   ├── details.py       # Assignment detail view
+│   ├── files.py         # File manager + batch downloads
+│   ├── grades.py        # Grades overview with averages
+│   ├── help.py          # Keybinding reference
+│   ├── modals.py        # Input prompts, loading screen
+│   ├── syllabi.py       # Syllabi browser + PDF preview
+│   └── weekview.py      # 7-day calendar grid
+└── widgets/
+    └── pomodoro.py      # Pomodoro timer widget
+```
+
+## License
+
+[GPL-3.0-or-later](LICENSE)
