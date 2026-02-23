@@ -1,19 +1,26 @@
-# PLAN.md
+# Canvas-TUI Overhaul — Autonomous Execution Plan
 
-## Task
-P0.1: Split monolith into src/ package modules
+## Status: ACTIVE (zero involvement)
 
-## Subtasks
-- [ ] Audit current `canvas-tui.py` structure and map functions/classes to target modules.
-- [ ] Create `src/canvas_tui/` package layout (`app.py`, `config.py`, `api.py`, `models.py`, `state.py`, `screens/`, `widgets/`, `utils.py`, `__init__.py`).
-- [ ] Move configuration/state/http/helpers/fetch logic into new modules with import-safe boundaries.
-- [ ] Move Textual UI components into `screens/` and `widgets/` and rewire `CanvasTUI` in `app.py`.
-- [ ] Add compatibility launcher script and update packaging/build files (`pyproject.toml`, `Makefile`).
-- [ ] Run lint/smoke verification and fix regressions.
+## Completed
+- [x] P0.1: Module split into src/canvas_tui/ (15 modules) — 77c68af
+- [x] P0.2: All 8 bugs fixed — included in P0.1
 
-## State
-Status: IN_PROGRESS
-Current subtask: Audit current `canvas-tui.py` structure and map functions/classes to target modules.
-Notes:
-- Lobster workflow invocation currently fails with: `Unsupported condition: $LOBSTER_ARG_involvement == "heavy"`.
-- Proceeding with equivalent manual Plan→Execute→Verify flow in repo.
+## In Progress
+- [ ] P1.1: UI overhaul — responsive layout, theming, ASCII logo [d1846487]
+
+## Queue
+- [ ] P1.2: Enhanced filtering and search [a97e29f8]
+- [ ] P2.1: Grades view + submission tracking [5ba83191]
+- [ ] P2.2: Offline mode + caching [79883c81]
+- [ ] P2.3: File manager + batch operations + week view [babe040d]
+- [ ] P2.4: CLI flags + notifications + pomodoro upgrade [23a3bee7]
+- [ ] P3.1: Comprehensive test suite [31827dd2]
+- [ ] P4.1: Packaging, distribution, security [db623705]
+- [ ] P5.1: Full validation, usage audit, second-pass improvements [4bc1b05d]
+
+## Decision Log
+- Module layout: src/canvas_tui/ with screens/ and widgets/ subpackages
+- Using CanvasItem dataclass instead of raw dicts
+- Thread-safe StateManager with locking
+- ASCII logo inspired by GideonWolfe/canvas-tui (cyan block art)

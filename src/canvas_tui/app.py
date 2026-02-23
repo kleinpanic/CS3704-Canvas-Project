@@ -30,11 +30,14 @@ from .screens import (
     AnnouncementsScreen,
     ConfirmPath,
     DetailsScreen,
+    GradesScreen,
+    HelpScreen,
     InputPrompt,
     LoadingScreen,
     SyllabiScreen,
 )
 from .state import StateManager
+from .theme import DARK_THEME, LIGHT_THEME, ThemeColors, get_theme
 from .utils import absolute_url, get_download_dir, local_dt, sanitize_filename
 from .widgets import Pomodoro
 
@@ -53,30 +56,99 @@ class CanvasTUI(App):
     """Main Canvas TUI application."""
 
     CSS = """
-    Screen { layout: horizontal; }
-    Horizontal { height: 1fr; }
-    Vertical#left { width: 54; border: solid #555; }
-    Vertical#right { height: 1fr; }
-    DataTable { border: solid #555; }
-    Static#info { padding: 1 2; }
-    Static#details { padding: 1 2; border: solid #555; height: 12; }
-    Static#pomodoro { padding: 1 2; border: solid #555; height: 6; }
-    Static#progress { padding: 1 2; border: solid #555; height: 6; }
-    Static#status-bar { height: 1; dock: bottom; background: $surface; color: $text-muted; padding: 0 1; }
+    /* === Main layout === */
+    Screen { layout: vertical; }
+    #main-split { layout: horizontal; height: 1fr; }
+    #left-panel {
+        width: 1fr;
+        min-width: 40;
+        max-width: 64;
+        border-right: solid #30363d;
+    }
+    #right-panel { width: 3fr; }
 
-    /* Syllabi split */
+    /* === Left panel sections === */
+    #info {
+        padding: 1 2;
+        height: auto;
+        max-height: 16;
+    }
+    #details {
+        padding: 1 2;
+        border-top: solid #30363d;
+        height: 1fr;
+        min-height: 8;
+        overflow-y: auto;
+    }
+    #pomodoro {
+        padding: 0 2;
+        border-top: solid #30363d;
+        height: 3;
+    }
+    #progress-bar {
+        padding: 0 2;
+        border-top: solid #30363d;
+        height: 3;
+    }
+
+    /* === Right panel === */
+    #main-table {
+        height: 1fr;
+        border: none;
+    }
+
+    /* === Status bar (bottom dock) === */
+    #status-bar {
+        dock: bottom;
+        height: 1;
+        background: #161b22;
+        color: #8b949e;
+        padding: 0 1;
+    }
+
+    /* === Syllabi split === */
     #syl-root { height: 1fr; width: 1fr; }
     #syl-split { layout: horizontal; height: 1fr; }
-    #syl-list { width: 48; min-width: 32; max-width: 80; }
-    #syl-preview { height: 1fr; overflow: auto; }
+    #syl-list { width: 1fr; min-width: 28; max-width: 56; border-right: solid #30363d; }
+    #syl-preview { height: 1fr; width: 3fr; overflow: auto; padding: 1 2; }
 
-    /* Announcements full width */
+    /* === Announcements === */
     #ann-root { height: 1fr; width: 1fr; }
     #ann-table { width: 1fr; height: 1fr; }
 
-    /* Detail bodies + link tables */
-    #d-body, #a-body { height: 1fr; overflow: auto; }
-    #d-links, #a-links { height: 8; }
+    /* === Grades === */
+    #grades-root { height: 1fr; width: 1fr; }
+    #grades-split { layout: horizontal; height: 1fr; }
+    #grades-courses { width: 1fr; min-width: 24; max-width: 40; border-right: solid #30363d; }
+    #grades-detail { width: 3fr; }
+    #grades-summary { padding: 1 2; height: auto; max-height: 8; border-bottom: solid #30363d; }
+    #grades-table { height: 1fr; }
+
+    /* === Detail screens === */
+    #d-head, #a-head { padding: 1 2; height: auto; border-bottom: solid #30363d; }
+    #d-body, #a-body { height: 1fr; overflow: auto; padding: 1 2; }
+    #d-links, #a-links { height: 10; border-top: solid #30363d; }
+
+    /* === Help screen === */
+    #help-scroll { padding: 2 4; }
+    #help-text { width: 1fr; }
+
+    /* === Modals === */
+    InputPrompt, ConfirmPath {
+        align: center middle;
+    }
+    #prompt-title { padding: 1 2; text-style: bold; }
+    #prompt-input { margin: 0 2; }
+    #prompt-buttons { padding: 1 2; }
+
+    /* === Loading === */
+    LoadingScreen {
+        align: center middle;
+    }
+
+    /* === DataTable global === */
+    DataTable { scrollbar-size: 1 1; }
+    DataTable > .datatable--cursor { background: #30363d; }
     """
 
     BINDINGS = [
@@ -101,6 +173,8 @@ class CanvasTUI(App):
         ("0", "pomo_stop", "Pomodoro stop"),
         ("S", "open_syllabi", "Syllabi"),
         ("A", "open_announcements", "Announcements"),
+        ("G", "open_grades", "Grades"),
+        ("T", "toggle_theme", "Theme"),
         ("question_mark", "show_help", "Help"),
     ]
 
@@ -128,22 +202,23 @@ class CanvasTUI(App):
         self._submission_cache: dict[tuple[int, int], dict[str, Any]] = {}
         self._pending: dict[str, tuple[str, dict[str, Any]]] = {}
         self._error_count = 0
+        self._theme: ThemeColors = get_theme("dark")
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
-        with Horizontal():
-            with Vertical(id="left"):
+        with Horizontal(id="main-split"):
+            with Vertical(id="left-panel"):
                 self.info = Static(id="info")
                 yield self.info
                 self.details = Static(id="details")
                 yield self.details
                 self.pomo = Pomodoro(on_state_change=self._persist_pomo)
                 yield self.pomo
-            with Vertical(id="right"):
-                self.table = DataTable(zebra_stripes=True)
-                yield self.table
-                self.progress = Static(id="progress")
+                self.progress = Static(id="progress-bar")
                 yield self.progress
+            with Vertical(id="right-panel"):
+                self.table = DataTable(zebra_stripes=True, id="main-table")
+                yield self.table
         self.status_bar = Static(id="status-bar")
         yield self.status_bar
         yield Footer()
@@ -274,24 +349,25 @@ class CanvasTUI(App):
         return [base[i] for i in range(len(base)) if i in self.filtered]
 
     def _color_for_item(self, it: CanvasItem) -> str:
+        t = self._theme
         if "submitted" in it.status_flags:
-            return "green"
+            return t.success
         if not it.due_iso:
-            return "white"
+            return t.normal
         now = dt.datetime.now(ZoneInfo(self.cfg.user_tz))
         due = local_dt(it.due_iso, self.cfg.user_tz)
         delta_h = (due - now).total_seconds() / 3600.0
         if delta_h < 0:
-            return "red"
+            return t.overdue
         if delta_h <= 8:
-            return "orange1"
+            return t.urgent
         if delta_h <= 12:
-            return "yellow1"
+            return t.soon
         if delta_h <= 24:
-            return "green"
+            return t.today
         if delta_h <= 48:
-            return "cyan"
-        return "white"
+            return t.upcoming
+        return t.normal
 
     def _pts_cell(self, it: CanvasItem) -> str:
         pts = it.points
@@ -756,37 +832,26 @@ class CanvasTUI(App):
         )
 
     def action_show_help(self) -> None:
-        """Show help with categorized keybindings."""
-        help_text = (
-            "[b]Canvas TUI — Keyboard Shortcuts[/b]\n\n"
-            "[b]Navigation[/b]\n"
-            "  ↑/↓ — Move through items\n"
-            "  Enter — Open full details\n"
-            "  d — Quick preview\n"
-            "  Backspace/Esc — Go back\n\n"
-            "[b]Actions[/b]\n"
-            "  o — Open in browser\n"
-            "  g — Open course page\n"
-            "  y — Copy URL to clipboard\n"
-            "  w — Download attachments\n"
-            "  c — Export all to ICS\n"
-            "  C/Ctrl+C — Export + import to calcurse\n\n"
-            "[b]Filters[/b]\n"
-            "  / — Toggle filter\n"
-            "  x — Cycle visibility (visible → dim → hidden)\n"
-            "  H — Show/hide hidden items\n\n"
-            "[b]Views[/b]\n"
-            "  S — Syllabi browser\n"
-            "  A — Announcements\n"
-            "  ? — This help screen\n\n"
-            "[b]Pomodoro[/b]\n"
-            "  1 — 30 min  2 — 60 min  3 — 120 min\n"
-            "  P — Custom duration  0 — Stop\n\n"
-            "[b]General[/b]\n"
-            "  r — Refresh data\n"
-            "  q — Quit"
-        )
-        self.details.update(help_text)
+        """Show full help screen overlay."""
+        self.push_screen(HelpScreen())
+
+    def action_open_grades(self) -> None:
+        """Open grades overview screen."""
+        if not self.course_cache:
+            self.details.update("[yellow]No courses cached yet — refresh first[/yellow]")
+            return
+        self.push_screen(GradesScreen(self, self.course_cache))
+
+    def action_toggle_theme(self) -> None:
+        """Toggle between dark and light themes."""
+        if self._theme.name == "dark":
+            self._theme = LIGHT_THEME
+            self.dark = False
+        else:
+            self._theme = DARK_THEME
+            self.dark = True
+        self._render_info()
+        self._update_status_bar(f"Theme: {self._theme.name}")
 
     # Pomodoro
     def action_pomo30(self) -> None:
