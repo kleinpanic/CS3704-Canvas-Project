@@ -25,7 +25,7 @@ class TestResponseCache:
         cache = ResponseCache(tmp_dir, default_ttl=0)  # Immediate expiry
         cache.put("test_key", {"x": 1})
         time.sleep(0.1)
-        data, stale = cache.get("test_key", allow_stale=False)
+        data, _stale = cache.get("test_key", allow_stale=False)
         assert data is None
 
     def test_stale_returned_when_allowed(self, tmp_dir):

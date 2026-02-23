@@ -2,11 +2,7 @@
 
 from __future__ import annotations
 
-import json
-import os
 import threading
-
-import pytest
 
 from canvas_tui.state import StateManager
 

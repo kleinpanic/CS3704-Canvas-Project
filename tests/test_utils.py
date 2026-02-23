@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime as dt
+from zoneinfo import ZoneInfo
 
 from canvas_tui.utils import (
     absolute_url,
@@ -12,7 +13,6 @@ from canvas_tui.utils import (
     stable_item_key,
     strip_html,
 )
-from zoneinfo import ZoneInfo
 
 
 class TestStripHtml:

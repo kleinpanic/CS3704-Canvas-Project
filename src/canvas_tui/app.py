@@ -7,7 +7,6 @@ import datetime as dt
 import os
 import re
 import shutil
-import socket
 import subprocess
 import threading
 import time
@@ -780,47 +779,9 @@ class CanvasTUI(App):
             return
         self._async_gather_attachments(it)
 
-    def _ics_escape(self, s: str) -> str:
-        return s.replace("\\", "\\\\").replace(";", "\\;").replace(",", "\\,").replace("\n", "\\n")
-
-    def _ics_event_for_item(self, it: CanvasItem) -> str | None:
-        if not it.due_iso:
-            return None
-        due = local_dt(it.due_iso, self.cfg.user_tz)
-        start = due - dt.timedelta(minutes=self.cfg.default_block_min)
-
-        def ics_dt(ts: dt.datetime) -> str:
-            return ts.astimezone(dt.UTC).strftime("%Y%m%dT%H%M%SZ")
-
-        uid = f"canvas-{it.course_id or ''}-{it.plannable_id or ''}-{abs(hash(it.title))}@{socket.gethostname()}"
-        summary = f"{it.course_code} • {it.title} [{it.ptype}]"
-        desc = f"URL: {it.url}"
-        loc = it.course_name or it.course_code
-        return "\n".join(
-            [
-                "BEGIN:VEVENT",
-                f"UID:{uid}",
-                f"DTSTAMP:{ics_dt(dt.datetime.now(ZoneInfo(self.cfg.user_tz)))}",
-                f"DTSTART:{ics_dt(start)}",
-                f"DTEND:{ics_dt(due)}",
-                f"SUMMARY:{self._ics_escape(summary)}",
-                f"DESCRIPTION:{self._ics_escape(desc)}",
-                f"LOCATION:{self._ics_escape(loc)}",
-                "END:VEVENT",
-            ]
-        )
-
     def _export_all_ics(self) -> str:
-        os.makedirs(self.cfg.export_dir, exist_ok=True)
-        events = [self._ics_event_for_item(it) for it in self.items]
-        ics = (
-            "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//canvas-tui//EN\n"
-            + "\n".join([e for e in events if e])
-            + "\nEND:VCALENDAR\n"
-        )
-        with open(self.cfg.export_ics_path, "w", encoding="utf-8") as f:
-            f.write(ics)
-        return self.cfg.export_ics_path
+        from .ics import export_ics
+        return export_ics(self.items, self.cfg)
 
     def action_export_ics(self) -> None:
         try:
