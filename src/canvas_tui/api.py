@@ -257,6 +257,23 @@ class CanvasAPI:
         params["context_codes[]"] = [f"course_{cid}" for cid in course_ids]
         return self.get_all(self._url("/api/v1/announcements"), params)
 
+    def fetch_assignment_groups(self, course_id: int) -> list[dict[str, Any]]:
+        """Fetch assignment groups (with weights) for a course."""
+        try:
+            return self.get_all(
+                self._url(f"/api/v1/courses/{course_id}/assignment_groups"),
+                {"per_page": 100},
+            )
+        except Exception:
+            return []
+
+    def fetch_course_info(self, course_id: int) -> dict[str, Any] | None:
+        """Fetch extended course info with teacher, term, and enrollment count."""
+        return self.get_json(
+            self._url(f"/api/v1/courses/{course_id}"),
+            {"include[]": ["teachers", "term", "total_students"]},
+        )
+
     def fetch_grades(self, course_id: int) -> list[dict[str, Any]]:
         """Fetch all assignments with grades for a course."""
         try:
