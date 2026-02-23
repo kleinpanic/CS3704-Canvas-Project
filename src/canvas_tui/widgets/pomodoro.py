@@ -74,7 +74,7 @@ class Pomodoro(Static):
         bar_len = 28
         filled = int(bar_len * (1 - remaining / total))
         bar = "█" * filled + "░" * (bar_len - filled)
-        return f"🍅 Pomodoro: {m:02d}:{s:02d}  {bar}"
+        return f"[P] Pomodoro: {m:02d}:{s:02d}  {bar}"
 
     @property
     def title_suffix(self) -> str:
@@ -83,7 +83,7 @@ class Pomodoro(Static):
             return ""
         remaining = max(0, int(self._end_ts - time.time()))
         m, s = divmod(remaining, 60)
-        return f" 🍅 {m:02d}:{s:02d}"
+        return f" [P] {m:02d}:{s:02d}"
 
     def _run(self) -> None:
         """Tick loop running on background thread."""
@@ -95,8 +95,8 @@ class Pomodoro(Static):
                     break
                 text = self._render_status()
                 if "00:00" in text and self._end_ts is not None:
-                    self._safe_update("[green bold]🍅 Pomodoro done![/green bold]")
-                    notify("Pomodoro", "Time is up! 🍅")
+                    self._safe_update("[green bold][P] Pomodoro done![/green bold]")
+                    notify("Pomodoro", "Time is up! [P]")
                     # Ring terminal bell
                     with contextlib.suppress(Exception):
                         print("\a", end="", flush=True)

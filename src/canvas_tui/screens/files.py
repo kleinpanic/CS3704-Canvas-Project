@@ -70,7 +70,7 @@ class FileManagerScreen(Screen):
             self.course_table.cursor_coordinate = (0, 0)
 
         self.file_table.clear(columns=True)
-        self.file_table.add_columns("☐", "Name", "Size", "Type", "Updated")
+        self.file_table.add_columns("[ ]", "Name", "Size", "Type", "Updated")
         self.file_table.cursor_type = "row"
 
         self.breadcrumb_label.update("[dim]Select a course to browse files[/dim]")
@@ -147,12 +147,12 @@ class FileManagerScreen(Screen):
 
         code, _name = self.courses.get(cid, ("?", "?"))
         bc_parts = [code] + [n for _, n in self._breadcrumb]
-        self.breadcrumb_label.update(f"[b]📁 {' / '.join(bc_parts)}[/b]")
+        self.breadcrumb_label.update(f"[b][D] {' / '.join(bc_parts)}[/b]")
 
         # Folders first
         for f in folders:
             fname = f.get("name") or f.get("full_name") or "folder"
-            self.file_table.add_row("📁", f"[cyan]{fname}/[/cyan]", "-", "folder", "-")
+            self.file_table.add_row("[D]", f"[cyan]{fname}/[/cyan]", "-", "folder", "-")
 
         # Then files
         for f in files:
@@ -161,7 +161,7 @@ class FileManagerScreen(Screen):
             size_str = _human_size(size)
             ctype = (f.get("content-type") or f.get("mime_class") or "").split("/")[-1][:12]
             updated = (f.get("updated_at") or f.get("modified_at") or "")[:10]
-            self.file_table.add_row("☐", fname, size_str, ctype, updated)
+            self.file_table.add_row("[ ]", fname, size_str, ctype, updated)
 
         total_size = sum(f.get("size") or 0 for f in files)
         self.file_status.update(
@@ -204,10 +204,10 @@ class FileManagerScreen(Screen):
             return
         if fidx in self._selected:
             self._selected.discard(fidx)
-            self.file_table.update_cell_at((row, 0), "☐")
+            self.file_table.update_cell_at((row, 0), "[ ]")
         else:
             self._selected.add(fidx)
-            self.file_table.update_cell_at((row, 0), "☑")
+            self.file_table.update_cell_at((row, 0), "[x]")
         sel_count = len(self._selected)
         sel_size = sum(self._files[i].get("size") or 0 for i in self._selected)
         self.file_status.update(f"{sel_count} selected ({_human_size(sel_size)}) — press w to download")

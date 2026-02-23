@@ -187,7 +187,7 @@ class DashboardScreen(Screen):
         border_color = urgency_color(len(upcoming))
         due_lines = [f"[bold {border_color}]Due Soon ({len(upcoming)} items)[/bold {border_color}]"]
         if not upcoming:
-            due_lines.append("[green]  Nothing due in the next 48 hours! 🎉[/green]")
+            due_lines.append("[green]  Nothing due in the next 48 hours! [/green]")
         else:
             for urgency, it in upcoming[:12]:
                 title = it.title[:40]
@@ -197,7 +197,7 @@ class DashboardScreen(Screen):
             if len(upcoming) > 12:
                 due_lines.append(f"  [dim]… and {len(upcoming) - 12} more[/dim]")
         if overdue_count:
-            due_lines.append(f"\n  [red bold]⚠ {overdue_count} overdue item(s)[/red bold]")
+            due_lines.append(f"\n  [red bold]!! {overdue_count} overdue item(s)[/red bold]")
 
         self.due_panel.update("\n".join(due_lines))
 

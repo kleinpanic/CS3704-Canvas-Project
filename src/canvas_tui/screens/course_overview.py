@@ -152,7 +152,7 @@ class CourseOverviewScreen(Screen):
         ]
         upcoming.sort(key=lambda it: it.due_iso)
         if not upcoming:
-            upcoming_lines.append("  [green]Nothing upcoming! 🎉[/green]")
+            upcoming_lines.append("  [green]Nothing upcoming! [/green]")
         else:
             for it in upcoming[:8]:
                 title = it.title[:45]

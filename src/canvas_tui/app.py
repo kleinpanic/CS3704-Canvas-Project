@@ -48,14 +48,14 @@ from .utils import absolute_url, get_download_dir, local_dt, sanitize_filename
 from .widgets import Pomodoro
 
 _TYPE_ICONS: dict[str, str] = {
-    "assignment": "📝 assign",
-    "quiz": "📋 quiz",
-    "discussion": "💬 discuss",
-    "discussion_topic": "💬 discuss",
-    "announcement": "📢 announce",
-    "calendar_event": "📅 event",
-    "planner_note": "📌 note",
-    "wiki_page": "📄 page",
+    "assignment": "ASGN",
+    "quiz": "QUIZ",
+    "discussion": "DISC",
+    "discussion_topic": "DISC",
+    "announcement": "ANN",
+    "calendar_event": "EVNT",
+    "planner_note": "NOTE",
+    "wiki_page": "PAGE",
 }
 
 
@@ -68,11 +68,11 @@ class CanvasTUI(App):
     #main-split { layout: horizontal; height: 1fr; }
     #left-panel {
         width: 1fr;
-        min-width: 40;
-        max-width: 64;
+        min-width: 30;
+        max-width: 42;
         border-right: solid #30363d;
     }
-    #right-panel { width: 3fr; }
+    #right-panel { width: 4fr; }
 
     /* === Left panel sections === */
     #info {
@@ -302,7 +302,7 @@ class CanvasTUI(App):
             else "Last refresh: never"
         )
         err_str = f"Errors: {self._error_count}" if self._error_count else ""
-        offline_str = "[yellow]⚡ OFFLINE[/yellow]" if self.api.is_offline else ""
+        offline_str = "[yellow]!! OFFLINE[/yellow]" if self.api.is_offline else ""
         cache_stats = self._response_cache.stats()
         cache_str = f"Cache: {cache_stats['entries']} ({cache_stats['size_kb']}KB)"
         parts = [p for p in [offline_str, refresh_str, rate_str, cache_str, err_str, extra] if p]
@@ -343,19 +343,28 @@ class CanvasTUI(App):
     def _initial_load(self) -> None:
         try:
             # Validate token before first fetch
-            if not self.api.validate_token():
-                self.call_from_thread(
-                    lambda: self.details.update(
-                        "[red bold]Token validation failed![/red bold]\n"
-                        "Check CANVAS_TOKEN and CANVAS_BASE_URL.\n"
-                        "Press r to retry after fixing."
-                    )
-                )
+            token_ok = True
+            with contextlib.suppress(Exception):
+                token_ok = self.api.validate_token()
+
+            if not token_ok:
+                def _show_error() -> None:
+                    if self.details:
+                        self.details.update(
+                            "[red bold]Token validation failed![/red bold]\n"
+                            "Check CANVAS_TOKEN and CANVAS_BASE_URL.\n"
+                            "Press r to retry after fixing."
+                        )
+                try:
+                    self.call_from_thread(_show_error)
+                except RuntimeError:
+                    _show_error()
                 with contextlib.suppress(Exception):
                     self.pop_screen()
                 return
             # Purge stale cache on startup
-            self._response_cache.purge_expired(86400)
+            with contextlib.suppress(Exception):
+                self._response_cache.purge_expired(86400)
             self.refresh_data()
         finally:
             with contextlib.suppress(Exception):
@@ -414,7 +423,7 @@ class CanvasTUI(App):
         total, due_today, overdue, submitted = self._stats()
         prog = f"{submitted}/{total}" if total else "0/0"
         s = (
-            f"{get_logo()}\n"
+            f"{get_logo(38)}\n"
             f"[b]Canvas TODO (next {self.cfg.days_ahead}d; past {self.cfg.past_hours}h if unsubmitted)[/b]\n"
             f"{self.cfg.base_url}\n"
             f"[dim]{now.strftime('%m/%d/%Y %H:%M %Z')}[/dim]\n"

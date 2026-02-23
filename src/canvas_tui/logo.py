@@ -1,49 +1,39 @@
-"""Canvas ASCII logo and branding elements.
+"""Canvas LMS logo — block-character wordmark in Canvas brand red.
 
-Inspired by GideonWolfe/canvas-tui's logo approach, but rendered as
-Rich-markup ASCII art instead of base64 PNG blobs.
+Clean, readable block letters similar to GideonWolfe/canvas-tui's
+cyan CANVAS wordmark, but in Canvas brand red.
 """
 
 from __future__ import annotations
 
-# Full Canvas wordmark — block unicode, brand cyan + red accent
-CANVAS_WORDMARK = (
-    "[bold cyan]"
-    "  ██████╗ █████╗ ███╗   ██╗██╗   ██╗ █████╗ ███████╗\n"
-    " ██╔════╝██╔══██╗████╗  ██║██║   ██║██╔══██╗██╔════╝\n"
-    " ██║     ███████║██╔██╗ ██║██║   ██║███████║███████╗\n"
-    " ██║     ██╔══██║██║╚██╗██║╚██╗ ██╔╝██╔══██║╚════██║\n"
-    " ╚██████╗██║  ██║██║ ╚████║ ╚████╔╝ ██║  ██║███████║\n"
-    " ╚═════╝╚═╝  ╚═╝╚═╝  ╚═══╝  ╚═══╝  ╚═╝  ╚═╝╚══════╝"
-    "[/bold cyan]"
+# Full block-letter CANVAS wordmark (48 cols wide, 5 lines tall)
+CANVAS_LOGO_FULL = (
+    "[bold red]"
+    " ██████  █████  ██   ██ ██   ██  █████  ███████\n"
+    "██      ██   ██ ███  ██ ██   ██ ██   ██ ██     \n"
+    "██      ███████ ██ █ ██ ██   ██ ███████ ███████\n"
+    "██      ██   ██ ██  ███  ██ ██  ██   ██      ██\n"
+    " ██████ ██   ██ ██   ██   ███   ██   ██ ███████"
+    "[/bold red]"
 )
 
-# Compact logo — for small terminals or sidebar
-CANVAS_COMPACT = (
-    "[bold cyan]╔═╗┌─┐┌┐┌┬  ┬┌─┐┌─┐[/bold cyan]\n"
-    "[bold cyan]║  ├─┤│││└┐┌┘├─┤└─┐[/bold cyan]\n"
-    "[bold cyan]╚═╝┴ ┴┘└┘ └┘ ┴ ┴└─┘[/bold cyan]"
+# Medium — box-drawing CANVAS (21 cols, 3 lines)
+CANVAS_LOGO_MED = (
+    "[bold red]"
+    "┌─┐┌─┐┌┐┌┬  ┬┌─┐┌─┐\n"
+    "│  ├─┤│││└┐┌┘├─┤└─┐\n"
+    "└─┘┴ ┴┘└┘ └┘ ┴ ┴└─┘"
+    "[/bold red]"
 )
 
-# Canvas "C" shield — icon-style for dashboard headers
-CANVAS_SHIELD = (
-    "[bold red]   ╔══════════╗[/bold red]\n"
-    "[bold red]   ║[/bold red][bold white]  ██████  [/bold white][bold red]║[/bold red]\n"
-    "[bold red]   ║[/bold red][bold white] ██[/bold white]       [bold red]║[/bold red]\n"
-    "[bold red]   ║[/bold red][bold white] ██[/bold white]       [bold red]║[/bold red]\n"
-    "[bold red]   ║[/bold red][bold white] ██[/bold white]       [bold red]║[/bold red]\n"
-    "[bold red]   ║[/bold red][bold white]  ██████  [/bold white][bold red]║[/bold red]\n"
-    "[bold red]   ╚══════════╝[/bold red]"
-)
-
-# One-liner brand
-CANVAS_INLINE = "[bold cyan]Canvas[/bold cyan] [dim]LMS Terminal[/dim]"
+# Compact one-liner
+CANVAS_LOGO_SMALL = "[bold red]CANVAS[/bold red] [dim]LMS[/dim]"
 
 
 def get_logo(width: int = 80) -> str:
-    """Pick the best logo variant for the available width."""
-    if width >= 58:
-        return CANVAS_WORDMARK
-    if width >= 24:
-        return CANVAS_COMPACT
-    return CANVAS_INLINE
+    """Select best logo for available width."""
+    if width >= 50:
+        return CANVAS_LOGO_FULL
+    if width >= 22:
+        return CANVAS_LOGO_MED
+    return CANVAS_LOGO_SMALL
