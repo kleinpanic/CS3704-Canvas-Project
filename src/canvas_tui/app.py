@@ -24,6 +24,7 @@ from textual.widgets import DataTable, Footer, Header, Static
 
 from .api import CanvasAPI
 from .config import Config, ensure_dirs, load_config
+from .filtering import FilterQuery, filter_items, format_filter_summary
 from .models import CanvasItem
 from .normalize import apply_past_filter, normalize_announcements, normalize_items, serialize_items
 from .screens import (
@@ -544,19 +545,24 @@ class CanvasTUI(App):
         res = event.result
 
         if kind == "filter":
-            needle = (res or "").strip().lower()
-            if not needle:
+            raw = (res or "").strip()
+            if not raw:
                 self.details.update("[dim]Filter cancelled[/dim]")
                 return
-            base = self._visible_items()
-            idxs = [
-                i
-                for i, it in enumerate(base)
-                if needle in f"{it.title} {it.course_code} {it.ptype}".lower()
-            ]
-            self.filtered = idxs or None
+            query = FilterQuery.parse(raw)
+            if query.is_empty:
+                self.filtered = None
+                self._render_table()
+                self.details.update("[dim]Filter cleared[/dim]")
+                return
+            # Filter against base items (before visibility filter for indices)
+            base = self.items if self.show_hidden else [it for it in self.items if self.state.get_visibility(it.key) != 2]
+            idxs = filter_items(base, query)
+            self.filtered = idxs if idxs else None
+            # Persist last filter
+            self.state.set("last_filters", {"raw": raw})
             self._render_table()
-            self.details.update(f"[dim]Filter:[/dim] '{needle}' → {len(self._visible_items())} items")
+            self.details.update(format_filter_summary(query, len(idxs), len(base)))
         elif kind == "pomo":
             try:
                 mins = int(res)
@@ -815,7 +821,15 @@ class CanvasTUI(App):
             self._render_table()
             self.details.update("[dim]Filter cleared[/dim]")
             return
-        self._show_input("Filter (title/course/type):", "", "", "filter", {})
+        last = self.state.get("last_filters", {})
+        last_raw = last.get("raw", "") if isinstance(last, dict) else ""
+        self._show_input(
+            "Filter (e.g. course:CS3214 type:assignment status:graded):",
+            "type:assignment",
+            last_raw,
+            "filter",
+            {},
+        )
 
     def action_toggle_hide(self) -> None:
         it = self._selected_item()
