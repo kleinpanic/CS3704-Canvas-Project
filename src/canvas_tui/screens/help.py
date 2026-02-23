@@ -36,6 +36,7 @@ HELP_TEXT = """\
   [dim]Short prefixes: c: t: s: has:points has:due[/dim]
 
 [bold]Views[/bold]
+  [cyan]D[/cyan]         Dashboard (scores, trends, due-soon)
   [cyan]S[/cyan]         Syllabi browser
   [cyan]A[/cyan]         Announcements
   [cyan]G[/cyan]         Grades overview

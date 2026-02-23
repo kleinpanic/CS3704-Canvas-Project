@@ -25,12 +25,14 @@ from .api import CanvasAPI
 from .cache import ResponseCache
 from .config import Config, ensure_dirs, load_config
 from .filtering import FilterQuery, filter_items, format_filter_summary
+from .logo import get_logo
 from .models import CanvasItem
 from .normalize import apply_past_filter, normalize_announcements, normalize_items, serialize_items
 from .notifications import DueNotifier
 from .screens import (
     AnnouncementsScreen,
     ConfirmPath,
+    DashboardScreen,
     DetailsScreen,
     FileManagerScreen,
     GradesScreen,
@@ -44,17 +46,6 @@ from .state import StateManager
 from .theme import DARK_THEME, LIGHT_THEME, ThemeColors, get_theme
 from .utils import absolute_url, get_download_dir, local_dt, sanitize_filename
 from .widgets import Pomodoro
-
-# ASCII art Canvas logo (inspired by GideonWolfe/canvas-tui)
-CANVAS_LOGO = """[cyan]
-  ██████╗ █████╗ ███╗   ██╗██╗   ██╗ █████╗ ███████╗
- ██╔════╝██╔══██╗████╗  ██║██║   ██║██╔══██╗██╔════╝
- ██║     ███████║██╔██╗ ██║██║   ██║███████║███████╗
- ██║     ██╔══██║██║╚██╗██║╚██╗ ██╔╝██╔══██║╚════██║
- ╚██████╗██║  ██║██║ ╚████║ ╚████╔╝ ██║  ██║███████║
-  ╚═════╝╚═╝  ╚═╝╚═╝  ╚═══╝  ╚═══╝  ╚═╝  ╚═╝╚══════╝
-[/cyan]"""
-
 
 _TYPE_ICONS: dict[str, str] = {
     "assignment": "📝 assign",
@@ -165,6 +156,28 @@ class CanvasTUI(App):
         overflow-y: auto;
     }
 
+    /* === Dashboard === */
+    #dash-root { height: 1fr; width: 1fr; }
+    #dash-top { layout: horizontal; height: auto; max-height: 14; border-bottom: solid #30363d; }
+    #dash-logo { width: 1fr; min-width: 24; max-width: 60; padding: 1 2; }
+    #dash-scores { width: 2fr; padding: 1 2; }
+    #dash-mid { layout: horizontal; height: 1fr; border-bottom: solid #30363d; }
+    #dash-due { width: 1fr; padding: 1 2; border-right: solid #30363d; overflow-y: auto; }
+    #dash-completion { width: 1fr; padding: 1 2; overflow-y: auto; }
+    #dash-trends { height: auto; max-height: 14; padding: 1 2; }
+
+    /* === Course Overview === */
+    #co-root { height: 1fr; width: 1fr; }
+    #co-header { padding: 1 2; height: auto; max-height: 6; border-bottom: solid #30363d; }
+    #co-body { layout: horizontal; height: 1fr; }
+    #co-left { width: 1fr; border-right: solid #30363d; overflow-y: auto; }
+    #co-upcoming { padding: 1 2; border-bottom: solid #30363d; }
+    #co-scores { padding: 1 2; overflow-y: auto; }
+    #co-right { width: 1fr; overflow-y: auto; }
+    #co-gauge { padding: 1 2; border-bottom: solid #30363d; }
+    #co-weights { padding: 1 2; border-bottom: solid #30363d; }
+    #co-trend { padding: 1 2; }
+
     /* === Detail screens === */
     #d-head, #a-head { padding: 1 2; height: auto; border-bottom: solid #30363d; }
     #d-body, #a-body { height: 1fr; overflow: auto; padding: 1 2; }
@@ -216,6 +229,7 @@ class CanvasTUI(App):
         ("G", "open_grades", "Grades"),
         ("F", "open_files", "Files"),
         ("W", "open_week", "Week view"),
+        ("D", "open_dashboard", "Dashboard"),
         ("s", "cycle_sort", "Sort"),
         ("T", "toggle_theme", "Theme"),
         ("question_mark", "show_help", "Help"),
@@ -400,7 +414,7 @@ class CanvasTUI(App):
         total, due_today, overdue, submitted = self._stats()
         prog = f"{submitted}/{total}" if total else "0/0"
         s = (
-            f"{CANVAS_LOGO}\n"
+            f"{get_logo()}\n"
             f"[b]Canvas TODO (next {self.cfg.days_ahead}d; past {self.cfg.past_hours}h if unsubmitted)[/b]\n"
             f"{self.cfg.base_url}\n"
             f"[dim]{now.strftime('%m/%d/%Y %H:%M %Z')}[/dim]\n"
@@ -497,6 +511,12 @@ class CanvasTUI(App):
         self.table.focus()
         with contextlib.suppress(Exception):
             self.table.cursor_coordinate = (0, 0)
+
+        # Urgency-colored border (GideonWolfe-style)
+        _, due_today, overdue, _ = self._stats()
+        urgent_count = overdue + due_today
+        from .widgets.plots import urgency_color
+        self.table.styles.border = ("solid", urgency_color(urgent_count))
 
     def _render_progress(self) -> None:
         total, _, _, submitted = self._stats()
@@ -965,6 +985,10 @@ class CanvasTUI(App):
     def action_open_week(self) -> None:
         """Open calendar week view."""
         self.push_screen(WeekViewScreen(self, self.items))
+
+    def action_open_dashboard(self) -> None:
+        """Open the dashboard overview screen."""
+        self.push_screen(DashboardScreen(self))
 
 
 def main() -> None:

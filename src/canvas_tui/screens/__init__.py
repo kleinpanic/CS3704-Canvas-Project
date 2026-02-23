@@ -1,6 +1,8 @@
 """TUI screens for Canvas TUI."""
 
 from .announcements import AnnouncementDetailScreen, AnnouncementsScreen
+from .course_overview import CourseOverviewScreen
+from .dashboard import DashboardScreen
 from .details import DetailsScreen
 from .files import FileManagerScreen
 from .grades import GradesScreen
@@ -13,6 +15,8 @@ __all__ = [
     "AnnouncementDetailScreen",
     "AnnouncementsScreen",
     "ConfirmPath",
+    "CourseOverviewScreen",
+    "DashboardScreen",
     "DetailsScreen",
     "FileManagerScreen",
     "GradesScreen",

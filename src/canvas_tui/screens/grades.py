@@ -12,6 +12,12 @@ from textual.events import Key
 from textual.screen import Screen
 from textual.widgets import DataTable, Footer, Static
 
+from ..widgets.plots import (
+    WeightSegment,
+    render_gauge,
+    render_weight_bar,
+)
+
 if TYPE_CHECKING:
     from ..app import CanvasTUI
 
@@ -170,14 +176,28 @@ class GradesScreen(Screen):
                 recent_pcts.append(sc / pt)
         spark = _sparkline(recent_pcts) if recent_pcts else ""
 
+        # Completion gauge
+        gauge = render_gauge(len(graded), len(graded) + len(ungraded), width=20)
+
         summary_text = (
             f"[b]{code} — {name}[/b]\n"
-            f"Weighted Average: [{avg_color}]{avg:.1f}%[/{avg_color}]  "
+            f"Average: [{avg_color}]{avg:.1f}%[/{avg_color}]  "
             f"({len(graded)} graded, {len(ungraded)} pending)\n"
             f"Total: {total_score:.1f} / {total_possible:.1f}\n"
+            f"Progress: {gauge}\n"
         )
         if spark:
-            summary_text += f"Recent trend: {spark}"
+            summary_text += f"Trend: {spark}\n"
+
+        # Fetch and render assignment group weights
+        groups = self._owner.api.fetch_assignment_groups(cid)
+        if groups:
+            segments = [
+                WeightSegment(label=g.get("name", "?"), weight=g.get("group_weight", 0))
+                for g in groups if g.get("group_weight", 0) > 0
+            ]
+            if segments:
+                summary_text += "\n" + render_weight_bar(segments, width=28, title="Grade Weights")
 
         self.summary.update(summary_text)
 

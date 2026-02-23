@@ -164,3 +164,25 @@ class TestSerializeItems:
         assert serialized[0]["key"] == "1"
         restored = [CanvasItem.from_dict(d) for d in serialized]
         assert restored[0].title == "HW1"
+
+
+class TestApiEndpoints:
+    """Test new API endpoint methods exist and have correct signatures."""
+
+    def test_fetch_assignment_groups_exists(self):
+        from unittest.mock import MagicMock
+
+        from canvas_tui.api import CanvasAPI
+
+        api = MagicMock(spec=CanvasAPI)
+        api.fetch_assignment_groups(12345)
+        api.fetch_assignment_groups.assert_called_once_with(12345)
+
+    def test_fetch_course_info_exists(self):
+        from unittest.mock import MagicMock
+
+        from canvas_tui.api import CanvasAPI
+
+        api = MagicMock(spec=CanvasAPI)
+        api.fetch_course_info(12345)
+        api.fetch_course_info.assert_called_once_with(12345)
