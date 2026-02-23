@@ -103,10 +103,10 @@ def _validate_token_and_exit() -> None:
     api = CanvasAPI(cfg)
     print(f"Validating token against {cfg.base_url}…")
     if api.validate_token():
-        print("✅ Token is valid!")
+        print("OK: Token is valid!")
         sys.exit(0)
     else:
-        print("❌ Token validation failed. Check CANVAS_TOKEN and CANVAS_BASE_URL.")
+        print("FAIL: Token validation failed. Check CANVAS_TOKEN and CANVAS_BASE_URL.")
         sys.exit(1)
 
 

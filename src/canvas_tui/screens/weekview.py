@@ -62,7 +62,7 @@ class WeekViewScreen(Screen):
         ws = self._week_start
         we = ws + dt.timedelta(days=6)
         self.week_label.update(
-            f"[b]📅 Week of {ws.strftime('%b %d')} — {we.strftime('%b %d, %Y')}[/b]  "
+            f"[b]Week of {ws.strftime('%b %d')} — {we.strftime('%b %d, %Y')}[/b]  "
             f"[dim](← → to navigate, t for today)[/dim]"
         )
 
@@ -106,9 +106,9 @@ class WeekViewScreen(Screen):
                     prefix = f"  {time_str} " if time_str else "  "
                     status = ""
                     if "submitted" in it.status_flags:
-                        status = " ✓"
+                        status = " [x]"
                     elif "missing" in it.status_flags:
-                        status = " ✗"
+                        status = " [ ]"
                     lines.append(f"[{color}]{prefix}{it.title[:30]}{status}[/{color}]")
                 if len(items_in_day) > 8:
                     lines.append(f"  [dim]+{len(items_in_day) - 8} more[/dim]")
