@@ -70,13 +70,34 @@ class Config:
         return os.path.join(self.export_dir, "canvas.ics")
 
 
+def _load_dotenv() -> None:
+    """Load .env file if present (simple key=value parser, no dependencies)."""
+    for path in [".env", os.path.expanduser("~/.config/canvas-tui/.env")]:
+        if os.path.exists(path):
+            try:
+                with open(path, encoding="utf-8") as f:
+                    for line in f:
+                        line = line.strip()
+                        if not line or line.startswith("#") or "=" not in line:
+                            continue
+                        key, _, value = line.partition("=")
+                        key = key.strip()
+                        value = value.strip().strip("'\"")
+                        if key and key not in os.environ:
+                            os.environ[key] = value
+            except Exception:
+                pass
+            break
+
+
 def load_config() -> Config:
-    """Load config from environment variables, then overlay file config."""
+    """Load config from .env, environment variables, then overlay file config."""
+    _load_dotenv()
     cfg = Config(
         base_url=os.environ.get("CANVAS_BASE_URL", "https://canvas.vt.edu").rstrip("/"),
         token=os.environ.get("CANVAS_TOKEN", ""),
         user_tz=os.environ.get("TZ", "America/New_York"),
-        user_agent=os.environ.get("CANVAS_UA", "canvas-tui/0.5 (textual)"),
+        user_agent=os.environ.get("CANVAS_UA", "canvas-tui/1.0 (textual)"),
         http_timeout=int(os.environ.get("HTTP_TIMEOUT", "20")),
         max_retries=int(os.environ.get("HTTP_MAX_RETRIES", "5")),
         backoff_factor=float(os.environ.get("HTTP_BACKOFF", "0.4")),

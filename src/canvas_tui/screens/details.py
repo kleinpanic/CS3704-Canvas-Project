@@ -26,8 +26,10 @@ class DetailsScreen(Screen):
     BINDINGS = [
         ("backspace", "pop", "Back"),
         ("escape", "pop", "Back"),
+        ("o", "open", "Open in browser"),
+        ("b", "open", "Open in browser"),
         ("w", "download", "Download"),
-        ("enter", "open", "Open"),
+        ("enter", "open_link", "Open selected link"),
     ]
 
     def __init__(self, owner_app: CanvasTUI, item: CanvasItem) -> None:
@@ -139,6 +141,12 @@ class DetailsScreen(Screen):
         return self.links[self.link_table.cursor_row][1]
 
     def action_open(self) -> None:
+        """Open the item URL in browser."""
+        with contextlib.suppress(Exception):
+            webbrowser.open(self.item.url, new=2)
+
+    def action_open_link(self) -> None:
+        """Open the selected link from the link table."""
         url = self._selected_link() or self.item.url
         if not url:
             return
