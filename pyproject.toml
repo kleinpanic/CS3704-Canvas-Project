@@ -31,8 +31,5 @@ dev = [
 [project.scripts]
 canvas-tui = "canvas_tui.app:main"
 
-[tool.setuptools]
-py-modules = []
-
 [tool.setuptools.packages.find]
-where = ["."]
+where = ["src"]
