@@ -94,7 +94,14 @@ def load_config() -> Config:
     )
 
     if not cfg.token:
-        print("ERROR: Set CANVAS_TOKEN env var.", file=sys.stderr)
+        # Try keyring as fallback
+        cfg.token = _try_keyring()
+    if not cfg.token:
+        print(
+            "ERROR: Set CANVAS_TOKEN env var or store it via:\n"
+            "  python3 -c \"import keyring; keyring.set_password('canvas-tui', 'token', 'YOUR_TOKEN')\"",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     _overlay_file_config(cfg)
@@ -153,6 +160,17 @@ def _read_config_file(toml_path: str, json_path: str) -> dict[str, Any]:
     except Exception:
         pass
     return {}
+
+
+def _try_keyring() -> str:
+    """Try to get token from system keyring."""
+    try:
+        import keyring
+
+        token = keyring.get_password("canvas-tui", "token")
+        return token or ""
+    except Exception:
+        return ""
 
 
 def ensure_dirs(cfg: Config) -> None:

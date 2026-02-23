@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "canvas-tui"
-version = "0.5.0"
+version = "1.0.0"
 description = "Canvas LMS TUI client — planner, announcements, syllabi, downloads, ICS export, pomodoro"
 readme = "README.md"
 license = "GPL-3.0-or-later"
@@ -19,6 +19,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+keyring = ["keyring>=23.0"]
 dev = [
     "ruff",
     "mypy",
