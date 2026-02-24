@@ -178,15 +178,54 @@ class CanvasAPI:
         return self._cached_get_all(ck, self._url("/api/v1/planner/items"), params)
 
     def fetch_current_courses(self) -> dict[int, tuple[str, str]]:
-        """Fetch active courses (cached). Returns {course_id: (code, name)}."""
-        params = {"enrollment_state": "active", "per_page": 100}
+        """Fetch current/active courses (cached). Returns {course_id: (code, name)}.
+
+        Canvas `enrollment_state=active` can still include stale historical enrollments.
+        We apply a term-date filter to suppress clearly old/future courses.
+        """
+        now = dt.datetime.now(dt.UTC)
+        params: dict[str, Any] = {
+            "enrollment_state": "active",
+            "state[]": ["available"],
+            "include[]": ["term"],
+            "per_page": 100,
+        }
         ck = cache_key("courses", params)
         raw = self._cached_get_all(ck, self._url("/api/v1/courses"), params)
         out: dict[int, tuple[str, str]] = {}
         for c in raw:
             cid = c.get("id")
-            if cid:
-                out[int(cid)] = (c.get("course_code") or str(cid), c.get("name") or "")
+            if not cid:
+                continue
+
+            # Skip unavailable/unpublished/ended workflows.
+            wf = str(c.get("workflow_state") or "").lower()
+            if wf and wf not in {"available"}:
+                continue
+
+            # Term-window guard: keep courses around "now"; drop obviously stale ones.
+            term = c.get("term") if isinstance(c.get("term"), dict) else {}
+            start_raw = term.get("start_at") if isinstance(term, dict) else None
+            end_raw = term.get("end_at") if isinstance(term, dict) else None
+
+            def _parse_iso(ts: str | None) -> dt.datetime | None:
+                if not ts:
+                    return None
+                with contextlib.suppress(Exception):
+                    return dt.datetime.fromisoformat(ts.replace("Z", "+00:00")).astimezone(dt.UTC)
+                return None
+
+            start_at = _parse_iso(start_raw)
+            end_at = _parse_iso(end_raw)
+
+            # If the term ended more than 30 days ago, exclude it.
+            if end_at and end_at < (now - dt.timedelta(days=30)):
+                continue
+            # If term starts far in the future, exclude it.
+            if start_at and start_at > (now + dt.timedelta(days=120)):
+                continue
+
+            out[int(cid)] = (c.get("course_code") or str(cid), c.get("name") or "")
         return out
 
     def fetch_course_name(self, course_id: int) -> tuple[str, str]:
