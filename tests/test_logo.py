@@ -1,33 +1,34 @@
-"""Tests for Canvas ASCII logo module."""
+"""Tests for Canvas logo module."""
 
 from canvas_tui.logo import (
-    CANVAS_LOGO_FULL,
-    CANVAS_LOGO_MED,
+    CANVAS_ICON,
     CANVAS_LOGO_SMALL,
+    CANVAS_LOGO_WIDE,
     get_logo,
 )
 
 
 class TestLogo:
-    def test_full_has_block_chars(self):
-        assert "██" in CANVAS_LOGO_FULL
+    def test_icon_has_half_blocks(self):
+        assert "▄" in CANVAS_ICON or "█" in CANVAS_ICON
 
-    def test_full_is_red(self):
-        assert "red" in CANVAS_LOGO_FULL
+    def test_icon_is_red(self):
+        assert "red" in CANVAS_ICON
 
-    def test_med_has_box_drawing(self):
-        assert "┌" in CANVAS_LOGO_MED
+    def test_wide_has_icon_and_text(self):
+        assert "▄" in CANVAS_LOGO_WIDE
+        assert "██" in CANVAS_LOGO_WIDE
 
-    def test_small_has_canvas(self):
+    def test_small_has_text(self):
         assert "CANVAS" in CANVAS_LOGO_SMALL
 
     def test_get_logo_wide(self):
         logo = get_logo(80)
-        assert "██" in logo
+        assert "▄" in logo
 
     def test_get_logo_medium(self):
-        logo = get_logo(40)
-        assert "┌" in logo
+        logo = get_logo(35)
+        assert "▄" in logo
 
     def test_get_logo_narrow(self):
         logo = get_logo(10)
