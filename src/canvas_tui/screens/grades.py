@@ -166,8 +166,9 @@ class GradesScreen(Screen):
             status = ", ".join(status_parts) or "-"
             self.grade_table.add_row(aname[:50], score_str, pts_str, pct_str, status)
 
-        # Summary
-        avg = (100.0 * total_score / total_possible) if total_possible > 0 else 0.0
+        # Summary: prefer authoritative Canvas course score when available
+        manual_avg = (100.0 * total_score / total_possible) if total_possible > 0 else 0.0
+        avg = self._owner._course_score_cache.get(cid, manual_avg)
         avg_color = grade_color(avg)
 
         # Sparkline of recent grades
