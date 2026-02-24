@@ -37,12 +37,18 @@ HELP_TEXT = """\
 
 [bold]Views[/bold]
   [cyan]D[/cyan]         Dashboard (scores, trends, due-soon)
+  [cyan]M[/cyan]         Course manager (show/hide courses)
   [cyan]S[/cyan]         Syllabi browser
   [cyan]A[/cyan]         Announcements
   [cyan]G[/cyan]         Grades overview
   [cyan]F[/cyan]         File manager
   [cyan]W[/cyan]         Calendar week view
   [cyan]?[/cyan]         This help screen
+
+[bold]Course Manager (M)[/bold]
+  [cyan]Enter/Space[/cyan]  Toggle course visibility
+  [cyan]a[/cyan]            Auto-detect and hide ghost courses
+  [cyan]s[/cyan]            Show all courses
 
 [bold]Pomodoro Timer[/bold]
   [cyan]1[/cyan]         Start 30 min

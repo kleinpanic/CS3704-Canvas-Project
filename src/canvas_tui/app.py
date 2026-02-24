@@ -11,7 +11,6 @@ import subprocess
 import threading
 import time
 import uuid
-import webbrowser
 from typing import Any
 from urllib.parse import urlparse
 from zoneinfo import ZoneInfo
@@ -32,6 +31,7 @@ from .notifications import DueNotifier
 from .screens import (
     AnnouncementsScreen,
     ConfirmPath,
+    CourseManagerScreen,
     DashboardScreen,
     DetailsScreen,
     FileManagerScreen,
@@ -44,7 +44,7 @@ from .screens import (
 )
 from .state import StateManager
 from .theme import DARK_THEME, LIGHT_THEME, ThemeColors, get_theme
-from .utils import absolute_url, get_download_dir, local_dt, sanitize_filename
+from .utils import absolute_url, get_download_dir, local_dt, open_url, sanitize_filename
 from .widgets import Pomodoro
 
 _TYPE_ICONS: dict[str, str] = {
@@ -137,6 +137,12 @@ class CanvasTUI(App):
         padding: 0 2;
         border-left: solid #30363d;
     }
+
+    /* === Course Manager === */
+    #cm-root { height: 1fr; width: 1fr; }
+    #cm-header { padding: 1 2; height: auto; border-bottom: solid #30363d; }
+    #cm-table { height: 1fr; }
+    #cm-status { padding: 0 2; height: 2; border-top: solid #30363d; }
 
     /* === Status bar (bottom dock) === */
     #status-bar {
@@ -264,6 +270,7 @@ class CanvasTUI(App):
         ("F", "open_files", "Files"),
         ("W", "open_week", "Week view"),
         ("D", "open_dashboard", "Dashboard"),
+        ("M", "manage_courses", "Courses"),
         ("s", "cycle_sort", "Sort"),
         ("T", "toggle_theme", "Theme"),
         ("question_mark", "show_help", "Help"),
@@ -347,10 +354,11 @@ class CanvasTUI(App):
             urgency_color,
         )
 
-        # --- Top banner: course score bar chart ---
+        # --- Top banner: course score bar chart (hidden courses filtered) ---
+        active = self._active_courses()
         bar_entries: list[BarEntry] = []
         course_data: dict[str, tuple[float, list[float]]] = {}
-        for cid, (code, _name) in sorted(self.course_cache.items(), key=lambda kv: kv[1][0]):
+        for cid, (code, _name) in sorted(active.items(), key=lambda kv: kv[1][0]):
             grades = self._grade_cache.get(cid, [])
             ts, tp = 0.0, 0.0
             pcts: list[float] = []
@@ -587,12 +595,18 @@ class CanvasTUI(App):
             f"Items: {total}  Today: {due_today}\n"
             f"Overdue: [red]{overdue}[/red]  Done: {submitted}\n"
             f"{bar} {prog} ({pct}%)\n"
-            f"[dim]? = help  D = dashboard[/dim]"
+            f"[dim]? help  D dash  M courses[/dim]"
         )
         self.info.update(s)
 
+    def _active_courses(self) -> dict[int, tuple[str, str]]:
+        """Return course_cache filtered by hidden courses."""
+        hidden = self.state.get_hidden_courses()
+        return {cid: v for cid, v in self.course_cache.items() if cid not in hidden}
+
     def _visible_items(self) -> list[CanvasItem]:
-        base = self.items
+        hidden_courses = self.state.get_hidden_courses()
+        base = [it for it in self.items if it.course_id not in hidden_courses]
         if not self.show_hidden:
             base = [it for it in base if self.state.get_visibility(it.key) != 2]
         if self.filtered is not None:
@@ -964,7 +978,7 @@ class CanvasTUI(App):
         if not it:
             return
         with contextlib.suppress(Exception):
-            webbrowser.open(it.url, new=2)
+            open_url(it.url)
 
     def action_quick_preview(self) -> None:
         it = self._selected_item()
@@ -1045,7 +1059,7 @@ class CanvasTUI(App):
         if m:
             url = f"{self.cfg.base_url}/courses/{m.group(1)}"
             with contextlib.suppress(Exception):
-                webbrowser.open(url, new=2)
+                open_url(url)
         else:
             self.details.update("[yellow]No course link found[/yellow]")
 
@@ -1152,6 +1166,10 @@ class CanvasTUI(App):
     def action_open_dashboard(self) -> None:
         """Open the dashboard overview screen."""
         self.push_screen(DashboardScreen(self))
+
+    def action_manage_courses(self) -> None:
+        """Open the course manager to show/hide courses."""
+        self.push_screen(CourseManagerScreen(self))
 
 
 def main() -> None:

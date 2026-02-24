@@ -41,6 +41,7 @@ class StateManager:
         self._data.setdefault("cache_announcements", [])
         self._data.setdefault("notes", {})
         self._data.setdefault("last_filters", {})
+        self._data.setdefault("hidden_courses", [])  # list of course_id ints
 
     def save(self) -> None:
         """Atomic save to disk (thread-safe)."""
@@ -147,6 +148,38 @@ class StateManager:
         with self._lock:
             self._data.setdefault("notes", {})[item_key] = text
             self._save_unsafe()
+
+    # --- Course management ---
+
+    def get_hidden_courses(self) -> list[int]:
+        """Get list of hidden course IDs."""
+        with self._lock:
+            return list(self._data.get("hidden_courses") or [])
+
+    def set_hidden_courses(self, course_ids: list[int]) -> None:
+        """Set list of hidden course IDs."""
+        with self._lock:
+            self._data["hidden_courses"] = course_ids
+            self._save_unsafe()
+
+    def toggle_course_hidden(self, course_id: int) -> bool:
+        """Toggle a course's hidden state. Returns new hidden state."""
+        with self._lock:
+            hidden = self._data.get("hidden_courses") or []
+            if course_id in hidden:
+                hidden.remove(course_id)
+                result = False
+            else:
+                hidden.append(course_id)
+                result = True
+            self._data["hidden_courses"] = hidden
+            self._save_unsafe()
+            return result
+
+    def is_course_hidden(self, course_id: int) -> bool:
+        """Check if a course is hidden."""
+        with self._lock:
+            return course_id in (self._data.get("hidden_courses") or [])
 
     @property
     def raw(self) -> dict[str, Any]:
