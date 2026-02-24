@@ -37,6 +37,7 @@ HELP_TEXT = """\
 
 [bold]Views[/bold]
   [cyan]D[/cyan]         Dashboard (scores, trends, due-soon)
+  [cyan]V[/cyan]         Analytics (scatter, heatmap, histogram)
   [cyan]M[/cyan]         Course manager (show/hide courses)
   [cyan]S[/cyan]         Syllabi browser
   [cyan]A[/cyan]         Announcements
@@ -44,6 +45,10 @@ HELP_TEXT = """\
   [cyan]F[/cyan]         File manager
   [cyan]W[/cyan]         Calendar week view
   [cyan]?[/cyan]         This help screen
+
+[bold]Command Bar[/bold]
+  [cyan][[/cyan]         Previous command page
+  [cyan]][/cyan]         Next command page
 
 [bold]Course Manager (M)[/bold]
   [cyan]Enter/Space[/cyan]  Toggle course visibility
@@ -55,6 +60,7 @@ HELP_TEXT = """\
   [cyan]2[/cyan]         Start 60 min
   [cyan]3[/cyan]         Start 120 min
   [cyan]P[/cyan]         Custom duration
+  [cyan]p[/cyan]         Pause / Resume
   [cyan]0[/cyan]         Stop timer
 
 [bold]General[/bold]

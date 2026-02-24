@@ -18,7 +18,7 @@ from zoneinfo import ZoneInfo
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.events import Key
-from textual.widgets import DataTable, Footer, Header, Static
+from textual.widgets import DataTable, Header, Static
 
 from .api import CanvasAPI
 from .cache import ResponseCache
@@ -29,6 +29,7 @@ from .models import CanvasItem
 from .normalize import apply_past_filter, normalize_announcements, normalize_items, serialize_items
 from .notifications import DueNotifier
 from .screens import (
+    AnalyticsScreen,
     AnnouncementsScreen,
     ConfirmPath,
     CourseManagerScreen,
@@ -46,6 +47,7 @@ from .state import StateManager
 from .theme import DARK_THEME, LIGHT_THEME, ThemeColors, get_theme
 from .utils import absolute_url, get_download_dir, local_dt, open_url, sanitize_filename
 from .widgets import Pomodoro
+from .widgets.command_bar import CommandBar
 
 _TYPE_ICONS: dict[str, str] = {
     "assignment": "ASGN",
@@ -119,9 +121,10 @@ class CanvasTUI(App):
     #bottom-panel {
         layout: horizontal;
         height: auto;
-        min-height: 6;
-        max-height: 10;
+        min-height: 10;
+        max-height: 16;
         border-top: solid #30363d;
+        overflow-y: auto;
     }
     #bottom-trends {
         width: 1fr;
@@ -137,6 +140,40 @@ class CanvasTUI(App):
         padding: 0 2;
         border-left: solid #30363d;
     }
+
+    /* === Pane borders (tmux-style) === */
+    #banner-logo { border-right: solid #30363d; padding: 0 1; }
+    #banner-scores { padding: 0 1; overflow: auto; }
+    #side-info { border-bottom: solid #30363d; padding: 0 1; }
+    #side-details { border-bottom: solid #30363d; padding: 0 1; overflow-y: auto; }
+    #bottom-trends { border-right: solid #30363d; width: 1fr; padding: 0 1; overflow: auto; }
+    #bottom-stats { border-right: solid #30363d; width: 1fr; padding: 0 1; overflow: auto; }
+    #bottom-due { width: 1fr; padding: 0 1; overflow: auto; }
+
+    /* === Command bar === */
+    #cmd-bar {
+        dock: bottom;
+        height: 1;
+        background: #161b22;
+        color: #8b949e;
+        padding: 0 1;
+    }
+
+    /* === Analytics screen === */
+    #analytics-root { height: 1fr; width: 1fr; }
+    #analytics-header { padding: 0 2; height: 2; border-bottom: solid #30363d; }
+    #analytics-top, #analytics-mid, #analytics-bot {
+        layout: horizontal;
+        height: 1fr;
+        border-bottom: solid #30363d;
+    }
+    .chart-pane {
+        width: 1fr;
+        padding: 0 1;
+        border-right: solid #30363d;
+        overflow: auto;
+    }
+    .chart-pane:last-child { border-right: none; }
 
     /* === Course Manager === */
     #cm-root { height: 1fr; width: 1fr; }
@@ -263,6 +300,7 @@ class CanvasTUI(App):
         ("2", "pomo60", "Pomodoro 1h"),
         ("3", "pomo120", "Pomodoro 2h"),
         ("P", "pomo_custom", "Pomodoro custom"),
+        ("p", "pomo_pause", "Pomodoro pause"),
         ("0", "pomo_stop", "Pomodoro stop"),
         ("S", "open_syllabi", "Syllabi"),
         ("A", "open_announcements", "Announcements"),
@@ -270,7 +308,10 @@ class CanvasTUI(App):
         ("F", "open_files", "Files"),
         ("W", "open_week", "Week view"),
         ("D", "open_dashboard", "Dashboard"),
+        ("V", "open_analytics", "Analytics"),
         ("M", "manage_courses", "Courses"),
+        ("left_square_bracket", "cmd_prev", "Cmd <"),
+        ("right_square_bracket", "cmd_next", "Cmd >"),
         ("s", "cycle_sort", "Sort"),
         ("T", "toggle_theme", "Theme"),
         ("question_mark", "show_help", "Help"),
@@ -339,25 +380,28 @@ class CanvasTUI(App):
             yield self.bottom_due
         self.status_bar = Static(id="status-bar")
         yield self.status_bar
-        yield Footer()
+        self.cmd_bar = CommandBar(id="cmd-bar")
+        yield self.cmd_bar
 
     def _persist_pomo(self, end_ts: float | None) -> None:
         self.state.set_pomo_end(end_ts)
 
     def _render_graphs(self) -> None:
-        """Render score bars (top banner) and trends (bottom panel)."""
-        from .widgets.plots import (
-            BarEntry,
-            grade_color,
-            render_bar_chart,
-            sparkline,
-            urgency_color,
+        """Render plotext charts in banner and bottom panels."""
+        from .widgets.charts import (
+            grade_histogram,
+            multi_line_chart,
+            score_bar_chart,
         )
+        from .widgets.plots import urgency_color
 
-        # --- Top banner: course score bar chart (hidden courses filtered) ---
+        # --- Collect course data (filtered by hidden courses) ---
         active = self._active_courses()
-        bar_entries: list[BarEntry] = []
-        course_data: dict[str, tuple[float, list[float]]] = {}
+        labels: list[str] = []
+        scores: list[float] = []
+        course_pcts: dict[str, list[float]] = {}
+        all_scores: list[float] = []
+
         for cid, (code, _name) in sorted(active.items(), key=lambda kv: kv[1][0]):
             grades = self._grade_cache.get(cid, [])
             ts, tp = 0.0, 0.0
@@ -369,46 +413,40 @@ class CanvasTUI(App):
                 if sc is not None and pts:
                     ts += float(sc)
                     tp += float(pts)
-                    pcts.append(100.0 * float(sc) / float(pts))
+                    pct = 100.0 * float(sc) / float(pts)
+                    pcts.append(pct)
+                    all_scores.append(pct)
             avg = (100.0 * ts / tp) if tp > 0 else 0.0
-            bar_entries.append(BarEntry(label=code, value=avg, suffix=f"{avg:.1f}%"))
-            course_data[code] = (avg, pcts)
+            labels.append(code[:12])
+            scores.append(round(avg, 1))
+            if pcts:
+                course_pcts[code[:12]] = pcts
 
-        if bar_entries:
-            self.banner_scores.update(
-                render_bar_chart(bar_entries, bar_width=20, title="Course Scores")
-            )
-        else:
-            self.banner_scores.update("[dim]No grade data yet[/dim]")
+        # --- Top banner: plotext bar chart ---
+        with contextlib.suppress(Exception):
+            chart = score_bar_chart(labels, scores, width=55, height=max(8, len(labels) + 4))
+            self.banner_scores.update(chart)
 
-        # --- Bottom panel: trends ---
-        colors = ["cyan", "green", "yellow", "magenta", "blue", "red"]
-        trend_lines = ["[bold]Grade Trends[/bold]"]
-        for i, (code, (avg, pcts)) in enumerate(course_data.items()):
-            c = colors[i % len(colors)]
-            gc = grade_color(avg)
-            spark = sparkline(pcts[-12:], c) if pcts else "[dim]---[/dim]"
-            trend_lines.append(f" [{c}]{code:<8}[/{c}] {spark} [{gc}]{avg:.0f}%[/{gc}]")
-        if len(trend_lines) > 1:
-            self.bottom_trends.update("\n".join(trend_lines))
-        else:
-            self.bottom_trends.update("[dim]No trends yet[/dim]")
+        # --- Bottom: line chart (trends) ---
+        with contextlib.suppress(Exception):
+            if course_pcts:
+                trend_chart = multi_line_chart(
+                    {k: v[-15:] for k, v in course_pcts.items()},
+                    width=45, height=8, title="Grade Trends",
+                )
+                self.bottom_trends.update(trend_chart)
+            else:
+                self.bottom_trends.update("[dim]No trend data[/dim]")
 
-        # --- Bottom panel: completion stats ---
-        stat_lines = ["[bold]Completion[/bold]"]
-        for code, (avg, pcts) in course_data.items():
-            n = len(pcts)
-            gc = grade_color(avg)
-            bar_w = 12
-            filled = int(avg / 100.0 * bar_w)
-            bar = f"[{gc}]{'█' * filled}[/{gc}][dim]{'░' * (bar_w - filled)}[/dim]"
-            stat_lines.append(f" {code:<8} {bar} [{gc}]{avg:.0f}%[/{gc}] ({n})")
-        if len(stat_lines) > 1:
-            self.bottom_stats.update("\n".join(stat_lines))
-        else:
-            self.bottom_stats.update("[dim]No stats yet[/dim]")
+        # --- Bottom: histogram (distribution) ---
+        with contextlib.suppress(Exception):
+            if all_scores:
+                hist = grade_histogram(all_scores, width=40, height=8, title="Distribution")
+                self.bottom_stats.update(hist)
+            else:
+                self.bottom_stats.update("[dim]No grades[/dim]")
 
-        # --- Bottom panel: due soon ---
+        # --- Bottom: due soon ---
         now = dt.datetime.now(ZoneInfo(self.cfg.user_tz))
         urgent: list[tuple[str, CanvasItem]] = []
         for it in self.items:
@@ -545,7 +583,7 @@ class CanvasTUI(App):
         self.action_open_details()
 
     def on_key(self, event: Key) -> None:
-        if event.key in ("1", "2", "3", "0", "P"):
+        if event.key in ("1", "2", "3", "0", "P", "p"):
             event.stop()
             if event.key == "1":
                 self.action_pomo30()
@@ -1136,6 +1174,9 @@ class CanvasTUI(App):
     def action_pomo_custom(self) -> None:
         self._show_input("Minutes:", "", "45", "pomo", {})
 
+    def action_pomo_pause(self) -> None:
+        self.pomo.pause()
+
     def action_pomo_stop(self) -> None:
         self.pomo.stop()
 
@@ -1166,6 +1207,18 @@ class CanvasTUI(App):
     def action_open_dashboard(self) -> None:
         """Open the dashboard overview screen."""
         self.push_screen(DashboardScreen(self))
+
+    def action_open_analytics(self) -> None:
+        """Open the analytics visualization screen."""
+        self.push_screen(AnalyticsScreen(self))
+
+    def action_cmd_prev(self) -> None:
+        """Previous command bar page."""
+        self.cmd_bar.prev_page()
+
+    def action_cmd_next(self) -> None:
+        """Next command bar page."""
+        self.cmd_bar.next_page()
 
     def action_manage_courses(self) -> None:
         """Open the course manager to show/hide courses."""

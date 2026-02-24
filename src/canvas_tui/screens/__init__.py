@@ -1,5 +1,6 @@
 """TUI screens for Canvas TUI."""
 
+from .analytics import AnalyticsScreen
 from .announcements import AnnouncementDetailScreen, AnnouncementsScreen
 from .course_overview import CourseOverviewScreen
 from .courses import CourseManagerScreen
@@ -13,6 +14,7 @@ from .syllabi import SyllabiScreen
 from .weekview import WeekViewScreen
 
 __all__ = [
+    "AnalyticsScreen",
     "AnnouncementDetailScreen",
     "AnnouncementsScreen",
     "ConfirmPath",

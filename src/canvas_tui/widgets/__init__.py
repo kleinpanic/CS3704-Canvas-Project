@@ -1,5 +1,6 @@
 """Custom widgets for Canvas TUI."""
 
+from .command_bar import CommandBar
 from .plots import (
     BarEntry,
     PlotSeries,
@@ -14,6 +15,7 @@ from .pomodoro import Pomodoro
 
 __all__ = [
     "BarEntry",
+    "CommandBar",
     "PlotSeries",
     "Pomodoro",
     "WeightSegment",

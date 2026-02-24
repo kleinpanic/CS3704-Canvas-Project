@@ -16,6 +16,7 @@ dependencies = [
     "requests>=2.28",
     "urllib3>=2.0",
     "textual>=0.40",
+"plotext>=5.3",
 ]
 
 [project.optional-dependencies]

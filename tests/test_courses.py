@@ -27,7 +27,7 @@ class TestGhostDetection:
         assert ghost
 
     def test_zero_assignments_is_ghost(self):
-        ghost, reason = is_likely_ghost("IFC", "IFC 2023", 0)
+        ghost, _reason = is_likely_ghost("IFC", "IFC 2023", 0)
         assert ghost
 
     def test_real_course_not_ghost(self):
@@ -54,6 +54,7 @@ class TestGhostDetection:
 class TestCourseHiding:
     def test_toggle_course(self, tmp_dir):
         import os
+
         from canvas_tui.state import StateManager
 
         sm = StateManager(os.path.join(tmp_dir, "state.json"))
@@ -69,6 +70,7 @@ class TestCourseHiding:
 
     def test_get_hidden_courses(self, tmp_dir):
         import os
+
         from canvas_tui.state import StateManager
 
         sm = StateManager(os.path.join(tmp_dir, "state.json"))
@@ -77,6 +79,7 @@ class TestCourseHiding:
 
     def test_hidden_persists(self, tmp_dir):
         import os
+
         from canvas_tui.state import StateManager
 
         path = os.path.join(tmp_dir, "state.json")
