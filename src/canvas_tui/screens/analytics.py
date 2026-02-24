@@ -112,7 +112,8 @@ class AnalyticsScreen(Screen):
                     idx += 1
                     all_x.append(float(idx))
                     submitted += 1
-            avg = (100.0 * ts / tp) if tp > 0 else 0.0
+            manual_avg = (100.0 * ts / tp) if tp > 0 else 0.0
+            avg = self._owner._course_score_cache.get(cid, manual_avg)
             base = course_label(code)
             n = label_counts.get(base, 0) + 1
             label_counts[base] = n

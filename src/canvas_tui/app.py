@@ -370,6 +370,7 @@ class CanvasTUI(App):
         self._stop_bg = False
         self._submission_cache: dict[tuple[int, int], dict[str, Any]] = {}
         self._grade_cache: dict[int, list[dict[str, Any]]] = {}
+        self._course_score_cache: dict[int, float] = {}
         self._pending: dict[str, tuple[str, dict[str, Any]]] = {}
         self._error_count = 0
         self._theme: ThemeColors = get_theme("dark")
@@ -457,8 +458,10 @@ class CanvasTUI(App):
             total_scored += ts
             total_possible += tp
             total_submitted += n_sub
-            avg = (100.0 * ts / tp) if tp > 0 else 0.0
-            if tp > 0:
+            manual_avg = (100.0 * ts / tp) if tp > 0 else 0.0
+            # Prefer authoritative Canvas-computed course score when available.
+            avg = self._course_score_cache.get(cid, manual_avg)
+            if tp > 0 or cid in self._course_score_cache:
                 course_avgs.append((course_label(code), avg))
 
         # Cell 1: Course averages
@@ -567,7 +570,8 @@ class CanvasTUI(App):
                     all_scores.append(pct)
                     idx += 1
                     all_x.append(float(idx))
-            avg = (100.0 * ts / tp) if tp > 0 else 0.0
+            manual_avg = (100.0 * ts / tp) if tp > 0 else 0.0
+            avg = self._course_score_cache.get(cid, manual_avg)
             base = course_label(code)
             n = label_counts.get(base, 0) + 1
             label_counts[base] = n
@@ -1035,9 +1039,15 @@ class CanvasTUI(App):
                     with contextlib.suppress(Exception):
                         grade_data[cid] = self.api.fetch_grades(cid)
 
+                # Fetch Canvas-computed course totals for display accuracy.
+                course_scores: dict[int, float] = {}
+                with contextlib.suppress(Exception):
+                    course_scores = self.api.fetch_course_scores(set(course_cache.keys()))
+
                 def apply_ui() -> None:
                     self.course_cache = course_cache
                     self._grade_cache = grade_data
+                    self._course_score_cache = course_scores
                     self.items = items
                     self.announcements = announcements
                     self.filtered = None

@@ -178,16 +178,13 @@ class CanvasAPI:
         return self._cached_get_all(ck, self._url("/api/v1/planner/items"), params)
 
     def fetch_current_courses(self) -> dict[int, tuple[str, str]]:
-        """Fetch current/active courses (cached). Returns {course_id: (code, name)}.
+        """Fetch active courses (cached). Returns {course_id: (code, name)}.
 
-        Canvas `enrollment_state=active` can still include stale historical enrollments.
-        We apply a term-date filter to suppress clearly old/future courses.
+        Important: use Canvas active enrollment state directly; do NOT over-filter by
+        term dates, or legitimate active/self-paced courses may disappear.
         """
-        now = dt.datetime.now(dt.UTC)
         params: dict[str, Any] = {
             "enrollment_state": "active",
-            "state[]": ["available"],
-            "include[]": ["term"],
             "per_page": 100,
         }
         ck = cache_key("courses", params)
@@ -197,35 +194,52 @@ class CanvasAPI:
             cid = c.get("id")
             if not cid:
                 continue
-
-            # Skip unavailable/unpublished/ended workflows.
-            wf = str(c.get("workflow_state") or "").lower()
-            if wf and wf not in {"available"}:
-                continue
-
-            # Term-window guard: keep courses around "now"; drop obviously stale ones.
-            term = c.get("term") if isinstance(c.get("term"), dict) else {}
-            start_raw = term.get("start_at") if isinstance(term, dict) else None
-            end_raw = term.get("end_at") if isinstance(term, dict) else None
-
-            def _parse_iso(ts: str | None) -> dt.datetime | None:
-                if not ts:
-                    return None
-                with contextlib.suppress(Exception):
-                    return dt.datetime.fromisoformat(ts.replace("Z", "+00:00")).astimezone(dt.UTC)
-                return None
-
-            start_at = _parse_iso(start_raw)
-            end_at = _parse_iso(end_raw)
-
-            # If the term ended more than 30 days ago, exclude it.
-            if end_at and end_at < (now - dt.timedelta(days=30)):
-                continue
-            # If term starts far in the future, exclude it.
-            if start_at and start_at > (now + dt.timedelta(days=120)):
-                continue
-
             out[int(cid)] = (c.get("course_code") or str(cid), c.get("name") or "")
+        return out
+
+    def fetch_course_scores(self, course_ids: set[int] | None = None) -> dict[int, float]:
+        """Fetch Canvas-computed current scores per course.
+
+        Uses `/api/v1/courses?include[]=total_scores` so displayed percentages match
+        Canvas gradebook semantics (weights/hidden rules) better than local manual sums.
+        """
+        params: dict[str, Any] = {
+            "enrollment_state": "active",
+            "include[]": ["total_scores"],
+            "per_page": 100,
+        }
+        ck = cache_key("courses_scores", params)
+        raw = self._cached_get_all(ck, self._url("/api/v1/courses"), params)
+        out: dict[int, float] = {}
+        for c in raw:
+            cid = c.get("id")
+            if not cid:
+                continue
+            cid_i = int(cid)
+            if course_ids and cid_i not in course_ids:
+                continue
+
+            enrollments = c.get("enrollments") if isinstance(c.get("enrollments"), list) else []
+            score: float | None = None
+            for e in enrollments:
+                if not isinstance(e, dict):
+                    continue
+                # Prefer current score fields exposed by Canvas.
+                for k in (
+                    "computed_current_score",
+                    "current_score",
+                    "computed_final_score",
+                    "final_score",
+                ):
+                    v = e.get(k)
+                    if isinstance(v, (int, float)):
+                        score = float(v)
+                        break
+                if score is not None:
+                    break
+
+            if score is not None:
+                out[cid_i] = score
         return out
 
     def fetch_course_name(self, course_id: int) -> tuple[str, str]:
