@@ -184,9 +184,9 @@ class CourseManagerScreen(Screen):
         self.status.update("[bold]All courses visible[/bold]")
 
     def action_pop(self) -> None:
-        self.app.pop_screen()
+        self.dismiss()
 
     def on_key(self, event: Key) -> None:
         if event.key == "backspace":
             event.stop()
-            self.app.pop_screen()
+            self.dismiss()

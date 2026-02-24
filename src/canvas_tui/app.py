@@ -1169,7 +1169,11 @@ class CanvasTUI(App):
 
     def action_manage_courses(self) -> None:
         """Open the course manager to show/hide courses."""
-        self.push_screen(CourseManagerScreen(self))
+        def _on_dismiss(_result: Any = None) -> None:
+            self._render_table()
+            self._render_info()
+            self._render_graphs()
+        self.push_screen(CourseManagerScreen(self), callback=_on_dismiss)
 
 
 def main() -> None:
