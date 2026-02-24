@@ -72,13 +72,13 @@ class CanvasTUI(App):
     #top-banner {
         layout: horizontal;
         height: auto;
-        max-height: 8;
+        max-height: 10;
         border-bottom: solid #30363d;
     }
     #banner-logo {
         width: auto;
-        min-width: 20;
-        max-width: 22;
+        min-width: 30;
+        max-width: 34;
         padding: 0 1;
     }
     #banner-scores {
@@ -91,14 +91,14 @@ class CanvasTUI(App):
     #content-area { height: 1fr; layout: horizontal; }
     #left-area { width: 3fr; layout: vertical; }
     #main-table {
-        height: auto;
-        max-height: 50%;
+        height: 2fr;
         border: none;
     }
     #chart-area {
-        height: 1fr;
+        height: 3fr;
         layout: vertical;
         border-top: solid #30363d;
+        overflow-y: auto;
     }
     #sidebar {
         width: 1fr;
@@ -152,8 +152,9 @@ class CanvasTUI(App):
     #bottom-panel {
         layout: horizontal;
         height: 1fr;
-        min-height: 10;
+        min-height: 12;
         border-top: solid #30363d;
+        overflow-y: auto;
     }
     #bottom-trends {
         width: 1fr;
@@ -533,11 +534,11 @@ class CanvasTUI(App):
         except Exception:
             tw, th = 120, 40
         # Panel widths: 3 bottom panels split the left area (~75% of terminal)
-        panel_w = max(30, (tw * 3 // 4) // 3 - 4)
-        # Panel height: remaining space below table (roughly 40-60% of terminal)
-        panel_h = max(10, th * 2 // 5)
-        banner_w = max(40, tw * 3 // 4 - 6)
-        banner_h = max(4, min(8, len(self._active_courses()) + 3))
+        panel_w = max(35, (tw * 3 // 4) // 3 - 2)
+        # Panel height: charts get 3/5 of content area, which is ~60% of terminal
+        panel_h = max(14, th * 3 // 7)
+        banner_w = max(45, tw * 3 // 4 - 4)
+        banner_h = max(5, min(8, len(self._active_courses()) + 3))
 
         # --- Collect course data (filtered by hidden courses) ---
         active = self._active_courses()
@@ -725,7 +726,7 @@ class CanvasTUI(App):
     def on_mount(self) -> None:
         self._setup_table()
         # Initialize graph panels
-        self.banner_logo.update(get_logo(32, compact=True))
+        self.banner_logo.update(get_logo(32))
         self.banner_scores.update("[dim]Loading scores...[/dim]")
         self.side_charts.update("")
         self.stat_gpa.update("[dim]---[/dim]")
@@ -848,7 +849,7 @@ class CanvasTUI(App):
         total, due_today, overdue, submitted = self._stats()
 
         # Banner logo
-        self.banner_logo.update(get_logo(32, compact=True))
+        self.banner_logo.update(get_logo(32))
 
         # Sidebar info
         prog = f"{submitted}/{total}" if total else "0/0"
