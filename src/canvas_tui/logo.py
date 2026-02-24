@@ -43,12 +43,26 @@ CANVAS_LOGO_WIDE = (
     "[bold red]           ▀▀            [/bold red][bold red]   █    ██   ██ ███████[/bold red]"
 )
 
+# Compact icon — 4 rows, ~18 cols (for banner use)
+CANVAS_ICON_COMPACT = (
+    "[bold red]"
+    "    ▄▄█▀▀██▀▄▄   \n"
+    "  ▄██  ▀▀  ▀▀██▄ \n"
+    "  ▀██  ▄▄  ▄▄██▀ \n"
+    "    ▀▀█▄▄██▄▀▀   "
+    "[/bold red]"
+)
+
 # Compact — just the text (for narrow panels)
 CANVAS_LOGO_SMALL = "[bold red]CANVAS[/bold red] [dim]LMS[/dim]"
 
 
-def get_logo(width: int = 80) -> str:
+def get_logo(width: int = 80, compact: bool = False) -> str:
     """Select best logo for available width."""
+    if compact:
+        if width >= 18:
+            return CANVAS_ICON_COMPACT
+        return CANVAS_LOGO_SMALL
     if width >= 60:
         return CANVAS_LOGO_WIDE
     if width >= 32:

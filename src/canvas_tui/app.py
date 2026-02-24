@@ -72,13 +72,13 @@ class CanvasTUI(App):
     #top-banner {
         layout: horizontal;
         height: auto;
-        max-height: 14;
+        max-height: 8;
         border-bottom: solid #30363d;
     }
     #banner-logo {
         width: auto;
-        min-width: 32;
-        max-width: 34;
+        min-width: 20;
+        max-width: 22;
         padding: 0 1;
     }
     #banner-scores {
@@ -87,12 +87,18 @@ class CanvasTUI(App):
         border-left: solid #30363d;
     }
 
-    /* Middle: table (1fr) + sidebar — scrolls if needed */
-    #content-area { height: 1fr; layout: vertical; }
-    #main-split { layout: horizontal; height: 1fr; }
+    /* Middle: table + charts + sidebar */
+    #content-area { height: 1fr; layout: horizontal; }
+    #left-area { width: 3fr; layout: vertical; }
     #main-table {
-        width: 3fr;
+        height: auto;
+        max-height: 50%;
         border: none;
+    }
+    #chart-area {
+        height: 1fr;
+        layout: vertical;
+        border-top: solid #30363d;
     }
     #sidebar {
         width: 1fr;
@@ -101,6 +107,7 @@ class CanvasTUI(App):
         border-left: solid #30363d;
         layout: vertical;
         padding: 0 1;
+        overflow-y: auto;
     }
     #side-info {
         padding: 1 1;
@@ -126,13 +133,12 @@ class CanvasTUI(App):
         overflow-y: auto;
     }
 
-    /* Stats + charts row (below table) */
+    /* Stats row */
     #stats-row {
         layout: horizontal;
         height: auto;
         min-height: 4;
         max-height: 7;
-        border-top: solid #30363d;
         padding: 0 1;
     }
     .stat-cell {
@@ -142,12 +148,11 @@ class CanvasTUI(App):
         border-left: solid #30363d;
     }
 
-    /* Bottom panel: plotext charts */
+    /* Chart panels: expand to fill remaining space below table */
     #bottom-panel {
         layout: horizontal;
-        height: auto;
+        height: 1fr;
         min-height: 10;
-        max-height: 14;
         border-top: solid #30363d;
     }
     #bottom-trends {
@@ -381,38 +386,40 @@ class CanvasTUI(App):
             yield self.banner_logo
             self.banner_scores = Static(id="banner-scores")
             yield self.banner_scores
-        # Content area: table + sidebar (fills remaining vertical space)
-        with Vertical(id="content-area"):
-            with Horizontal(id="main-split"):
+        # Content area: left (table + stats + charts) | right (sidebar)
+        with Horizontal(id="content-area"):
+            with Vertical(id="left-area"):
                 self.table = DataTable(zebra_stripes=True, id="main-table")
                 yield self.table
-                with Vertical(id="sidebar"):
-                    self.info = Static(id="side-info")
-                    yield self.info
-                    self.details = Static(id="side-details")
-                    yield self.details
-                    self.pomo = Pomodoro(on_state_change=self._persist_pomo)
-                    yield self.pomo
-                    self.side_charts = Static(id="side-charts")
-                    yield self.side_charts
-            # Stats row: raw text statistics
-            with Horizontal(id="stats-row"):
-                self.stat_gpa = Static(id="stat-gpa", classes="stat-cell")
-                yield self.stat_gpa
-                self.stat_progress = Static(id="stat-progress", classes="stat-cell")
-                yield self.stat_progress
-                self.stat_upcoming = Static(id="stat-upcoming", classes="stat-cell")
-                yield self.stat_upcoming
-                self.stat_summary = Static(id="stat-summary", classes="stat-cell")
-                yield self.stat_summary
-            # Bottom panel: plotext charts
-            with Horizontal(id="bottom-panel"):
-                self.bottom_trends = Static(id="bottom-trends")
-                yield self.bottom_trends
-                self.bottom_stats = Static(id="bottom-stats")
-                yield self.bottom_stats
-                self.bottom_due = Static(id="bottom-due")
-                yield self.bottom_due
+                # Charts fill remaining space below table
+                with Vertical(id="chart-area"):
+                    # Stats row
+                    with Horizontal(id="stats-row"):
+                        self.stat_gpa = Static(id="stat-gpa", classes="stat-cell")
+                        yield self.stat_gpa
+                        self.stat_progress = Static(id="stat-progress", classes="stat-cell")
+                        yield self.stat_progress
+                        self.stat_upcoming = Static(id="stat-upcoming", classes="stat-cell")
+                        yield self.stat_upcoming
+                        self.stat_summary = Static(id="stat-summary", classes="stat-cell")
+                        yield self.stat_summary
+                    # Plotext chart panels
+                    with Horizontal(id="bottom-panel"):
+                        self.bottom_trends = Static(id="bottom-trends")
+                        yield self.bottom_trends
+                        self.bottom_stats = Static(id="bottom-stats")
+                        yield self.bottom_stats
+                        self.bottom_due = Static(id="bottom-due")
+                        yield self.bottom_due
+            with Vertical(id="sidebar"):
+                self.info = Static(id="side-info")
+                yield self.info
+                self.details = Static(id="side-details")
+                yield self.details
+                self.pomo = Pomodoro(on_state_change=self._persist_pomo)
+                yield self.pomo
+                self.side_charts = Static(id="side-charts")
+                yield self.side_charts
         self.status_bar = Static(id="status-bar")
         yield self.status_bar
         self.cmd_bar = CommandBar(id="cmd-bar")
@@ -635,7 +642,7 @@ class CanvasTUI(App):
     def on_mount(self) -> None:
         self._setup_table()
         # Initialize graph panels
-        self.banner_logo.update(get_logo(32))
+        self.banner_logo.update(get_logo(32, compact=True))
         self.banner_scores.update("[dim]Loading scores...[/dim]")
         self.side_charts.update("")
         self.stat_gpa.update("[dim]---[/dim]")
@@ -758,7 +765,7 @@ class CanvasTUI(App):
         total, due_today, overdue, submitted = self._stats()
 
         # Banner logo
-        self.banner_logo.update(get_logo(32))
+        self.banner_logo.update(get_logo(32, compact=True))
 
         # Sidebar info
         prog = f"{submitted}/{total}" if total else "0/0"
