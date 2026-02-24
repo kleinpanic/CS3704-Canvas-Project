@@ -152,3 +152,37 @@ def legacy_item_key(
 ) -> str:
     """Generate legacy key format for migration."""
     return f"{course_id}:{plannable_id}:{ptype}:{abs(hash(title))}"
+
+
+def open_url(url: str) -> None:
+    """Open URL in the user's graphical browser.
+
+    Prefers xdg-open (Linux) or open (macOS) over Python's webbrowser
+    module, which may fall back to w3m or lynx in terminal environments.
+    """
+    import platform
+    import subprocess
+    import webbrowser
+
+    if not url:
+        return
+
+    system = platform.system()
+    try:
+        if system == "Linux":
+            subprocess.Popen(
+                ["xdg-open", url],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True,
+            )
+        elif system == "Darwin":
+            subprocess.Popen(
+                ["open", url],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        else:
+            webbrowser.open(url, new=2)
+    except FileNotFoundError:
+        webbrowser.open(url, new=2)

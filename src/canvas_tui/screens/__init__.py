@@ -2,6 +2,7 @@
 
 from .announcements import AnnouncementDetailScreen, AnnouncementsScreen
 from .course_overview import CourseOverviewScreen
+from .courses import CourseManagerScreen
 from .dashboard import DashboardScreen
 from .details import DetailsScreen
 from .files import FileManagerScreen
@@ -15,6 +16,7 @@ __all__ = [
     "AnnouncementDetailScreen",
     "AnnouncementsScreen",
     "ConfirmPath",
+    "CourseManagerScreen",
     "CourseOverviewScreen",
     "DashboardScreen",
     "DetailsScreen",

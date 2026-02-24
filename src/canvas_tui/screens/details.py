@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import contextlib
 import threading
-import webbrowser
 from typing import TYPE_CHECKING, Any
 
 from textual.app import ComposeResult
@@ -14,7 +13,7 @@ from textual.screen import Screen
 from textual.widgets import DataTable, Footer, RichLog, Static
 
 from ..models import CanvasItem
-from ..utils import strip_html
+from ..utils import open_url, strip_html
 
 if TYPE_CHECKING:
     from ..app import CanvasTUI
@@ -143,7 +142,7 @@ class DetailsScreen(Screen):
     def action_open(self) -> None:
         """Open the item URL in browser."""
         with contextlib.suppress(Exception):
-            webbrowser.open(self.item.url, new=2)
+            open_url(self.item.url)
 
     def action_open_link(self) -> None:
         """Open the selected link from the link table."""
@@ -151,7 +150,7 @@ class DetailsScreen(Screen):
         if not url:
             return
         with contextlib.suppress(Exception):
-            webbrowser.open(url, new=2)
+            open_url(url)
 
     def action_download(self) -> None:
         if not self._loaded:
