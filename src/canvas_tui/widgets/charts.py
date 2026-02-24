@@ -1,13 +1,19 @@
 """Terminal chart rendering via plotext.
 
-All functions return ANSI strings ready for Rich/Textual Static widgets.
-plotext renders directly to terminal escape codes — we capture the output
-with plt.build() and embed it.
+All functions return Rich Text objects (via Text.from_ansi) ready for
+Textual Static widgets. plotext renders to ANSI escape codes which we
+convert to Rich's internal format for proper display.
 """
 
 from __future__ import annotations
 
 import plotext as plt
+from rich.text import Text
+
+
+def _to_rich(ansi_str: str) -> Text:
+    """Convert plotext ANSI output to Rich Text for Textual widgets."""
+    return Text.from_ansi(ansi_str)
 
 
 def _setup(width: int = 50, height: int = 12, title: str = "") -> None:
@@ -25,10 +31,10 @@ def score_bar_chart(
     width: int = 50,
     height: int = 12,
     title: str = "Course Scores",
-) -> str:
+) -> Text:
     """Horizontal bar chart of course scores."""
     if not labels:
-        return "[dim]No score data[/dim]"
+        return Text("No score data", style="dim")
     _setup(width, height, title)
     colors = []
     for s in scores:
@@ -42,7 +48,7 @@ def score_bar_chart(
             colors.append("red")
     plt.bar(labels, scores, color=colors, orientation="horizontal")
     plt.xlim(0, 100)
-    return plt.build()
+    return _to_rich(plt.build())
 
 
 def score_line_chart(
@@ -52,15 +58,15 @@ def score_line_chart(
     height: int = 10,
     title: str = "Score Trend",
     color: str = "cyan",
-) -> str:
+) -> Text:
     """Line chart of scores over assignments."""
     if not values:
-        return "[dim]No trend data[/dim]"
+        return Text("No trend data", style="dim")
     _setup(width, height, title)
     x = list(range(1, len(values) + 1))
     plt.plot(x, values, color=color, marker="braille")
     plt.ylim(0, 100)
-    return plt.build()
+    return _to_rich(plt.build())
 
 
 def multi_line_chart(
@@ -68,10 +74,10 @@ def multi_line_chart(
     width: int = 50,
     height: int = 12,
     title: str = "Grade Trends",
-) -> str:
+) -> Text:
     """Multiple line series on one chart."""
     if not series:
-        return "[dim]No trend data[/dim]"
+        return Text("No trend data", style="dim")
     _setup(width, height, title)
     colors = ["cyan", "green", "yellow", "magenta", "blue", "red"]
     for i, (label, vals) in enumerate(series.items()):
@@ -79,7 +85,7 @@ def multi_line_chart(
             x = list(range(1, len(vals) + 1))
             plt.plot(x, vals, color=colors[i % len(colors)], label=label, marker="braille")
     plt.ylim(0, 100)
-    return plt.build()
+    return _to_rich(plt.build())
 
 
 def grade_histogram(
@@ -88,13 +94,13 @@ def grade_histogram(
     height: int = 10,
     title: str = "Grade Distribution",
     bins: int = 10,
-) -> str:
+) -> Text:
     """Histogram of grade scores."""
     if not scores:
-        return "[dim]No grade data[/dim]"
+        return Text("No grade data", style="dim")
     _setup(width, height, title)
     plt.hist(scores, bins=bins, color="cyan")
-    return plt.build()
+    return _to_rich(plt.build())
 
 
 def submission_heatmap(
@@ -104,20 +110,17 @@ def submission_heatmap(
     width: int = 50,
     height: int = 12,
     title: str = "Submission Activity",
-) -> str:
-    """Heatmap of submission patterns (day x hour).
-
-    day_hour_counts: 7 x 24 matrix of submission counts.
-    """
+) -> Text:
+    """Heatmap of submission patterns (day x hour)."""
     if not day_hour_counts:
-        return "[dim]No submission data[/dim]"
+        return Text("No submission data", style="dim")
     _setup(width, height, title)
     plt.matrix_plot(day_hour_counts)
     if days:
         plt.yticks(list(range(len(days))), days)
     if hours:
         plt.xticks(list(range(len(hours))), hours)
-    return plt.build()
+    return _to_rich(plt.build())
 
 
 def completion_bullet(
@@ -127,16 +130,16 @@ def completion_bullet(
     width: int = 50,
     height: int = 10,
     title: str = "Completion",
-) -> str:
+) -> Text:
     """Bullet chart showing actual vs target completion."""
     if not labels:
-        return "[dim]No data[/dim]"
+        return Text("No data", style="dim")
     _setup(width, height, title)
     plt.bar(labels, actual, color="cyan", orientation="horizontal")
     if targets:
         plt.bar(labels, targets, color="gray", orientation="horizontal")
     plt.xlim(0, 100)
-    return plt.build()
+    return _to_rich(plt.build())
 
 
 def scatter_scores(
@@ -146,13 +149,13 @@ def scatter_scores(
     height: int = 10,
     title: str = "Score Scatter",
     color: str = "cyan",
-) -> str:
+) -> Text:
     """Scatter plot of scores."""
     if not x or not y:
-        return "[dim]No data[/dim]"
+        return Text("No data", style="dim")
     _setup(width, height, title)
     plt.scatter(x, y, color=color, marker="braille")
-    return plt.build()
+    return _to_rich(plt.build())
 
 
 def pie_chart(
@@ -161,19 +164,18 @@ def pie_chart(
     width: int = 40,
     height: int = 10,
     title: str = "",
-) -> str:
+) -> Text:
     """Simulated pie chart using horizontal stacked bars."""
     if not labels or not values:
-        return "[dim]No data[/dim]"
+        return Text("No data", style="dim")
     _setup(width, height, title)
     colors = ["cyan", "green", "yellow", "magenta", "blue", "red", "white"]
     total = sum(values)
     if total <= 0:
-        return "[dim]No data[/dim]"
+        return Text("No data", style="dim")
     pcts = [100.0 * v / total for v in values]
-    # Render as stacked horizontal bar
     plt.stacked_bar([""], [pcts], color=colors[: len(labels)], orientation="horizontal", labels=labels)
-    return plt.build()
+    return _to_rich(plt.build())
 
 
 def weekly_activity_chart(
@@ -182,10 +184,10 @@ def weekly_activity_chart(
     width: int = 40,
     height: int = 8,
     title: str = "This Week",
-) -> str:
+) -> Text:
     """Bar chart of submissions per day this week."""
     if not days:
-        return "[dim]No data[/dim]"
+        return Text("No data", style="dim")
     _setup(width, height, title)
     plt.bar(days, counts, color="cyan")
-    return plt.build()
+    return _to_rich(plt.build())
