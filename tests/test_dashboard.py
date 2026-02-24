@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from canvas_tui.theme import get_theme
 from canvas_tui.widgets.plots import (
     BarEntry,
     PlotSeries,
@@ -30,21 +31,20 @@ class TestDashboardDataRendering:
 
     def test_urgency_coloring(self):
         """Test urgency color thresholds for due-soon panel."""
-        assert urgency_color(0) == "green"
-        assert urgency_color(3) == "cyan"
-        assert urgency_color(5) == "blue"
-        assert urgency_color(8) == "yellow"
-        assert urgency_color(12) == "red"
+        t = get_theme()
+        assert urgency_color(0) == t.success
+        assert urgency_color(3) == t.info
+        assert urgency_color(5) == t.info
+        assert urgency_color(8) == t.warning
+        assert urgency_color(12) == t.error
 
     def test_completion_gauges(self):
         """Test assignment completion gauge rendering."""
-        # Course with good completion
         result = render_gauge(15, 18, width=20, label="CS3214")
         assert "CS3214" in result
         assert "15/18" in result
         assert "83%" in result
 
-        # Course with no assignments
         result = render_gauge(0, 0, label="NEW101")
         assert "no assignments" in result
 
@@ -61,7 +61,7 @@ class TestDashboardDataRendering:
         assert "Grade Trends" in result
         assert "CS3214" in result
         assert "MATH2114" in result
-        assert "100" in result  # y-axis label
+        assert "100" in result
 
     def test_empty_dashboard_data(self):
         """Dashboard with no courses should render gracefully."""

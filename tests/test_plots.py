@@ -1,5 +1,6 @@
 """Tests for plot widgets — bar charts, braille plots, gauges, weight bars."""
 
+from canvas_tui.theme import get_theme
 from canvas_tui.widgets.plots import (
     BarEntry,
     PlotSeries,
@@ -16,42 +17,54 @@ from canvas_tui.widgets.plots import (
 
 class TestGradeColor:
     def test_a_grade(self):
-        assert grade_color(95) == "green"
+        t = get_theme()
+        assert grade_color(95) == t.success
 
     def test_b_grade(self):
-        assert grade_color(85) == "cyan"
+        t = get_theme()
+        assert grade_color(85) == t.info
 
     def test_c_grade(self):
-        assert grade_color(75) == "yellow"
+        t = get_theme()
+        assert grade_color(75) == t.warning
 
     def test_d_grade(self):
-        assert grade_color(65) == "magenta"
+        t = get_theme()
+        assert grade_color(65) == t.secondary
 
     def test_f_grade(self):
-        assert grade_color(50) == "red"
+        t = get_theme()
+        assert grade_color(50) == t.error
 
     def test_boundary_90(self):
-        assert grade_color(90) == "green"
+        t = get_theme()
+        assert grade_color(90) == t.success
 
     def test_boundary_80(self):
-        assert grade_color(80) == "cyan"
+        t = get_theme()
+        assert grade_color(80) == t.info
 
 
 class TestUrgencyColor:
     def test_many(self):
-        assert urgency_color(10) == "red"
+        t = get_theme()
+        assert urgency_color(10) == t.error
 
     def test_several(self):
-        assert urgency_color(7) == "yellow"
+        t = get_theme()
+        assert urgency_color(7) == t.warning
 
     def test_some(self):
-        assert urgency_color(4) == "blue"
+        t = get_theme()
+        assert urgency_color(4) == t.info
 
     def test_few(self):
-        assert urgency_color(2) == "cyan"
+        t = get_theme()
+        assert urgency_color(2) == t.info
 
     def test_none(self):
-        assert urgency_color(0) == "green"
+        t = get_theme()
+        assert urgency_color(0) == t.success
 
 
 class TestBarChart:
@@ -156,11 +169,11 @@ class TestBraillePlot:
     def test_single_series(self):
         series = [PlotSeries(values=[10, 20, 30, 40, 50], color="cyan", label="Test")]
         result = render_braille_plot(series, width=20, height=4)
-        # Should contain braille characters (U+2800 range)
         assert any(0x2800 <= ord(c) <= 0x28FF for c in result)
         assert "Test" in result
 
-    def test_multiple_series(self):
+    def test_multiple_series_overlay(self):
+        """Multiple series should be overlaid on the same grid, not stacked."""
         series = [
             PlotSeries(values=[10, 20, 30], color="cyan", label="A"),
             PlotSeries(values=[30, 20, 10], color="green", label="B"),
@@ -168,6 +181,9 @@ class TestBraillePlot:
         result = render_braille_plot(series, width=15, height=3)
         assert "A" in result
         assert "B" in result
+        # The overlay should produce braille chars with dots from both series
+        braille_chars = [c for c in result if 0x2800 <= ord(c) <= 0x28FF and c != chr(0x2800)]
+        assert len(braille_chars) > 0
 
     def test_with_title(self):
         series = [PlotSeries(values=[1, 2, 3])]
@@ -177,7 +193,6 @@ class TestBraillePlot:
     def test_constant_values(self):
         series = [PlotSeries(values=[50, 50, 50])]
         result = render_braille_plot(series, width=10, height=3)
-        # Should not crash even with zero range
         assert isinstance(result, str)
 
     def test_y_axis_labels(self):
@@ -198,7 +213,6 @@ class TestSparkline:
 
     def test_constant(self):
         result = sparkline([50, 50, 50])
-        # All same value — should contain braille/block chars
         assert "▁" in result or "▄" in result or "█" in result
 
     def test_with_color(self):

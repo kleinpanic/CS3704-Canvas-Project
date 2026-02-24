@@ -12,6 +12,15 @@ from html.parser import HTMLParser
 from zoneinfo import ZoneInfo
 
 
+def course_label(code: str, max_len: int = 12) -> str:
+    """Normalize a course code for display labels.
+
+    Truncates to max_len, strips trailing underscores/whitespace.
+    """
+    label = code[:max_len].rstrip("_ ")
+    return label or code[:max_len]
+
+
 class _HTMLStripper(HTMLParser):
     """Robust HTML-to-text converter using html.parser instead of regex."""
 

@@ -14,6 +14,7 @@ from textual.widgets import DataTable, Footer, Static
 
 from ..widgets.plots import (
     WeightSegment,
+    grade_color,
     render_gauge,
     render_weight_bar,
 )
@@ -159,7 +160,7 @@ class GradesScreen(Screen):
             pct_str = ""
             if score is not None and pts:
                 pct = 100.0 * float(score) / float(pts)
-                color = "green" if pct >= 90 else "yellow" if pct >= 70 else "red"
+                color = grade_color(pct)
                 pct_str = f"[{color}]{pct:.1f}%[/{color}]"
 
             status = ", ".join(status_parts) or "-"
@@ -167,7 +168,7 @@ class GradesScreen(Screen):
 
         # Summary
         avg = (100.0 * total_score / total_possible) if total_possible > 0 else 0.0
-        avg_color = "green" if avg >= 90 else "yellow" if avg >= 70 else "red"
+        avg_color = grade_color(avg)
 
         # Sparkline of recent grades
         recent_pcts = []

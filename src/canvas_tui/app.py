@@ -45,7 +45,7 @@ from .screens import (
 )
 from .state import StateManager
 from .theme import DARK_THEME, LIGHT_THEME, ThemeColors, get_theme
-from .utils import absolute_url, get_download_dir, local_dt, open_url, sanitize_filename
+from .utils import absolute_url, course_label, get_download_dir, local_dt, open_url, sanitize_filename
 from .widgets import Pomodoro
 from .widgets.command_bar import CommandBar
 
@@ -431,6 +431,7 @@ class CanvasTUI(App):
 
     def _render_stats(self) -> None:
         """Render raw text statistics in the stats row."""
+        from .widgets.plots import grade_color
         active = self._active_courses()
         hidden_courses = self.state.get_hidden_courses()
 
@@ -458,15 +459,15 @@ class CanvasTUI(App):
             total_submitted += n_sub
             avg = (100.0 * ts / tp) if tp > 0 else 0.0
             if tp > 0:
-                course_avgs.append((code[:12], avg))
+                course_avgs.append((course_label(code), avg))
 
         # Cell 1: Course averages
         lines = ["[bold]Averages[/bold]"]
         for code, avg in course_avgs:
-            gc = "green" if avg >= 90 else "cyan" if avg >= 80 else "yellow" if avg >= 70 else "red"
+            gc = grade_color(avg)
             lines.append(f" [{gc}]{avg:5.1f}%[/{gc}] {code}")
         overall = (100.0 * total_scored / total_possible) if total_possible > 0 else 0.0
-        gc = "green" if overall >= 90 else "cyan" if overall >= 80 else "yellow" if overall >= 70 else "red"
+        gc = grade_color(overall)
         lines.append(f"[bold][{gc}]{overall:5.1f}%[/{gc}] Overall[/bold]")
         self.stat_gpa.update("\n".join(lines))
 
@@ -515,7 +516,7 @@ class CanvasTUI(App):
         )
 
     def _render_graphs(self) -> None:
-        """Render plotext charts in banner and bottom panels.
+        """Render charts in banner and bottom panels.
 
         Chart sizes are dynamic based on terminal dimensions.
         """
@@ -526,7 +527,7 @@ class CanvasTUI(App):
             scatter_scores,
             score_bar_chart,
         )
-        from .widgets.plots import urgency_color
+        from .widgets.plots import grade_color, urgency_color
 
         # Dynamic sizing from terminal
         try:
@@ -566,10 +567,10 @@ class CanvasTUI(App):
                     idx += 1
                     all_x.append(float(idx))
             avg = (100.0 * ts / tp) if tp > 0 else 0.0
-            labels.append(code[:12])
+            labels.append(course_label(code))
             scores.append(round(avg, 1))
             if pcts:
-                course_pcts[code[:12]] = pcts
+                course_pcts[course_label(code)] = pcts
 
         # --- Top banner: score bar chart ---
         with contextlib.suppress(Exception):
@@ -672,7 +673,7 @@ class CanvasTUI(App):
                     title="Due by Day",
                 )
                 from rich.text import Text
-                combined = Text("\n".join(due_lines))
+                combined = Text.from_markup("\n".join(due_lines))
                 combined.append("\n")
                 combined.append_text(wk)
                 self.bottom_due.update(combined)
@@ -686,13 +687,13 @@ class CanvasTUI(App):
                 ((l, (s, course_pcts.get(l, []))) for l, s in zip(labels, scores, strict=False)),
                 key=lambda x: -x[1][0],
             ):
-                gc = "green" if avg >= 90 else "cyan" if avg >= 80 else "yellow" if avg >= 70 else "red"
+                gc = grade_color(avg)
                 bar_w = 16
                 filled = int(avg / 100.0 * bar_w)
                 full = "\u2588" * filled
                 empty = "\u2591" * (bar_w - filled)
                 bar = f"[{gc}]{full}[/{gc}][dim]{empty}[/dim]"
-                side_lines.append(f"{code[:8]:<8} {bar} [{gc}]{avg:.0f}%[/{gc}]")
+                side_lines.append(f"{course_label(code, 8):<8} {bar} [{gc}]{avg:.0f}%[/{gc}]")
             # Add line sparklines per course
             side_lines.append("")
             side_lines.append("[bold]Recent Scores[/bold]")
@@ -700,8 +701,8 @@ class CanvasTUI(App):
                 last5 = pcts[-5:]
                 sparks = " ".join(f"{p:.0f}" for p in last5)
                 avg = sum(last5) / len(last5)
-                gc = "green" if avg >= 90 else "cyan" if avg >= 80 else "yellow" if avg >= 70 else "red"
-                side_lines.append(f" [{gc}]{code[:8]:<8}[/{gc}] {sparks}")
+                gc = grade_color(avg)
+                side_lines.append(f" [{gc}]{course_label(code, 8):<8}[/{gc}] {sparks}")
             self.side_charts.update("\n".join(side_lines))
 
     def _update_status_bar(self, extra: str = "") -> None:
