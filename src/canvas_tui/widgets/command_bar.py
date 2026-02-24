@@ -62,7 +62,7 @@ class CommandBar(Static):
         parts = [f"[bold]{pg_name}[/bold]"]
         for key, label in bindings:
             parts.append(f" [cyan]{key}[/cyan]={label}")
-        nav = f"  [dim][/] pg {self.page + 1}/{self._max_page + 1}[/dim]"
+        nav = f"  [dim]<< >> pg {self.page + 1}/{self._max_page + 1}[/dim]"
         return "".join(parts) + nav
 
     def next_page(self) -> None:
