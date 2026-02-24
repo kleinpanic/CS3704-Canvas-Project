@@ -87,7 +87,8 @@ class CanvasTUI(App):
         border-left: solid #30363d;
     }
 
-    /* Middle: table + sidebar */
+    /* Middle: table (1fr) + sidebar — scrolls if needed */
+    #content-area { height: 1fr; layout: vertical; }
     #main-split { layout: horizontal; height: 1fr; }
     #main-table {
         width: 3fr;
@@ -95,10 +96,10 @@ class CanvasTUI(App):
     }
     #sidebar {
         width: 1fr;
-        min-width: 28;
-        max-width: 40;
+        min-width: 34;
+        max-width: 46;
         border-left: solid #30363d;
-        overflow-y: auto;
+        layout: vertical;
         padding: 0 1;
     }
     #side-info {
@@ -108,47 +109,68 @@ class CanvasTUI(App):
     #side-details {
         padding: 1 1;
         border-top: solid #30363d;
-        height: 1fr;
+        height: auto;
         overflow-y: auto;
     }
     #pomodoro {
         padding: 0 1;
         border-top: solid #30363d;
-        height: 3;
+        height: auto;
+        min-height: 2;
+    }
+    /* Side charts in sidebar below details */
+    #side-charts {
+        border-top: solid #30363d;
+        padding: 0 1;
+        height: 1fr;
+        overflow-y: auto;
     }
 
-    /* Bottom panel: trends + stats */
+    /* Stats + charts row (below table) */
+    #stats-row {
+        layout: horizontal;
+        height: auto;
+        min-height: 4;
+        max-height: 7;
+        border-top: solid #30363d;
+        padding: 0 1;
+    }
+    .stat-cell {
+        width: 1fr;
+        padding: 0 1;
+        height: auto;
+        border-left: solid #30363d;
+    }
+
+    /* Bottom panel: plotext charts */
     #bottom-panel {
         layout: horizontal;
         height: auto;
         min-height: 10;
-        max-height: 16;
+        max-height: 14;
         border-top: solid #30363d;
-        overflow-y: auto;
     }
     #bottom-trends {
         width: 1fr;
-        padding: 0 2;
+        padding: 0 1;
+        overflow: auto;
     }
     #bottom-stats {
         width: 1fr;
-        padding: 0 2;
+        padding: 0 1;
         border-left: solid #30363d;
+        overflow: auto;
     }
     #bottom-due {
         width: 1fr;
-        padding: 0 2;
+        padding: 0 1;
         border-left: solid #30363d;
+        overflow: auto;
     }
 
     /* === Pane borders (tmux-style) === */
     #banner-logo { border-right: solid #30363d; padding: 0 1; }
     #banner-scores { padding: 0 1; overflow: auto; }
-    #side-info { border-bottom: solid #30363d; padding: 0 1; }
-    #side-details { border-bottom: solid #30363d; padding: 0 1; overflow-y: auto; }
-    #bottom-trends { border-right: solid #30363d; width: 1fr; padding: 0 1; overflow: auto; }
-    #bottom-stats { border-right: solid #30363d; width: 1fr; padding: 0 1; overflow: auto; }
-    #bottom-due { width: 1fr; padding: 0 1; overflow: auto; }
 
     /* === Command bar === */
     #cmd-bar {
@@ -359,25 +381,38 @@ class CanvasTUI(App):
             yield self.banner_logo
             self.banner_scores = Static(id="banner-scores")
             yield self.banner_scores
-        # Middle: table + sidebar
-        with Horizontal(id="main-split"):
-            self.table = DataTable(zebra_stripes=True, id="main-table")
-            yield self.table
-            with Vertical(id="sidebar"):
-                self.info = Static(id="side-info")
-                yield self.info
-                self.details = Static(id="side-details")
-                yield self.details
-                self.pomo = Pomodoro(on_state_change=self._persist_pomo)
-                yield self.pomo
-        # Bottom panel: trends + stats + due-soon
-        with Horizontal(id="bottom-panel"):
-            self.bottom_trends = Static(id="bottom-trends")
-            yield self.bottom_trends
-            self.bottom_stats = Static(id="bottom-stats")
-            yield self.bottom_stats
-            self.bottom_due = Static(id="bottom-due")
-            yield self.bottom_due
+        # Content area: table + sidebar (fills remaining vertical space)
+        with Vertical(id="content-area"):
+            with Horizontal(id="main-split"):
+                self.table = DataTable(zebra_stripes=True, id="main-table")
+                yield self.table
+                with Vertical(id="sidebar"):
+                    self.info = Static(id="side-info")
+                    yield self.info
+                    self.details = Static(id="side-details")
+                    yield self.details
+                    self.pomo = Pomodoro(on_state_change=self._persist_pomo)
+                    yield self.pomo
+                    self.side_charts = Static(id="side-charts")
+                    yield self.side_charts
+            # Stats row: raw text statistics
+            with Horizontal(id="stats-row"):
+                self.stat_gpa = Static(id="stat-gpa", classes="stat-cell")
+                yield self.stat_gpa
+                self.stat_progress = Static(id="stat-progress", classes="stat-cell")
+                yield self.stat_progress
+                self.stat_upcoming = Static(id="stat-upcoming", classes="stat-cell")
+                yield self.stat_upcoming
+                self.stat_summary = Static(id="stat-summary", classes="stat-cell")
+                yield self.stat_summary
+            # Bottom panel: plotext charts
+            with Horizontal(id="bottom-panel"):
+                self.bottom_trends = Static(id="bottom-trends")
+                yield self.bottom_trends
+                self.bottom_stats = Static(id="bottom-stats")
+                yield self.bottom_stats
+                self.bottom_due = Static(id="bottom-due")
+                yield self.bottom_due
         self.status_bar = Static(id="status-bar")
         yield self.status_bar
         self.cmd_bar = CommandBar(id="cmd-bar")
@@ -385,6 +420,91 @@ class CanvasTUI(App):
 
     def _persist_pomo(self, end_ts: float | None) -> None:
         self.state.set_pomo_end(end_ts)
+
+    def _render_stats(self) -> None:
+        """Render raw text statistics in the stats row."""
+        active = self._active_courses()
+        hidden_courses = self.state.get_hidden_courses()
+
+        # GPA / averages
+        course_avgs: list[tuple[str, float]] = []
+        total_scored, total_possible = 0.0, 0.0
+        total_assignments = 0
+        total_submitted = 0
+
+        for cid, (code, _name) in sorted(active.items(), key=lambda kv: kv[1][0]):
+            grades = self._grade_cache.get(cid, [])
+            ts, tp = 0.0, 0.0
+            n_sub = 0
+            for a in grades:
+                pts = a.get("points_possible")
+                sub = a.get("submission") or {}
+                sc = sub.get("score")
+                total_assignments += 1
+                if sc is not None and pts:
+                    ts += float(sc)
+                    tp += float(pts)
+                    n_sub += 1
+            total_scored += ts
+            total_possible += tp
+            total_submitted += n_sub
+            avg = (100.0 * ts / tp) if tp > 0 else 0.0
+            if tp > 0:
+                course_avgs.append((code[:12], avg))
+
+        # Cell 1: Course averages
+        lines = ["[bold]Averages[/bold]"]
+        for code, avg in course_avgs:
+            gc = "green" if avg >= 90 else "cyan" if avg >= 80 else "yellow" if avg >= 70 else "red"
+            lines.append(f" [{gc}]{avg:5.1f}%[/{gc}] {code}")
+        overall = (100.0 * total_scored / total_possible) if total_possible > 0 else 0.0
+        gc = "green" if overall >= 90 else "cyan" if overall >= 80 else "yellow" if overall >= 70 else "red"
+        lines.append(f"[bold][{gc}]{overall:5.1f}%[/{gc}] Overall[/bold]")
+        self.stat_gpa.update("\n".join(lines))
+
+        # Cell 2: Progress
+        pct = (100.0 * total_submitted / total_assignments) if total_assignments > 0 else 0.0
+        bar_w = 20
+        filled = int(pct / 100.0 * bar_w)
+        bar = f"[green]{'█' * filled}[/green][dim]{'░' * (bar_w - filled)}[/dim]"
+        self.stat_progress.update(
+            f"[bold]Progress[/bold]\n"
+            f" {bar} {pct:.0f}%\n"
+            f" {total_submitted}/{total_assignments} graded\n"
+            f" {len(active)} courses active"
+        )
+
+        # Cell 3: Upcoming deadlines count
+        now = dt.datetime.now(ZoneInfo(self.cfg.user_tz))
+        late, today, week = 0, 0, 0
+        items_visible = [it for it in self.items if it.course_id not in hidden_courses]
+        for it in items_visible:
+            if "submitted" in it.status_flags or not it.due_iso:
+                continue
+            with contextlib.suppress(Exception):
+                due = dt.datetime.fromisoformat(it.due_iso.replace("Z", "+00:00"))
+                dh = (due - now.astimezone(dt.UTC)).total_seconds() / 3600.0
+                if dh < 0:
+                    late += 1
+                elif dh < 24:
+                    today += 1
+                elif dh < 168:
+                    week += 1
+        self.stat_upcoming.update(
+            f"[bold]Deadlines[/bold]\n"
+            f" [red]{late}[/red] overdue\n"
+            f" [yellow]{today}[/yellow] due today\n"
+            f" [cyan]{week}[/cyan] this week"
+        )
+
+        # Cell 4: Quick summary
+        hidden_count = len([c for c in self.course_cache if c in hidden_courses])
+        self.stat_summary.update(
+            f"[bold]Summary[/bold]\n"
+            f" {len(items_visible)} items shown\n"
+            f" {hidden_count} courses hidden\n"
+            f" {len(self.announcements)} announcements"
+        )
 
     def _render_graphs(self) -> None:
         """Render plotext charts in banner and bottom panels."""
@@ -477,6 +597,22 @@ class CanvasTUI(App):
             due_lines.append(" [green]All clear[/green]")
         self.bottom_due.update("\n".join(due_lines))
 
+        # --- Sidebar charts: completion gauges ---
+        with contextlib.suppress(Exception):
+            side_lines = ["[bold]Completion[/bold]"]
+            for code, (avg, _pcts) in sorted(
+                ((l, (s, course_pcts.get(l, []))) for l, s in zip(labels, scores, strict=False)),
+                key=lambda x: -x[1][0],
+            ):
+                gc = "green" if avg >= 90 else "cyan" if avg >= 80 else "yellow" if avg >= 70 else "red"
+                bar_w = 16
+                filled = int(avg / 100.0 * bar_w)
+                full = "\u2588" * filled
+                empty = "\u2591" * (bar_w - filled)
+                bar = f"[{gc}]{full}[/{gc}][dim]{empty}[/dim]"
+                side_lines.append(f"{code[:8]:<8} {bar} [{gc}]{avg:.0f}%[/{gc}]")
+            self.side_charts.update("\n".join(side_lines))
+
     def _update_status_bar(self, extra: str = "") -> None:
         """Update the bottom status bar."""
         if not self.status_bar:
@@ -501,6 +637,11 @@ class CanvasTUI(App):
         # Initialize graph panels
         self.banner_logo.update(get_logo(32))
         self.banner_scores.update("[dim]Loading scores...[/dim]")
+        self.side_charts.update("")
+        self.stat_gpa.update("[dim]---[/dim]")
+        self.stat_progress.update("[dim]---[/dim]")
+        self.stat_upcoming.update("[dim]---[/dim]")
+        self.stat_summary.update("[dim]---[/dim]")
         self.bottom_trends.update("[dim]Loading...[/dim]")
         self.bottom_stats.update("[dim]Loading...[/dim]")
         self.bottom_due.update("[dim]Loading...[/dim]")
@@ -808,6 +949,7 @@ class CanvasTUI(App):
                     )
                     self._render_info()
                     self._render_table()
+                    self._render_stats()
                     self._render_graphs()
                     if not silent:
                         self.details.update(
@@ -1225,6 +1367,7 @@ class CanvasTUI(App):
         def _on_dismiss(_result: Any = None) -> None:
             self._render_table()
             self._render_info()
+            self._render_stats()
             self._render_graphs()
         self.push_screen(CourseManagerScreen(self), callback=_on_dismiss)
 
