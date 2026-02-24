@@ -90,6 +90,7 @@ class AnalyticsScreen(Screen):
         all_scores: list[float] = []
         all_x: list[float] = []
         completion: dict[str, float] = {}
+        label_counts: dict[str, int] = {}
 
         for cid, (code, _name) in sorted(active.items(), key=lambda kv: kv[1][0]):
             grades = self._owner._grade_cache.get(cid, [])
@@ -112,7 +113,11 @@ class AnalyticsScreen(Screen):
                     all_x.append(float(idx))
                     submitted += 1
             avg = (100.0 * ts / tp) if tp > 0 else 0.0
-            lbl = course_label(code)
+            base = course_label(code)
+            n = label_counts.get(base, 0) + 1
+            label_counts[base] = n
+            lbl = base if n == 1 else f"{course_label(code, 9)}#{n}"
+
             labels.append(lbl)
             scores.append(round(avg, 1))
             if pcts:

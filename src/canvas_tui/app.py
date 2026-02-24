@@ -549,6 +549,7 @@ class CanvasTUI(App):
         all_scores: list[float] = []
         all_x: list[float] = []
         idx = 0
+        label_counts: dict[str, int] = {}
 
         for cid, (code, _name) in sorted(active.items(), key=lambda kv: kv[1][0]):
             grades = self._grade_cache.get(cid, [])
@@ -567,10 +568,15 @@ class CanvasTUI(App):
                     idx += 1
                     all_x.append(float(idx))
             avg = (100.0 * ts / tp) if tp > 0 else 0.0
-            labels.append(course_label(code))
+            base = course_label(code)
+            n = label_counts.get(base, 0) + 1
+            label_counts[base] = n
+            lbl = base if n == 1 else f"{course_label(code, 9)}#{n}"
+
+            labels.append(lbl)
             scores.append(round(avg, 1))
             if pcts:
-                course_pcts[course_label(code)] = pcts
+                course_pcts[lbl] = pcts
 
         # --- Top banner: score bar chart ---
         with contextlib.suppress(Exception):
