@@ -63,45 +63,79 @@ class CanvasTUI(App):
     """Main Canvas TUI application."""
 
     CSS = """
-    /* === Main layout === */
+    /* === Main layout (GideonWolfe-inspired) === */
     Screen { layout: vertical; }
-    #main-split { layout: horizontal; height: 1fr; }
-    #left-panel {
-        width: 1fr;
-        min-width: 30;
-        max-width: 42;
-        border-right: solid #30363d;
-    }
-    #right-panel { width: 4fr; }
 
-    /* === Left panel sections === */
-    #info {
-        padding: 1 2;
+    /* Top banner: logo + score bars */
+    #top-banner {
+        layout: horizontal;
         height: auto;
-        max-height: 16;
+        max-height: 14;
+        border-bottom: solid #30363d;
     }
-    #details {
-        padding: 1 2;
+    #banner-logo {
+        width: auto;
+        min-width: 32;
+        max-width: 34;
+        padding: 0 1;
+    }
+    #banner-scores {
+        width: 1fr;
+        padding: 0 2;
+        border-left: solid #30363d;
+    }
+
+    /* Middle: table + sidebar */
+    #main-split { layout: horizontal; height: 1fr; }
+    #main-table {
+        width: 3fr;
+        border: none;
+    }
+    #sidebar {
+        width: 1fr;
+        min-width: 28;
+        max-width: 40;
+        border-left: solid #30363d;
+        overflow-y: auto;
+        padding: 0 1;
+    }
+    #side-info {
+        padding: 1 1;
+        height: auto;
+    }
+    #side-details {
+        padding: 1 1;
         border-top: solid #30363d;
         height: 1fr;
-        min-height: 8;
         overflow-y: auto;
     }
     #pomodoro {
-        padding: 0 2;
-        border-top: solid #30363d;
-        height: 3;
-    }
-    #progress-bar {
-        padding: 0 2;
+        padding: 0 1;
         border-top: solid #30363d;
         height: 3;
     }
 
-    /* === Right panel === */
-    #main-table {
-        height: 1fr;
-        border: none;
+    /* Bottom panel: trends + stats */
+    #bottom-panel {
+        layout: horizontal;
+        height: auto;
+        min-height: 6;
+        max-height: 10;
+        border-top: solid #30363d;
+    }
+    #bottom-trends {
+        width: 1fr;
+        padding: 0 2;
+    }
+    #bottom-stats {
+        width: 1fr;
+        padding: 0 2;
+        border-left: solid #30363d;
+    }
+    #bottom-due {
+        width: 1fr;
+        padding: 0 2;
+        border-left: solid #30363d;
     }
 
     /* === Status bar (bottom dock) === */
@@ -259,6 +293,7 @@ class CanvasTUI(App):
         self._bg_refresh_thread: threading.Thread | None = None
         self._stop_bg = False
         self._submission_cache: dict[tuple[int, int], dict[str, Any]] = {}
+        self._grade_cache: dict[int, list[dict[str, Any]]] = {}
         self._pending: dict[str, tuple[str, dict[str, Any]]] = {}
         self._error_count = 0
         self._theme: ThemeColors = get_theme("dark")
@@ -270,25 +305,131 @@ class CanvasTUI(App):
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
+        # Top banner: logo + course score bars
+        with Horizontal(id="top-banner"):
+            self.banner_logo = Static(id="banner-logo")
+            yield self.banner_logo
+            self.banner_scores = Static(id="banner-scores")
+            yield self.banner_scores
+        # Middle: table + sidebar
         with Horizontal(id="main-split"):
-            with Vertical(id="left-panel"):
-                self.info = Static(id="info")
+            self.table = DataTable(zebra_stripes=True, id="main-table")
+            yield self.table
+            with Vertical(id="sidebar"):
+                self.info = Static(id="side-info")
                 yield self.info
-                self.details = Static(id="details")
+                self.details = Static(id="side-details")
                 yield self.details
                 self.pomo = Pomodoro(on_state_change=self._persist_pomo)
                 yield self.pomo
-                self.progress = Static(id="progress-bar")
-                yield self.progress
-            with Vertical(id="right-panel"):
-                self.table = DataTable(zebra_stripes=True, id="main-table")
-                yield self.table
+        # Bottom panel: trends + stats + due-soon
+        with Horizontal(id="bottom-panel"):
+            self.bottom_trends = Static(id="bottom-trends")
+            yield self.bottom_trends
+            self.bottom_stats = Static(id="bottom-stats")
+            yield self.bottom_stats
+            self.bottom_due = Static(id="bottom-due")
+            yield self.bottom_due
         self.status_bar = Static(id="status-bar")
         yield self.status_bar
         yield Footer()
 
     def _persist_pomo(self, end_ts: float | None) -> None:
         self.state.set_pomo_end(end_ts)
+
+    def _render_graphs(self) -> None:
+        """Render score bars (top banner) and trends (bottom panel)."""
+        from .widgets.plots import (
+            BarEntry,
+            grade_color,
+            render_bar_chart,
+            sparkline,
+            urgency_color,
+        )
+
+        # --- Top banner: course score bar chart ---
+        bar_entries: list[BarEntry] = []
+        course_data: dict[str, tuple[float, list[float]]] = {}
+        for cid, (code, _name) in sorted(self.course_cache.items(), key=lambda kv: kv[1][0]):
+            grades = self._grade_cache.get(cid, [])
+            ts, tp = 0.0, 0.0
+            pcts: list[float] = []
+            for a in grades:
+                pts = a.get("points_possible")
+                sub = a.get("submission") or {}
+                sc = sub.get("score")
+                if sc is not None and pts:
+                    ts += float(sc)
+                    tp += float(pts)
+                    pcts.append(100.0 * float(sc) / float(pts))
+            avg = (100.0 * ts / tp) if tp > 0 else 0.0
+            bar_entries.append(BarEntry(label=code, value=avg, suffix=f"{avg:.1f}%"))
+            course_data[code] = (avg, pcts)
+
+        if bar_entries:
+            self.banner_scores.update(
+                render_bar_chart(bar_entries, bar_width=20, title="Course Scores")
+            )
+        else:
+            self.banner_scores.update("[dim]No grade data yet[/dim]")
+
+        # --- Bottom panel: trends ---
+        colors = ["cyan", "green", "yellow", "magenta", "blue", "red"]
+        trend_lines = ["[bold]Grade Trends[/bold]"]
+        for i, (code, (avg, pcts)) in enumerate(course_data.items()):
+            c = colors[i % len(colors)]
+            gc = grade_color(avg)
+            spark = sparkline(pcts[-12:], c) if pcts else "[dim]---[/dim]"
+            trend_lines.append(f" [{c}]{code:<8}[/{c}] {spark} [{gc}]{avg:.0f}%[/{gc}]")
+        if len(trend_lines) > 1:
+            self.bottom_trends.update("\n".join(trend_lines))
+        else:
+            self.bottom_trends.update("[dim]No trends yet[/dim]")
+
+        # --- Bottom panel: completion stats ---
+        stat_lines = ["[bold]Completion[/bold]"]
+        for code, (avg, pcts) in course_data.items():
+            n = len(pcts)
+            gc = grade_color(avg)
+            bar_w = 12
+            filled = int(avg / 100.0 * bar_w)
+            bar = f"[{gc}]{'█' * filled}[/{gc}][dim]{'░' * (bar_w - filled)}[/dim]"
+            stat_lines.append(f" {code:<8} {bar} [{gc}]{avg:.0f}%[/{gc}] ({n})")
+        if len(stat_lines) > 1:
+            self.bottom_stats.update("\n".join(stat_lines))
+        else:
+            self.bottom_stats.update("[dim]No stats yet[/dim]")
+
+        # --- Bottom panel: due soon ---
+        now = dt.datetime.now(ZoneInfo(self.cfg.user_tz))
+        urgent: list[tuple[str, CanvasItem]] = []
+        for it in self.items:
+            if "submitted" in it.status_flags or not it.due_iso:
+                continue
+            try:
+                due = dt.datetime.fromisoformat(it.due_iso.replace("Z", "+00:00"))
+                dh = (due - now.astimezone(dt.UTC)).total_seconds() / 3600.0
+            except Exception:
+                continue
+            if dh < 0:
+                urgent.append(("[red]LATE[/red]", it))
+            elif dh < 12:
+                urgent.append(("[yellow]<12h[/yellow]", it))
+            elif dh < 24:
+                urgent.append(("[green]today[/green]", it))
+            elif dh < 48:
+                urgent.append(("[cyan]<48h[/cyan]", it))
+
+        urgent.sort(key=lambda t: t[1].due_iso)
+        uc = urgency_color(len(urgent))
+        due_lines = [f"[bold {uc}]Due Soon ({len(urgent)})[/bold {uc}]"]
+        for tag, it in urgent[:5]:
+            due_lines.append(f" {tag} {it.title[:22]}")
+        if len(urgent) > 5:
+            due_lines.append(f" [dim]+{len(urgent) - 5} more[/dim]")
+        if not urgent:
+            due_lines.append(" [green]All clear[/green]")
+        self.bottom_due.update("\n".join(due_lines))
 
     def _update_status_bar(self, extra: str = "") -> None:
         """Update the bottom status bar."""
@@ -311,6 +452,13 @@ class CanvasTUI(App):
     # ---------- mount / teardown ----------
     def on_mount(self) -> None:
         self._setup_table()
+        # Initialize graph panels
+        self.banner_logo.update(get_logo(32))
+        self.banner_scores.update("[dim]Loading scores...[/dim]")
+        self.bottom_trends.update("[dim]Loading...[/dim]")
+        self.bottom_stats.update("[dim]Loading...[/dim]")
+        self.bottom_due.update("[dim]Loading...[/dim]")
+
         # Load cached data immediately for instant display
         try:
             cached = self.state.get_cached_items()
@@ -421,15 +569,25 @@ class CanvasTUI(App):
     def _render_info(self) -> None:
         now = dt.datetime.now(ZoneInfo(self.cfg.user_tz))
         total, due_today, overdue, submitted = self._stats()
+
+        # Banner logo
+        self.banner_logo.update(get_logo(32))
+
+        # Sidebar info
         prog = f"{submitted}/{total}" if total else "0/0"
+        pct = int(100 * submitted / total) if total else 0
+        bar_len = 16
+        filled = int(bar_len * pct / 100)
+        bar = f"[green]{'█' * filled}[/green][dim]{'░' * (bar_len - filled)}[/dim]"
+
         s = (
-            f"{get_logo(38)}\n"
-            f"[b]Canvas TODO (next {self.cfg.days_ahead}d; past {self.cfg.past_hours}h if unsubmitted)[/b]\n"
-            f"{self.cfg.base_url}\n"
-            f"[dim]{now.strftime('%m/%d/%Y %H:%M %Z')}[/dim]\n"
-            f"Items: {total} • Today: {due_today} • Overdue: {overdue} • "
-            f"Submitted: {submitted} (progress {prog})\n"
-            f"[dim]Press ? for help[/dim]"
+            f"[b]Canvas TODO[/b]\n"
+            f"[dim]{now.strftime('%m/%d %H:%M')}[/dim]  "
+            f"[dim]{self.cfg.days_ahead}d ahead[/dim]\n"
+            f"Items: {total}  Today: {due_today}\n"
+            f"Overdue: [red]{overdue}[/red]  Done: {submitted}\n"
+            f"{bar} {prog} ({pct}%)\n"
+            f"[dim]? = help  D = dashboard[/dim]"
         )
         self.info.update(s)
 
@@ -527,18 +685,7 @@ class CanvasTUI(App):
         from .widgets.plots import urgency_color
         self.table.styles.border = ("solid", urgency_color(urgent_count))
 
-    def _render_progress(self) -> None:
-        total, _, _, submitted = self._stats()
-        if not total:
-            self.progress.update("[dim]Progress: 0/0[/dim]")
-            return
-        pct = submitted / total
-        slices = ["○", "◔", "◑", "◕", "●"]
-        i = min(int(pct * (len(slices) - 1) + 0.5), len(slices) - 1)
-        bar_len = 20
-        filled = int(bar_len * pct)
-        bar = "█" * filled + "░" * (bar_len - filled)
-        self.progress.update(f"Progress: {submitted}/{total}  {slices[i]} {int(pct * 100)}%\n[{bar}]")
+    # _render_progress removed — progress bar is now inline in _render_info
 
     # ---------- refresh ----------
     def _bg_refresh_loop(self) -> None:
@@ -591,8 +738,15 @@ class CanvasTUI(App):
                 self.items = items  # Temporarily set for prefetch
                 self._prefetch_submissions()
 
+                # Fetch grades for graph rendering (background thread)
+                grade_data: dict[int, list[dict[str, Any]]] = {}
+                for cid in course_cache:
+                    with contextlib.suppress(Exception):
+                        grade_data[cid] = self.api.fetch_grades(cid)
+
                 def apply_ui() -> None:
                     self.course_cache = course_cache
+                    self._grade_cache = grade_data
                     self.items = items
                     self.announcements = announcements
                     self.filtered = None
@@ -602,13 +756,13 @@ class CanvasTUI(App):
                     )
                     self._render_info()
                     self._render_table()
+                    self._render_graphs()
                     if not silent:
                         self.details.update(
-                            "[dim]Select an item and press Enter (full) or d (quick). "
-                            "Use A for announcements, S for syllabi.[/dim]"
+                            "[dim]Select item: Enter (full) or d (quick)\n"
+                            "A=announcements S=syllabi G=grades[/dim]"
                         )
                     self._last_refresh = time.time()
-                    self._render_progress()
                     self._update_status_bar()
 
                 self.call_from_thread(apply_ui)
