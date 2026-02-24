@@ -65,7 +65,9 @@ def score_line_chart(
     _setup(width, height, title)
     x = list(range(1, len(values) + 1))
     plt.plot(x, values, color=color, marker="braille")
-    plt.ylim(0, 100)
+    lo = max(0, min(values) - 5)
+    hi = min(100, max(values) + 5)
+    plt.ylim(lo, hi)
     return _to_rich(plt.build())
 
 
@@ -80,11 +82,19 @@ def multi_line_chart(
         return Text("No trend data", style="dim")
     _setup(width, height, title)
     colors = ["cyan", "green", "yellow", "magenta", "blue", "red"]
+    all_vals: list[float] = []
     for i, (label, vals) in enumerate(series.items()):
         if vals:
             x = list(range(1, len(vals) + 1))
             plt.plot(x, vals, color=colors[i % len(colors)], label=label, marker="braille")
-    plt.ylim(0, 100)
+            all_vals.extend(vals)
+    # Auto-range Y axis to data with padding
+    if all_vals:
+        lo = max(0, min(all_vals) - 5)
+        hi = min(100, max(all_vals) + 5)
+        plt.ylim(lo, hi)
+    else:
+        plt.ylim(0, 100)
     return _to_rich(plt.build())
 
 
