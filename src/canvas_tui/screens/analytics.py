@@ -49,6 +49,13 @@ class AnalyticsScreen(Screen):
         self._render_all()
 
     def _render_all(self) -> None:
+        try:
+            tw, th = self.app.size
+        except Exception:
+            tw, th = 120, 40
+        max(40, tw // 3 - 4)
+        max(10, th // 4)
+
         from ..widgets.charts import (
             completion_bullet,
             grade_histogram,
@@ -98,13 +105,13 @@ class AnalyticsScreen(Screen):
 
         # 1. Score bar chart
         with contextlib.suppress(Exception):
-            chart = score_bar_chart(labels, scores, width=50, height=max(8, len(labels) + 4),
+            chart = score_bar_chart(labels, scores, width=max(50, tw//3), height=max(8, len(labels)+4),
                                     title="Course Scores")
             self.query_one("#chart-scores", Static).update(chart)
 
         # 2. Grade distribution histogram
         with contextlib.suppress(Exception):
-            hist = grade_histogram(all_scores, width=45, height=10,
+            hist = grade_histogram(all_scores, width=max(45, tw//3), height=max(12, th//4),
                                    title="Grade Distribution", bins=12)
             self.query_one("#chart-distribution", Static).update(hist)
 
@@ -113,7 +120,7 @@ class AnalyticsScreen(Screen):
             if course_pcts:
                 trends = multi_line_chart(
                     {k: v[-20:] for k, v in course_pcts.items()},
-                    width=50, height=10, title="Score Trends",
+                    width=max(50, tw//3), height=max(12, th//4), title="Score Trends",
                 )
                 self.query_one("#chart-trends", Static).update(trends)
             else:
@@ -122,7 +129,7 @@ class AnalyticsScreen(Screen):
         # 4. Scatter plot
         with contextlib.suppress(Exception):
             if all_x and all_scores:
-                sc = scatter_scores(all_x, all_scores, width=45, height=10,
+                sc = scatter_scores(all_x, all_scores, width=max(45, tw//3), height=max(12, th//4),
                                     title="All Scores (scatter)")
                 self.query_one("#chart-scatter", Static).update(sc)
 
@@ -131,7 +138,7 @@ class AnalyticsScreen(Screen):
             heatmap_data = self._build_submission_heatmap()
             if heatmap_data:
                 days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-                hmap = submission_heatmap(heatmap_data, days=days, width=50, height=10,
+                hmap = submission_heatmap(heatmap_data, days=days, width=max(50, tw//3), height=max(12, th//4),
                                           title="Submission Activity")
                 self.query_one("#chart-heatmap", Static).update(hmap)
             else:
@@ -142,7 +149,7 @@ class AnalyticsScreen(Screen):
             if completion:
                 c_labels = list(completion.keys())
                 c_values = list(completion.values())
-                bullet = completion_bullet(c_labels, c_values, width=45, height=10,
+                bullet = completion_bullet(c_labels, c_values, width=max(45, tw//3), height=max(12, th//4),
                                             title="Completion %")
                 self.query_one("#chart-bullet", Static).update(bullet)
 
