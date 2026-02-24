@@ -8,32 +8,36 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from ..theme import get_theme
 
-# ─── Color thresholds (GideonWolfe-style) ────────────────────────────────
+
+# ─── Color thresholds (theme-aware) ──────────────────────────────────────
 def grade_color(pct: float) -> str:
     """Return Rich color name for a grade percentage."""
+    t = get_theme()
     if pct >= 90:
-        return "green"
+        return t.success
     if pct >= 80:
-        return "cyan"
+        return t.info
     if pct >= 70:
-        return "yellow"
+        return t.warning
     if pct >= 60:
-        return "magenta"
-    return "red"
+        return t.secondary
+    return t.error
 
 
 def urgency_color(count: int) -> str:
-    """Return color based on due-item count (GideonWolfe style)."""
+    """Return color based on due-item count."""
+    t = get_theme()
     if count >= 10:
-        return "red"
+        return t.error
     if count >= 7:
-        return "yellow"
+        return t.warning
     if count >= 4:
-        return "blue"
+        return t.info
     if count >= 2:
-        return "cyan"
-    return "green"
+        return t.info
+    return t.success
 
 
 # ─── Horizontal Bar Chart ────────────────────────────────────────────────
@@ -105,11 +109,13 @@ class WeightSegment:
     """A segment in a stacked weight bar."""
     label: str
     weight: float  # percentage 0-100
-    color: str = "white"
+    color: str = ""
 
 
-# Distinct colors for up to 8 assignment groups
-_WEIGHT_COLORS = ["cyan", "green", "yellow", "magenta", "blue", "red", "white", "bright_black"]
+def _chart_palette() -> list[str]:
+    """Return chart color palette from theme."""
+    t = get_theme()
+    return [t.info, t.success, t.warning, t.secondary, t.primary, t.error, t.text_accent, t.text_muted]
 
 
 def render_weight_bar(
@@ -117,12 +123,7 @@ def render_weight_bar(
     width: int = 40,
     title: str = "",
 ) -> str:
-    """Render a stacked horizontal bar showing assignment group weights.
-
-    Example:
-        ████████░░░░░░░░████░░░░░░░░████
-        HW 40%     Exam 30%    Quiz 20%   Participation 10%
-    """
+    """Render a stacked horizontal bar showing assignment group weights."""
     if not segments:
         return "[dim]No weight data[/dim]"
 
@@ -130,10 +131,12 @@ def render_weight_bar(
     if title:
         lines.append(f"[bold]{title}[/bold]")
 
+    palette = _chart_palette()
+
     # Auto-assign colors if not set
     for i, seg in enumerate(segments):
-        if seg.color == "white":
-            seg.color = _WEIGHT_COLORS[i % len(_WEIGHT_COLORS)]
+        if not seg.color:
+            seg.color = palette[i % len(palette)]
 
     total_w = sum(s.weight for s in segments)
     if total_w <= 0:
@@ -151,14 +154,8 @@ def render_weight_bar(
     return "\n".join(lines)
 
 
-# ─── Braille Line Plot ──────────────────────────────────────────────────
+# ─── Braille Line Plot (FIXED — overlaid series on shared grid) ──────────
 # Unicode braille characters: 2x4 dot matrix per character
-# Dot positions:
-#   ⠁ ⠈     row 0: (0,0)=0x01  (1,0)=0x08
-#   ⠂ ⠐     row 1: (0,1)=0x02  (1,1)=0x10
-#   ⠄ ⠠     row 2: (0,2)=0x04  (1,2)=0x20
-#   ⡀ ⢀     row 3: (0,3)=0x40  (1,3)=0x80
-
 _BRAILLE_BASE = 0x2800
 _DOT_MAP = [
     [0x01, 0x08],  # row 0
@@ -172,7 +169,7 @@ _DOT_MAP = [
 class PlotSeries:
     """A data series for the braille plot."""
     values: list[float] = field(default_factory=list)
-    color: str = "cyan"
+    color: str = ""
     label: str = ""
 
 
@@ -184,7 +181,7 @@ def render_braille_plot(
     y_min: float | None = None,
     y_max: float | None = None,
 ) -> str:
-    """Render a braille-dot line plot.
+    """Render a braille-dot line plot with ALL series overlaid on one grid.
 
     Each character cell is 2 dots wide x 4 dots tall, so:
       - plot_dots_x = width * 2
@@ -192,6 +189,14 @@ def render_braille_plot(
     """
     if not series_list or all(len(s.values) == 0 for s in series_list):
         return "[dim]No data to plot[/dim]"
+
+    t = get_theme()
+    palette = _chart_palette()
+
+    # Auto-assign colors
+    for i, s in enumerate(series_list):
+        if not s.color:
+            s.color = palette[i % len(palette)]
 
     all_vals = [v for s in series_list for v in s.values]
     lo = y_min if y_min is not None else min(all_vals)
@@ -201,61 +206,59 @@ def render_braille_plot(
 
     dots_x = width * 2
     dots_y = height * 4
+    y_range = hi - lo
 
-    # Build a grid per series, then overlay
-    # For simplicity with multiple colors, render each series separately
-    # and combine as separate lines with labels
-    lines: list[str] = []
-    if title:
-        lines.append(f"[bold]{title}[/bold]")
+    # Single shared grid for ALL series
+    grid = [[0] * width for _ in range(height)]
 
     for s in series_list:
         if not s.values:
             continue
-
-        # Create empty grid
-        grid = [[0] * width for _ in range(height)]
-
-        # Map values to dot positions
         n = len(s.values)
         for i, v in enumerate(s.values):
-            # x position in dot-space
             dx = int(i / max(1, n - 1) * (dots_x - 1)) if n > 1 else dots_x // 2
-            # y position in dot-space (inverted — 0 is top)
-            norm = (v - lo) / (hi - lo)
+            norm = max(0.0, min(1.0, (v - lo) / y_range))
             dy = dots_y - 1 - int(norm * (dots_y - 1))
 
-            # Map to character cell
-            cx = dx // 2
-            cy = dy // 4
-            # Map to dot within cell
+            cx = min(dx // 2, width - 1)
+            cy = min(dy // 4, height - 1)
             rx = dx % 2
             ry = dy % 4
 
-            if 0 <= cx < width and 0 <= cy < height:
-                grid[cy][cx] |= _DOT_MAP[ry][rx]
+            grid[cy][cx] |= _DOT_MAP[ry][rx]
 
-        # Render grid to braille characters
-        for row in grid:
-            chars = "".join(chr(_BRAILLE_BASE + cell) for cell in row)
-            lines.append(f"  [{s.color}]{chars}[/{s.color}]")
+    # Render with primary series color (braille cells can't be multi-colored per cell)
+    primary_color = series_list[0].color if series_list else t.info
 
-        if s.label:
-            lines.append(f"  [{s.color}]── {s.label}[/{s.color}]")
+    lines: list[str] = []
+    if title:
+        lines.append(f"[bold]{title}[/bold]")
 
     # Y axis labels
-    if lines:
-        lines.insert(1 if title else 0, f"  [dim]{hi:.0f}[/dim]")
-        lines.append(f"  [dim]{lo:.0f}[/dim]")
+    lines.append(f"  [dim]{hi:.0f}[/dim]")
+    for row in grid:
+        chars = "".join(chr(_BRAILLE_BASE + cell) for cell in row)
+        lines.append(f"  [{primary_color}]{chars}[/{primary_color}]")
+    lines.append(f"  [dim]{lo:.0f}[/dim]")
+
+    # Legend
+    legend_parts = []
+    for s in series_list:
+        if s.label:
+            legend_parts.append(f"[{s.color}]■ {s.label}[/{s.color}]")
+    if legend_parts:
+        lines.append("  " + "  ".join(legend_parts))
 
     return "\n".join(lines)
 
 
 # ─── Sparkline (enhanced) ───────────────────────────────────────────────
-def sparkline(values: list[float], color: str = "cyan") -> str:
+def sparkline(values: list[float], color: str = "") -> str:
     """Render a sparkline from raw values."""
     if not values:
         return ""
+    if not color:
+        color = get_theme().info
     chars = "▁▂▃▄▅▆▇█"
     lo = min(values)
     hi = max(values)

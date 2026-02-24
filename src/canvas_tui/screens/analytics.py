@@ -1,7 +1,7 @@
 """Analytics screen — full-screen chart visualization.
 
 Multiple panes of graphs: scatter, histogram, heatmap, line trends,
-bullet charts, and grade distribution. All rendered via plotext.
+bullet charts, and grade distribution. Rich-native rendering.
 """
 
 from __future__ import annotations
@@ -12,15 +12,19 @@ from typing import TYPE_CHECKING
 
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
+from textual.events import Resize
 from textual.screen import Screen
 from textual.widgets import Footer, Static
+
+from ..theme import get_theme
+from ..utils import course_label
 
 if TYPE_CHECKING:
     from ..app import CanvasTUI
 
 
 class AnalyticsScreen(Screen):
-    """Full analytics dashboard with plotext charts."""
+    """Full analytics dashboard with Rich-native charts."""
 
     BINDINGS = [
         ("escape", "pop", "Back"),
@@ -32,8 +36,9 @@ class AnalyticsScreen(Screen):
         self._owner = owner_app
 
     def compose(self) -> ComposeResult:
+        t = get_theme()
         with Vertical(id="analytics-root"):
-            yield Static("[bold]Analytics[/bold]  [dim]Esc = back[/dim]", id="analytics-header")
+            yield Static(f"[bold {t.text}]Analytics[/bold {t.text}]  [dim]Esc = back[/dim]", id="analytics-header")
             with Horizontal(id="analytics-top"):
                 yield Static(id="chart-scores", classes="chart-pane")
                 yield Static(id="chart-distribution", classes="chart-pane")
@@ -48,14 +53,24 @@ class AnalyticsScreen(Screen):
     def on_mount(self) -> None:
         self._render_all()
 
-    def _render_all(self) -> None:
-        try:
-            tw, th = self.app.size
-        except Exception:
-            tw, th = 120, 40
-        max(40, tw // 3 - 4)
-        max(10, th // 4)
+    def on_resize(self, event: Resize) -> None:
+        """Re-render charts when terminal is resized."""
+        self._render_all()
 
+    def _get_pane_size(self, pane_id: str) -> tuple[int, int]:
+        """Get the actual rendered size of a chart pane."""
+        try:
+            pane = self.query_one(f"#{pane_id}", Static)
+            w, h = pane.size
+            return max(20, w - 2), max(6, h - 2)
+        except Exception:
+            try:
+                tw, th = self.app.size
+                return max(40, tw // 2 - 4), max(10, th // 3 - 2)
+            except Exception:
+                return 50, 12
+
+    def _render_all(self) -> None:
         from ..widgets.charts import (
             completion_bullet,
             grade_histogram,
@@ -65,6 +80,7 @@ class AnalyticsScreen(Screen):
             submission_heatmap,
         )
 
+        t = get_theme()
         active = {cid: v for cid, v in self._owner.course_cache.items()
                   if cid not in self._owner.state.get_hidden_courses()}
 
@@ -96,62 +112,82 @@ class AnalyticsScreen(Screen):
                     all_x.append(float(idx))
                     submitted += 1
             avg = (100.0 * ts / tp) if tp > 0 else 0.0
-            labels.append(code[:10])
+            lbl = course_label(code)
+            labels.append(lbl)
             scores.append(round(avg, 1))
             if pcts:
-                course_pcts[code[:10]] = pcts
+                course_pcts[lbl] = pcts
             if total_count > 0:
-                completion[code[:10]] = 100.0 * submitted / total_count
+                completion[lbl] = 100.0 * submitted / total_count
 
-        # 1. Score bar chart
+        # 1. Score bar chart — responsive to pane size
         with contextlib.suppress(Exception):
-            chart = score_bar_chart(labels, scores, width=max(50, tw//3), height=max(8, len(labels)+4),
+            pw, ph = self._get_pane_size("chart-scores")
+            chart = score_bar_chart(labels, scores, width=pw, height=max(ph, len(labels) + 4),
                                     title="Course Scores")
             self.query_one("#chart-scores", Static).update(chart)
 
         # 2. Grade distribution histogram
         with contextlib.suppress(Exception):
-            hist = grade_histogram(all_scores, width=max(45, tw//3), height=max(12, th//4),
-                                   title="Grade Distribution", bins=12)
+            pw, ph = self._get_pane_size("chart-distribution")
+            hist = grade_histogram(all_scores, width=pw, height=ph,
+                                   title="Grade Distribution", bins=min(12, max(5, pw // 4)))
             self.query_one("#chart-distribution", Static).update(hist)
 
         # 3. Multi-line trends
         with contextlib.suppress(Exception):
+            pw, ph = self._get_pane_size("chart-trends")
             if course_pcts:
                 trends = multi_line_chart(
                     {k: v[-20:] for k, v in course_pcts.items()},
-                    width=max(50, tw//3), height=max(12, th//4), title="Score Trends",
+                    width=pw, height=ph, title="Score Trends",
                 )
                 self.query_one("#chart-trends", Static).update(trends)
             else:
-                self.query_one("#chart-trends", Static).update("[dim]No trend data[/dim]")
+                self.query_one("#chart-trends", Static).update(
+                    f"[{t.text_muted}]No trend data available[/{t.text_muted}]"
+                )
 
         # 4. Scatter plot
         with contextlib.suppress(Exception):
+            pw, ph = self._get_pane_size("chart-scatter")
             if all_x and all_scores:
-                sc = scatter_scores(all_x, all_scores, width=max(45, tw//3), height=max(12, th//4),
+                sc = scatter_scores(all_x, all_scores, width=pw, height=ph,
                                     title="All Scores (scatter)")
                 self.query_one("#chart-scatter", Static).update(sc)
+            else:
+                self.query_one("#chart-scatter", Static).update(
+                    f"[{t.text_muted}]No score data for scatter[/{t.text_muted}]"
+                )
 
-        # 5. Submission heatmap (day of week x hour)
+        # 5. Submission heatmap
         with contextlib.suppress(Exception):
+            pw, ph = self._get_pane_size("chart-heatmap")
             heatmap_data = self._build_submission_heatmap()
             if heatmap_data:
                 days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-                hmap = submission_heatmap(heatmap_data, days=days, width=max(50, tw//3), height=max(12, th//4),
+                hmap = submission_heatmap(heatmap_data, days=days, width=pw, height=ph,
                                           title="Submission Activity")
                 self.query_one("#chart-heatmap", Static).update(hmap)
             else:
-                self.query_one("#chart-heatmap", Static).update("[dim]No submission data[/dim]")
+                self.query_one("#chart-heatmap", Static).update(
+                    f"[{t.text_muted}]No submission data — submit assignments to see activity patterns[/{t.text_muted}]"
+                )
 
-        # 6. Completion bullet chart
+        # 6. Completion bullet chart — with 100% targets
         with contextlib.suppress(Exception):
+            pw, ph = self._get_pane_size("chart-bullet")
             if completion:
                 c_labels = list(completion.keys())
                 c_values = list(completion.values())
-                bullet = completion_bullet(c_labels, c_values, width=max(45, tw//3), height=max(12, th//4),
-                                            title="Completion %")
+                c_targets = [100.0] * len(c_labels)
+                bullet = completion_bullet(c_labels, c_values, targets=c_targets,
+                                            width=pw, height=ph, title="Completion %")
                 self.query_one("#chart-bullet", Static).update(bullet)
+            else:
+                self.query_one("#chart-bullet", Static).update(
+                    f"[{t.text_muted}]No completion data[/{t.text_muted}]"
+                )
 
     def _build_submission_heatmap(self) -> list[list[int]] | None:
         """Build a 7x24 matrix of submission counts by day-of-week x hour."""
@@ -160,10 +196,14 @@ class AnalyticsScreen(Screen):
         for it in self._owner.items:
             if "submitted" not in it.status_flags:
                 continue
-            if not it.due_iso:
+            # Try submission timestamp from raw_plannable, fall back to due_iso
+            raw = it.raw_plannable or {}
+            sub = raw.get("submissions", {}) if isinstance(raw.get("submissions"), dict) else {}
+            ts = sub.get("submitted_at") or raw.get("submitted_at") or it.due_iso
+            if not ts:
                 continue
             with contextlib.suppress(Exception):
-                d = dt.datetime.fromisoformat(it.due_iso.replace("Z", "+00:00"))
+                d = dt.datetime.fromisoformat(ts.replace("Z", "+00:00"))
                 matrix[d.weekday()][d.hour] += 1
                 has_data = True
         return matrix if has_data else None
