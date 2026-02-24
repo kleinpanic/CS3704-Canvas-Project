@@ -514,13 +514,30 @@ class CanvasTUI(App):
         )
 
     def _render_graphs(self) -> None:
-        """Render plotext charts in banner and bottom panels."""
+        """Render plotext charts in banner and bottom panels.
+
+        Chart sizes are dynamic based on terminal dimensions.
+        """
         from .widgets.charts import (
+            completion_bullet,
             grade_histogram,
             multi_line_chart,
+            scatter_scores,
             score_bar_chart,
         )
         from .widgets.plots import urgency_color
+
+        # Dynamic sizing from terminal
+        try:
+            tw, th = self.size
+        except Exception:
+            tw, th = 120, 40
+        # Panel widths: 3 bottom panels split the left area (~75% of terminal)
+        panel_w = max(30, (tw * 3 // 4) // 3 - 4)
+        # Panel height: remaining space below table (roughly 40-60% of terminal)
+        panel_h = max(10, th * 2 // 5)
+        banner_w = max(40, tw * 3 // 4 - 6)
+        banner_h = max(4, min(8, len(self._active_courses()) + 3))
 
         # --- Collect course data (filtered by hidden courses) ---
         active = self._active_courses()
@@ -528,6 +545,8 @@ class CanvasTUI(App):
         scores: list[float] = []
         course_pcts: dict[str, list[float]] = {}
         all_scores: list[float] = []
+        all_x: list[float] = []
+        idx = 0
 
         for cid, (code, _name) in sorted(active.items(), key=lambda kv: kv[1][0]):
             grades = self._grade_cache.get(cid, [])
@@ -543,40 +562,68 @@ class CanvasTUI(App):
                     pct = 100.0 * float(sc) / float(pts)
                     pcts.append(pct)
                     all_scores.append(pct)
+                    idx += 1
+                    all_x.append(float(idx))
             avg = (100.0 * ts / tp) if tp > 0 else 0.0
             labels.append(code[:12])
             scores.append(round(avg, 1))
             if pcts:
                 course_pcts[code[:12]] = pcts
 
-        # --- Top banner: plotext bar chart ---
+        # --- Top banner: score bar chart ---
         with contextlib.suppress(Exception):
-            chart = score_bar_chart(labels, scores, width=55, height=max(8, len(labels) + 4))
+            chart = score_bar_chart(labels, scores, width=banner_w, height=banner_h)
             self.banner_scores.update(chart)
 
-        # --- Bottom: line chart (trends) ---
+        # --- Bottom left: multi-line trend + scatter overlay ---
         with contextlib.suppress(Exception):
             if course_pcts:
                 trend_chart = multi_line_chart(
-                    {k: v[-15:] for k, v in course_pcts.items()},
-                    width=45, height=8, title="Grade Trends",
+                    {k: v[-20:] for k, v in course_pcts.items()},
+                    width=panel_w, height=panel_h, title="Grade Trends",
                 )
                 self.bottom_trends.update(trend_chart)
+            elif all_x and all_scores:
+                # Fallback: scatter plot of all scores
+                sc = scatter_scores(
+                    all_x, all_scores, width=panel_w, height=panel_h,
+                    title="All Scores",
+                )
+                self.bottom_trends.update(sc)
             else:
                 self.bottom_trends.update("[dim]No trend data[/dim]")
 
-        # --- Bottom: histogram (distribution) ---
+        # --- Bottom center: histogram + bullet stacked ---
         with contextlib.suppress(Exception):
             if all_scores:
-                hist = grade_histogram(all_scores, width=40, height=8, title="Distribution")
-                self.bottom_stats.update(hist)
+                hist = grade_histogram(
+                    all_scores, width=panel_w, height=panel_h // 2,
+                    title="Grade Distribution", bins=min(12, len(all_scores)),
+                )
+                # Stack histogram + bullet chart
+                if labels and scores:
+                    bullet = completion_bullet(
+                        labels, scores, width=panel_w, height=panel_h // 2,
+                        title="Score vs 100%",
+                    )
+                    from rich.text import Text
+                    combined = Text()
+                    combined.append_text(hist)
+                    combined.append("\n")
+                    combined.append_text(bullet)
+                    self.bottom_stats.update(combined)
+                else:
+                    self.bottom_stats.update(hist)
             else:
-                self.bottom_stats.update("[dim]No grades[/dim]")
+                self.bottom_stats.update("[dim]No grade data[/dim]")
 
-        # --- Bottom: due soon ---
+        # --- Bottom right: due soon + upcoming timeline ---
         now = dt.datetime.now(ZoneInfo(self.cfg.user_tz))
+        hidden_courses = self.state.get_hidden_courses()
         urgent: list[tuple[str, CanvasItem]] = []
         for it in self.items:
+            if it.course_id in hidden_courses:
+                continue
             if "submitted" in it.status_flags or not it.due_iso:
                 continue
             try:
@@ -592,19 +639,46 @@ class CanvasTUI(App):
                 urgent.append(("[green]today[/green]", it))
             elif dh < 48:
                 urgent.append(("[cyan]<48h[/cyan]", it))
+            elif dh < 168:
+                urgent.append(("[blue]<7d[/blue]", it))
 
         urgent.sort(key=lambda t: t[1].due_iso)
         uc = urgency_color(len(urgent))
         due_lines = [f"[bold {uc}]Due Soon ({len(urgent)})[/bold {uc}]"]
-        for tag, it in urgent[:5]:
-            due_lines.append(f" {tag} {it.title[:22]}")
-        if len(urgent) > 5:
-            due_lines.append(f" [dim]+{len(urgent) - 5} more[/dim]")
+        for tag, it in urgent[:8]:
+            due_lines.append(f" {tag} {it.title[:28]}")
+        if len(urgent) > 8:
+            due_lines.append(f" [dim]+{len(urgent) - 8} more[/dim]")
         if not urgent:
             due_lines.append(" [green]All clear[/green]")
-        self.bottom_due.update("\n".join(due_lines))
 
-        # --- Sidebar charts: completion gauges ---
+        # Add weekly activity bar chart below due-soon
+        with contextlib.suppress(Exception):
+            from .widgets.charts import weekly_activity_chart
+            day_counts = [0] * 7
+            day_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+            for it in self.items:
+                if it.course_id in hidden_courses:
+                    continue
+                if not it.due_iso:
+                    continue
+                with contextlib.suppress(Exception):
+                    d = dt.datetime.fromisoformat(it.due_iso.replace("Z", "+00:00"))
+                    day_counts[d.weekday()] += 1
+            if any(day_counts):
+                wk = weekly_activity_chart(
+                    day_names, day_counts, width=panel_w, height=max(6, panel_h // 2),
+                    title="Due by Day",
+                )
+                from rich.text import Text
+                combined = Text("\n".join(due_lines))
+                combined.append("\n")
+                combined.append_text(wk)
+                self.bottom_due.update(combined)
+            else:
+                self.bottom_due.update("\n".join(due_lines))
+
+        # --- Sidebar: completion gauges ---
         with contextlib.suppress(Exception):
             side_lines = ["[bold]Completion[/bold]"]
             for code, (avg, _pcts) in sorted(
@@ -618,6 +692,15 @@ class CanvasTUI(App):
                 empty = "\u2591" * (bar_w - filled)
                 bar = f"[{gc}]{full}[/{gc}][dim]{empty}[/dim]"
                 side_lines.append(f"{code[:8]:<8} {bar} [{gc}]{avg:.0f}%[/{gc}]")
+            # Add line sparklines per course
+            side_lines.append("")
+            side_lines.append("[bold]Recent Scores[/bold]")
+            for code, pcts in course_pcts.items():
+                last5 = pcts[-5:]
+                sparks = " ".join(f"{p:.0f}" for p in last5)
+                avg = sum(last5) / len(last5)
+                gc = "green" if avg >= 90 else "cyan" if avg >= 80 else "yellow" if avg >= 70 else "red"
+                side_lines.append(f" [{gc}]{code[:8]:<8}[/{gc}] {sparks}")
             self.side_charts.update("\n".join(side_lines))
 
     def _update_status_bar(self, extra: str = "") -> None:
