@@ -55,8 +55,12 @@ class TestDashboardDataRendering:
             PlotSeries(values=[70, 75, 72, 80, 68], color="yellow", label="MATH2114"),
         ]
         result = render_braille_plot(
-            series, width=30, height=5,
-            title="Grade Trends", y_min=0, y_max=100,
+            series,
+            width=30,
+            height=5,
+            title="Grade Trends",
+            y_min=0,
+            y_max=100,
         )
         assert "Grade Trends" in result
         assert "CS3214" in result

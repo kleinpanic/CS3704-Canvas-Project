@@ -81,8 +81,9 @@ class AnalyticsScreen(Screen):
         )
 
         t = get_theme()
-        active = {cid: v for cid, v in self._owner.course_cache.items()
-                  if cid not in self._owner.state.get_hidden_courses()}
+        active = {
+            cid: v for cid, v in self._owner.course_cache.items() if cid not in self._owner.state.get_hidden_courses()
+        }
 
         labels: list[str] = []
         scores: list[float] = []
@@ -129,15 +130,15 @@ class AnalyticsScreen(Screen):
         # 1. Score bar chart — responsive to pane size
         with contextlib.suppress(Exception):
             pw, ph = self._get_pane_size("chart-scores")
-            chart = score_bar_chart(labels, scores, width=pw, height=max(ph, len(labels) + 4),
-                                    title="Course Scores")
+            chart = score_bar_chart(labels, scores, width=pw, height=max(ph, len(labels) + 4), title="Course Scores")
             self.query_one("#chart-scores", Static).update(chart)
 
         # 2. Grade distribution histogram
         with contextlib.suppress(Exception):
             pw, ph = self._get_pane_size("chart-distribution")
-            hist = grade_histogram(all_scores, width=pw, height=ph,
-                                   title="Grade Distribution", bins=min(12, max(5, pw // 4)))
+            hist = grade_histogram(
+                all_scores, width=pw, height=ph, title="Grade Distribution", bins=min(12, max(5, pw // 4))
+            )
             self.query_one("#chart-distribution", Static).update(hist)
 
         # 3. Multi-line trends
@@ -146,7 +147,9 @@ class AnalyticsScreen(Screen):
             if course_pcts:
                 trends = multi_line_chart(
                     {k: v[-20:] for k, v in course_pcts.items()},
-                    width=pw, height=ph, title="Score Trends",
+                    width=pw,
+                    height=ph,
+                    title="Score Trends",
                 )
                 self.query_one("#chart-trends", Static).update(trends)
             else:
@@ -158,8 +161,7 @@ class AnalyticsScreen(Screen):
         with contextlib.suppress(Exception):
             pw, ph = self._get_pane_size("chart-scatter")
             if all_x and all_scores:
-                sc = scatter_scores(all_x, all_scores, width=pw, height=ph,
-                                    title="All Scores (scatter)")
+                sc = scatter_scores(all_x, all_scores, width=pw, height=ph, title="All Scores (scatter)")
                 self.query_one("#chart-scatter", Static).update(sc)
             else:
                 self.query_one("#chart-scatter", Static).update(
@@ -172,8 +174,7 @@ class AnalyticsScreen(Screen):
             heatmap_data = self._build_submission_heatmap()
             if heatmap_data:
                 days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-                hmap = submission_heatmap(heatmap_data, days=days, width=pw, height=ph,
-                                          title="Submission Activity")
+                hmap = submission_heatmap(heatmap_data, days=days, width=pw, height=ph, title="Submission Activity")
                 self.query_one("#chart-heatmap", Static).update(hmap)
             else:
                 self.query_one("#chart-heatmap", Static).update(
@@ -187,13 +188,12 @@ class AnalyticsScreen(Screen):
                 c_labels = list(completion.keys())
                 c_values = list(completion.values())
                 c_targets = [100.0] * len(c_labels)
-                bullet = completion_bullet(c_labels, c_values, targets=c_targets,
-                                            width=pw, height=ph, title="Completion %")
+                bullet = completion_bullet(
+                    c_labels, c_values, targets=c_targets, width=pw, height=ph, title="Completion %"
+                )
                 self.query_one("#chart-bullet", Static).update(bullet)
             else:
-                self.query_one("#chart-bullet", Static).update(
-                    f"[{t.text_muted}]No completion data[/{t.text_muted}]"
-                )
+                self.query_one("#chart-bullet", Static).update(f"[{t.text_muted}]No completion data[/{t.text_muted}]")
 
     def _build_submission_heatmap(self) -> list[list[int]] | None:
         """Build a 7x24 matrix of submission counts by day-of-week x hour."""

@@ -7,44 +7,56 @@ from textual.widgets import Static
 
 # Binding groups shown one page at a time
 PAGES: list[tuple[str, list[tuple[str, str]]]] = [
-    ("Navigation", [
-        ("q", "Quit"),
-        ("r", "Refresh"),
-        ("o", "Open"),
-        ("Enter", "Details"),
-        ("d", "Preview"),
-        ("/", "Filter"),
-        ("s", "Sort"),
-        ("?", "Help"),
-    ]),
-    ("Views", [
-        ("D", "Dashboard"),
-        ("V", "Analytics"),
-        ("M", "Courses"),
-        ("G", "Grades"),
-        ("S", "Syllabi"),
-        ("A", "Announce"),
-        ("F", "Files"),
-        ("W", "Week"),
-    ]),
-    ("Actions", [
-        ("y", "Copy URL"),
-        ("w", "Download"),
-        ("c", "ICS"),
-        ("C", "ICS+cal"),
-        ("g", "Course"),
-        ("x", "Hide"),
-        ("H", "ShowHid"),
-        ("T", "Theme"),
-    ]),
-    ("Pomodoro", [
-        ("1", "30min"),
-        ("2", "1hr"),
-        ("3", "2hr"),
-        ("P", "Custom"),
-        ("p", "Pause"),
-        ("0", "Stop"),
-    ]),
+    (
+        "Navigation",
+        [
+            ("q", "Quit"),
+            ("r", "Refresh"),
+            ("o", "Open"),
+            ("Enter", "Details"),
+            ("d", "Preview"),
+            ("/", "Filter"),
+            ("s", "Sort"),
+            ("?", "Help"),
+        ],
+    ),
+    (
+        "Views",
+        [
+            ("D", "Dashboard"),
+            ("V", "Analytics"),
+            ("M", "Courses"),
+            ("G", "Grades"),
+            ("S", "Syllabi"),
+            ("A", "Announce"),
+            ("F", "Files"),
+            ("W", "Week"),
+        ],
+    ),
+    (
+        "Actions",
+        [
+            ("y", "Copy URL"),
+            ("w", "Download"),
+            ("c", "ICS"),
+            ("C", "ICS+cal"),
+            ("g", "Course"),
+            ("x", "Hide"),
+            ("H", "ShowHid"),
+            ("T", "Theme"),
+        ],
+    ),
+    (
+        "Pomodoro",
+        [
+            ("1", "30min"),
+            ("2", "1hr"),
+            ("3", "2hr"),
+            ("P", "Custom"),
+            ("p", "Pause"),
+            ("0", "Stop"),
+        ],
+    ),
 ]
 
 

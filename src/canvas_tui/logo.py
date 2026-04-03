@@ -44,14 +44,7 @@ CANVAS_LOGO_WIDE = (
 )
 
 # Compact icon — 4 rows, ~18 cols (for banner use)
-CANVAS_ICON_COMPACT = (
-    "[bold red]"
-    "    ▄▄█▀▀██▀▄▄   \n"
-    "  ▄██  ▀▀  ▀▀██▄ \n"
-    "  ▀██  ▄▄  ▄▄██▀ \n"
-    "    ▀▀█▄▄██▄▀▀   "
-    "[/bold red]"
-)
+CANVAS_ICON_COMPACT = "[bold red]    ▄▄█▀▀██▀▄▄   \n  ▄██  ▀▀  ▀▀██▄ \n  ▀██  ▄▄  ▄▄██▀ \n    ▀▀█▄▄██▄▀▀   [/bold red]"
 
 # Compact — just the text (for narrow panels)
 CANVAS_LOGO_SMALL = "[bold red]CANVAS[/bold red] [dim]LMS[/dim]"

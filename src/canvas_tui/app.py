@@ -436,6 +436,7 @@ class CanvasTUI(App):
     def _render_stats(self) -> None:
         """Render raw text statistics in the stats row."""
         from .widgets.plots import grade_color
+
         active = self._active_courses()
         hidden_courses = self.state.get_hidden_courses()
 
@@ -595,13 +596,18 @@ class CanvasTUI(App):
             if course_pcts:
                 trend_chart = multi_line_chart(
                     {k: v[-20:] for k, v in course_pcts.items()},
-                    width=panel_w, height=panel_h, title="Grade Trends",
+                    width=panel_w,
+                    height=panel_h,
+                    title="Grade Trends",
                 )
                 self.bottom_trends.update(trend_chart)
             elif all_x and all_scores:
                 # Fallback: scatter plot of all scores
                 sc = scatter_scores(
-                    all_x, all_scores, width=panel_w, height=panel_h,
+                    all_x,
+                    all_scores,
+                    width=panel_w,
+                    height=panel_h,
                     title="All Scores",
                 )
                 self.bottom_trends.update(sc)
@@ -612,16 +618,23 @@ class CanvasTUI(App):
         with contextlib.suppress(Exception):
             if all_scores:
                 hist = grade_histogram(
-                    all_scores, width=panel_w, height=panel_h // 2,
-                    title="Grade Distribution", bins=min(12, len(all_scores)),
+                    all_scores,
+                    width=panel_w,
+                    height=panel_h // 2,
+                    title="Grade Distribution",
+                    bins=min(12, len(all_scores)),
                 )
                 # Stack histogram + bullet chart
                 if labels and scores:
                     bullet = completion_bullet(
-                        labels, scores, width=panel_w, height=panel_h // 2,
+                        labels,
+                        scores,
+                        width=panel_w,
+                        height=panel_h // 2,
                         title="Score vs 100%",
                     )
                     from rich.text import Text
+
                     combined = Text()
                     combined.append_text(hist)
                     combined.append("\n")
@@ -670,6 +683,7 @@ class CanvasTUI(App):
         # Add weekly activity bar chart below due-soon
         with contextlib.suppress(Exception):
             from .widgets.charts import weekly_activity_chart
+
             day_counts = [0] * 7
             day_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
             for it in self.items:
@@ -682,10 +696,14 @@ class CanvasTUI(App):
                     day_counts[d.weekday()] += 1
             if any(day_counts):
                 wk = weekly_activity_chart(
-                    day_names, day_counts, width=panel_w, height=max(6, panel_h // 2),
+                    day_names,
+                    day_counts,
+                    width=panel_w,
+                    height=max(6, panel_h // 2),
                     title="Due by Day",
                 )
                 from rich.text import Text
+
                 combined = Text.from_markup("\n".join(due_lines))
                 combined.append("\n")
                 combined.append_text(wk)
@@ -799,6 +817,7 @@ class CanvasTUI(App):
                 token_ok = self.api.validate_token()
 
             if not token_ok:
+
                 def _show_error() -> None:
                     if self.details:
                         self.details.update(
@@ -806,6 +825,7 @@ class CanvasTUI(App):
                             "Check CANVAS_TOKEN and CANVAS_BASE_URL.\n"
                             "Press r to retry after fixing."
                         )
+
                 try:
                     self.call_from_thread(_show_error)
                 except RuntimeError:
@@ -994,6 +1014,7 @@ class CanvasTUI(App):
         _, due_today, overdue, _ = self._stats()
         urgent_count = overdue + due_today
         from .widgets.plots import urgency_color
+
         self.table.styles.border = ("solid", urgency_color(urgent_count))
 
     # _render_progress removed — progress bar is now inline in _render_info
@@ -1010,9 +1031,7 @@ class CanvasTUI(App):
     def action_refresh(self) -> None:
         now = time.time()
         if (now - self._last_refresh) < self.cfg.refresh_cooldown:
-            self.details.update(
-                f"[yellow]Refresh ignored:[/yellow] cooldown {self.cfg.refresh_cooldown:.1f}s"
-            )
+            self.details.update(f"[yellow]Refresh ignored:[/yellow] cooldown {self.cfg.refresh_cooldown:.1f}s")
             return
         if self._refresh_lock.locked():
             self.details.update("[yellow]Refresh already in progress…[/yellow]")
@@ -1038,9 +1057,7 @@ class CanvasTUI(App):
                 ann_raw: list[dict[str, Any]] = []
                 with contextlib.suppress(Exception):
                     ann_raw = self.api.fetch_announcements(list(course_cache.keys()))
-                announcements = normalize_announcements(
-                    ann_raw, course_cache, self.cfg.base_url, self.cfg.user_tz
-                )
+                announcements = normalize_announcements(ann_raw, course_cache, self.cfg.base_url, self.cfg.user_tz)
 
                 # Migrate legacy keys
                 key_map = {it.legacy_key: it.key for it in items if it.legacy_key}
@@ -1059,9 +1076,7 @@ class CanvasTUI(App):
                     self.announcements = announcements
                     self.filtered = None
                     self._submission_cache.clear()
-                    self.state.update_cache(
-                        serialize_items(items), serialize_items(announcements)
-                    )
+                    self.state.update_cache(serialize_items(items), serialize_items(announcements))
                     self._render_info()
                     self._render_table()
                     self._render_stats()
@@ -1069,9 +1084,7 @@ class CanvasTUI(App):
                     self._last_refresh = time.time()
                     self._grade_hydrating = True
                     if not silent:
-                        self.details.update(
-                            "[dim]Core ready. Hydrating grade analytics in background…[/dim]"
-                        )
+                        self.details.update("[dim]Core ready. Hydrating grade analytics in background…[/dim]")
                     self._update_status_bar("Core ready")
 
                 self.call_from_thread(apply_core_ui)
@@ -1183,7 +1196,9 @@ class CanvasTUI(App):
                 self.details.update("[dim]Filter cleared[/dim]")
                 return
             # Filter against base items (before visibility filter for indices)
-            base = self.items if self.show_hidden else [it for it in self.items if self.state.get_visibility(it.key) != 2]
+            base = (
+                self.items if self.show_hidden else [it for it in self.items if self.state.get_visibility(it.key) != 2]
+            )
             idxs = filter_items(base, query)
             self.filtered = idxs if idxs else None
             # Persist last filter
@@ -1235,7 +1250,9 @@ class CanvasTUI(App):
             sanitize_filename(item.title),
         )
         msg = f"{len(files)} attachment(s) detected. Confirm download directory (Enter to accept):"
-        self._show_confirm_path(msg, dstdir_default, "dl_dir", {"files": files, "default": dstdir_default, "item": item})
+        self._show_confirm_path(
+            msg, dstdir_default, "dl_dir", {"files": files, "default": dstdir_default, "item": item}
+        )
 
     def _async_gather_attachments(self, it: CanvasItem) -> None:
         self.details.update("[dim]Scanning attachments…[/dim]")
@@ -1367,6 +1384,7 @@ class CanvasTUI(App):
 
     def _export_all_ics(self) -> str:
         from .ics import export_ics
+
         return export_ics(self.items, self.cfg)
 
     def action_export_ics(self) -> None:
@@ -1430,9 +1448,7 @@ class CanvasTUI(App):
     def action_toggle_show_hidden(self) -> None:
         self.show_hidden = not self.show_hidden
         self._render_table()
-        self.details.update(
-            "[dim]Showing hidden[/dim]" if self.show_hidden else "[dim]Hidden suppressed[/dim]"
-        )
+        self.details.update("[dim]Showing hidden[/dim]" if self.show_hidden else "[dim]Hidden suppressed[/dim]")
 
     def action_show_help(self) -> None:
         """Show full help screen overlay."""
@@ -1527,11 +1543,13 @@ class CanvasTUI(App):
 
     def action_manage_courses(self) -> None:
         """Open the course manager to show/hide courses."""
+
         def _on_dismiss(_result: Any = None) -> None:
             self._render_table()
             self._render_info()
             self._render_stats()
             self._render_graphs()
+
         self.push_screen(CourseManagerScreen(self), callback=_on_dismiss)
 
 

@@ -29,26 +29,25 @@ def item_to_vevent(it: CanvasItem, cfg: Config) -> str | None:
 
     due = local_dt(it.due_iso, cfg.user_tz)
     start = due - dt.timedelta(minutes=cfg.default_block_min)
-    uid = (
-        f"canvas-{it.course_id or ''}-{it.plannable_id or ''}"
-        f"-{abs(hash(it.title))}@{socket.gethostname()}"
-    )
+    uid = f"canvas-{it.course_id or ''}-{it.plannable_id or ''}-{abs(hash(it.title))}@{socket.gethostname()}"
     summary = f"{it.course_code} • {it.title} [{it.ptype}]"
     desc = f"URL: {it.url}"
     loc = it.course_name or it.course_code
     now_str = ics_dt(dt.datetime.now(ZoneInfo(cfg.user_tz)))
 
-    return "\n".join([
-        "BEGIN:VEVENT",
-        f"UID:{uid}",
-        f"DTSTAMP:{now_str}",
-        f"DTSTART:{ics_dt(start)}",
-        f"DTEND:{ics_dt(due)}",
-        f"SUMMARY:{ics_escape(summary)}",
-        f"DESCRIPTION:{ics_escape(desc)}",
-        f"LOCATION:{ics_escape(loc)}",
-        "END:VEVENT",
-    ])
+    return "\n".join(
+        [
+            "BEGIN:VEVENT",
+            f"UID:{uid}",
+            f"DTSTAMP:{now_str}",
+            f"DTSTART:{ics_dt(start)}",
+            f"DTEND:{ics_dt(due)}",
+            f"SUMMARY:{ics_escape(summary)}",
+            f"DESCRIPTION:{ics_escape(desc)}",
+            f"LOCATION:{ics_escape(loc)}",
+            "END:VEVENT",
+        ]
+    )
 
 
 def export_ics(items: list[CanvasItem], cfg: Config, path: str | None = None) -> str:
@@ -59,13 +58,7 @@ def export_ics(items: list[CanvasItem], cfg: Config, path: str | None = None) ->
     events = [item_to_vevent(it, cfg) for it in items]
     ics_body = "\n".join(e for e in events if e)
 
-    ics_content = (
-        "BEGIN:VCALENDAR\n"
-        "VERSION:2.0\n"
-        "PRODID:-//canvas-tui//EN\n"
-        f"{ics_body}\n"
-        "END:VCALENDAR\n"
-    )
+    ics_content = f"BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//canvas-tui//EN\n{ics_body}\nEND:VCALENDAR\n"
 
     with open(out_path, "w", encoding="utf-8") as f:
         f.write(ics_content)

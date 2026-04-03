@@ -58,6 +58,7 @@ def is_likely_ghost(
     year_match = re.search(r"(20\d{2})", full)
     if year_match:
         import datetime as dt
+
         year = int(year_match.group(1))
         now_year = dt.datetime.now().year
         if year < now_year - 1:
@@ -134,16 +135,11 @@ class CourseManagerScreen(Screen):
 
             vis_str = "[green]YES[/green]" if not is_hidden else "[red]HIDDEN[/red]"
 
-            self.course_table.add_row(
-                vis_str, code, name[:40], str(item_count), avg, ghost_str
-            )
+            self.course_table.add_row(vis_str, code, name[:40], str(item_count), avg, ghost_str)
 
         hidden_count = len(hidden)
         total = len(courses)
-        self.status.update(
-            f"[dim]{total} courses total, {hidden_count} hidden, "
-            f"{total - hidden_count} visible[/dim]"
-        )
+        self.status.update(f"[dim]{total} courses total, {hidden_count} hidden, {total - hidden_count} visible[/dim]")
 
     def _get_selected_course_id(self) -> int | None:
         if self.course_table.cursor_row is None:

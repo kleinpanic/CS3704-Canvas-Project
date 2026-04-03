@@ -47,7 +47,8 @@ class TestCharts:
     def test_multi_line(self):
         result = multi_line_chart(
             {"CS": [85, 90, 88], "MATH": [70, 75, 80]},
-            width=40, height=8,
+            width=40,
+            height=8,
         )
         assert isinstance(result, Text)
         plain = _plain(result)
@@ -88,7 +89,7 @@ class TestCharts:
         result = scatter_scores([1, 2, 3], [50, 60, 70], width=40, height=8)
         plain = _plain(result)
         # Should have at least some braille characters (not just whitespace/axis)
-        braille_chars = [c for c in plain if 0x2800 <= ord(c) <= 0x28FF and c != '⠀']
+        braille_chars = [c for c in plain if 0x2800 <= ord(c) <= 0x28FF and c != "⠀"]
         assert len(braille_chars) > 0
 
     def test_completion_bullet(self):
@@ -100,13 +101,20 @@ class TestCharts:
 
     def test_completion_bullet_with_targets(self):
         result = completion_bullet(
-            ["CS", "MATH"], [85, 60], targets=[90, 80], width=40, height=8,
+            ["CS", "MATH"],
+            [85, 60],
+            targets=[90, 80],
+            width=40,
+            height=8,
         )
         assert isinstance(result, Text)
 
     def test_weekly_activity(self):
         result = weekly_activity_chart(
-            ["Mon", "Tue", "Wed"], [3, 5, 2], width=40, height=8,
+            ["Mon", "Tue", "Wed"],
+            [3, 5, 2],
+            width=40,
+            height=8,
         )
         assert isinstance(result, Text)
         plain = _plain(result)
@@ -114,7 +122,7 @@ class TestCharts:
 
     def test_submission_heatmap(self):
         data = [[0] * 24 for _ in range(7)]
-        data[0][9] = 5   # Monday 9am
+        data[0][9] = 5  # Monday 9am
         data[4][14] = 3  # Friday 2pm
         result = submission_heatmap(data, days=["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"])
         assert isinstance(result, Text)
@@ -139,6 +147,7 @@ class TestCharts:
 class TestCommandBar:
     def test_pages_exist(self):
         from canvas_tui.widgets.command_bar import PAGES
+
         assert len(PAGES) >= 4
         assert PAGES[0][0] == "Navigation"
         assert PAGES[1][0] == "Views"

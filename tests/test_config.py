@@ -59,6 +59,7 @@ class TestLoadConfig:
             json.dump({"days_ahead": 14, "ann_future_days": 30}, f)
 
         import canvas_tui.config as config_mod
+
         cfg = load_config()
         # Overlay from the test config dir
         config_mod._overlay_file_config(cfg)
@@ -78,6 +79,7 @@ class TestLoadConfig:
             json.dump({"ann_futuredays": 21}, f)
 
         import canvas_tui.config as config_mod
+
         cfg = load_config()
         cfg.config_dir = cfg_dir
         config_mod._overlay_file_config(cfg)
