@@ -1,0 +1,48 @@
+name: "🐞 Bug report"
+description: Report a defect in CLI/TUI/docs/workflows
+labels: ["bug", "triage"]
+assignees: ["kleinpanic"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What broke?
+      placeholder: Concise bug summary
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior / logs
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      options:
+        - CLI/TUI
+        - API/Normalization
+        - Cache/State
+        - Docs/README
+        - CI/CD
+        - Security
+    validations:
+      required: true

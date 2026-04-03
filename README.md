@@ -9,6 +9,8 @@ This repository includes:
 - PM3 review notes and a concrete remaining-work roadmap
 
 [![CI](https://img.shields.io/github/actions/workflow/status/kleinpanic/CS7304-Canvas-Project/ci.yml?branch=main&label=CI)](https://github.com/kleinpanic/CS7304-Canvas-Project/actions/workflows/ci.yml)
+[![Security](https://img.shields.io/github/actions/workflow/status/kleinpanic/CS7304-Canvas-Project/security.yml?branch=main&label=Security)](https://github.com/kleinpanic/CS7304-Canvas-Project/actions/workflows/security.yml)
+[![Pages](https://img.shields.io/github/actions/workflow/status/kleinpanic/CS7304-Canvas-Project/pages.yml?branch=main&label=Pages)](https://github.com/kleinpanic/CS7304-Canvas-Project/actions/workflows/pages.yml)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Repo](https://img.shields.io/badge/repo-public-success)](https://github.com/kleinpanic/CS7304-Canvas-Project)

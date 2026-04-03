@@ -1,0 +1,12 @@
+site_name: CS7304 Canvas Project Docs
+site_description: Project wiki/docs portal for architecture, workflow, and delivery
+repo_url: https://github.com/kleinpanic/CS7304-Canvas-Project
+repo_name: kleinpanic/CS7304-Canvas-Project
+theme:
+  name: material
+nav:
+  - Home: index.md
+  - Architecture: architecture.md
+  - Workflow & Governance: workflow.md
+  - Roadmap: roadmap.md
+  - PM3 Review: pm3-review.md
