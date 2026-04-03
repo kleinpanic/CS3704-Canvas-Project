@@ -1,0 +1,28 @@
+sequenceDiagram
+  participant U as User (CLI/Extension)
+  participant F as Frontend
+  participant O as Shared Orchestrator
+  participant P as Policy Engine
+  participant G as API Gateway
+  participant C as Canvas API
+  participant N as Normalizer
+  participant D as Diff Engine
+  participant S as Cache/State
+  participant Q as Scheduler/Queue
+
+  U->>F: Trigger refresh / open dashboard
+  F->>O: getDashboard()
+  O->>P: authorize(scope,rateLimit)
+  P-->>O: allow
+  O->>G: fetchAssignments(), fetchCourses(), fetchGrades()
+  G->>C: paginated REST requests
+  C-->>G: JSON payloads
+  G-->>O: raw responses
+  O->>N: map to canonical models
+  N-->>O: normalized entities
+  O->>D: computeDelta(previous,current)
+  D-->>O: created/updated/deleted sets
+  O->>S: persist snapshot + indexes
+  O->>Q: enqueue reminders + badge updates
+  O-->>F: unified response envelope
+  F-->>U: refreshed UI with new state
