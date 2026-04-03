@@ -1,0 +1,63 @@
+name: Auto Assign Issues
+
+on:
+  issues:
+    types: [opened, labeled]
+  pull_request:
+    types: [opened]
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  auto-assign:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Auto-assign new issues
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue || context.payload.pull_request;
+            if (!issue) return;
+
+            // Skip if already assigned
+            if (issue.assignees && issue.assignees.length > 0) {
+              console.log('Already assigned, skipping');
+              return;
+            }
+
+            // Default assignee for all issues
+            const defaultAssignee = 'kleinpanic';
+
+            // Label-based routing (extend this as team grows)
+            const labelRouting = {
+              'bug': defaultAssignee,
+              'enhancement': defaultAssignee,
+              'documentation': defaultAssignee,
+              'good first issue': null, // Leave unassigned for team members to claim
+              'help wanted': null
+            };
+
+            // Check if there's label-based routing
+            const labels = issue.labels || [];
+            let assignee = defaultAssignee;
+
+            for (const label of labels) {
+              const labelName = label.name || label;
+              if (labelRouting[labelName] !== undefined) {
+                assignee = labelRouting[labelName];
+                break;
+              }
+            }
+
+            // Assign if we have someone
+            if (assignee) {
+              await github.rest.issues.addAssignees({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                assignees: [assignee]
+              });
+              console.log(`Assigned ${assignee} to issue #${issue.number}`);
+            }
