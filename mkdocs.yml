@@ -1,9 +1,20 @@
-site_name: CS7304 Canvas Project Docs
-site_description: Project wiki/docs portal for architecture, workflow, and delivery
-repo_url: https://github.com/kleinpanic/CS7304-Canvas-Project
-repo_name: kleinpanic/CS7304-Canvas-Project
+site_name: CS3704 Canvas Project Docs
+site_description: Team-maintained docs portal for the CS3704 Canvas project
+site_url: https://kleinpanic.github.io/CS3704-Canvas-Project/
+repo_url: https://github.com/kleinpanic/CS3704-Canvas-Project
+repo_name: kleinpanic/CS3704-Canvas-Project
+docs_dir: docs-site
+site_dir: site
 theme:
   name: material
+  features:
+    - navigation.instant
+    - navigation.sections
+    - content.code.copy
+markdown_extensions:
+  - admonition
+  - toc:
+      permalink: true
 nav:
   - Home: index.md
   - Architecture: architecture.md

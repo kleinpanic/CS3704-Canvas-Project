@@ -1,15 +1,18 @@
 # Roadmap
 
 ## Immediate
-- Stabilize CI gates and merge governance PR
-- Add collaborators and assign issue owners
-- Start milestone issue board
+- merge repo-hardening branch cleanly into `main`
+- verify Pages deployment and snapshot release on merge
+- normalize all repo/course naming to CS3704
+- finish issue ownership and milestone assignment
 
 ## Near-term
-- Extension parity workstream
-- Stronger typing and stricter type-checking gate
-- Expanded test coverage on API normalization edge cases
+- tighten package metadata and release notes
+- reduce mypy debt until type checking can become a required gate
+- expand tests around normalization and caching edge cases
+- improve docs for browser-extension parity work
 
-## Stretch
-- automated release notes + package publish
-- architecture decision records (ADR)
+## Longer-term
+- ADRs for major architecture decisions
+- release versioning policy
+- richer triage automation for issues and PRs

@@ -1,13 +1,15 @@
-# CS7304 Canvas Project
+# CS3704 Canvas Project
 
-Welcome to the project docs portal.
+This is the team docs portal for the **CS3704 Canvas project**: a Canvas-focused productivity client with a Textual TUI today and a documented path toward browser-extension parity.
 
-Use this space as the team wiki for:
-- architecture and design decisions
-- contributor workflow and branch policy
-- roadmap, issue-driven execution, and milestone tracking
+## What lives here
+- architecture diagrams and shared-core design notes
+- contributor workflow and governance rules
+- roadmap and PM3 delivery context
+- maintainership docs for a 4-person team
 
 ## Quick links
-- Repo: https://github.com/kleinpanic/CS7304-Canvas-Project
-- PRs: https://github.com/kleinpanic/CS7304-Canvas-Project/pulls
-- Issues: https://github.com/kleinpanic/CS7304-Canvas-Project/issues
+- Repo: https://github.com/kleinpanic/CS3704-Canvas-Project
+- Issues: https://github.com/kleinpanic/CS3704-Canvas-Project/issues
+- Pull requests: https://github.com/kleinpanic/CS3704-Canvas-Project/pulls
+- Security policy: https://github.com/kleinpanic/CS3704-Canvas-Project/security/policy

@@ -1,9 +1,14 @@
 # Architecture
 
-![Complex Architecture](../docs/architecture/complex-architecture.svg)
+The project uses a **shared-core** architecture: the Textual TUI and a future browser extension both depend on the same orchestration, normalization, policy, and caching concepts.
 
-![Sync Flow](../docs/architecture/sync-flow.svg)
+## Static architecture board
+![Complex Architecture](assets/architecture/complex-architecture.svg)
 
-## Mermaid source files
+## Sync flow
+![Sync Flow](assets/architecture/sync-flow.svg)
+
+## Source files
 - `docs/architecture/complex-architecture.mmd`
 - `docs/architecture/sync-sequence.mmd`
+- `docs/assets/architecture/*`

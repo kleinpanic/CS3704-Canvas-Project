@@ -1,0 +1,25 @@
+name: Stale
+
+on:
+  schedule:
+    - cron: "0 15 * * 1"
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@v9
+        with:
+          stale-issue-message: "This issue has gone stale due to inactivity. Update it if it is still active."
+          stale-pr-message: "This PR has gone stale due to inactivity. Update it if it is still active."
+          close-issue-message: "Closing stale issue after extended inactivity."
+          close-pr-message: "Closing stale PR after extended inactivity."
+          days-before-stale: 21
+          days-before-close: 7
+          exempt-issue-labels: "security,pinned"
+          exempt-pr-labels: "security,pinned"

@@ -4,35 +4,43 @@ __pycache__/
 *$py.class
 *.egg-info/
 *.egg
-dist/
-build/
 .eggs/
+
+# Build artifacts
+build/
+dist/
+site/
+*.whl
+*.tar.gz
 
 # Virtual environments
 .venv/
 venv/
 env/
+.python-version
 
-# IDE
+# Tool caches
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+.cache/
+
+# IDE / editor
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 
-# Testing
-.pytest_cache/
-.coverage
-htmlcov/
-.mypy_cache/
-.ruff_cache/
-
-# OS
+# OS junk
 .DS_Store
 Thumbs.db
 
-# Project
+# Local project state
 .env
 .env.*
 state.json
 cache/
+*.log
