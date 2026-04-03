@@ -1,58 +1,39 @@
-name: Release
+name: Release Package
 
 on:
   push:
-    tags:
-      - "v*"
+    branches: [main]
 
 permissions:
   contents: write
 
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+
 jobs:
-  lint:
-    name: Pre-release Lint
+  build-and-release:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install ruff
-      - run: ruff check .
-
-  release:
-    name: Create Release
-    needs: lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Build sdist
+      - name: Install build deps
+        run: python -m pip install --upgrade build
+      - name: Build wheel + sdist
+        run: python -m build
+      - name: Export release metadata
+        id: meta
         run: |
-          pip install build
-          python -m build --sdist
-
-      - name: Generate changelog
-        id: changelog
-        run: |
-          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
-          if [ -n "$PREV_TAG" ]; then
-            echo "## Changes since $PREV_TAG" > CHANGES.md
-            git log --pretty=format:"- %s (%h)" "$PREV_TAG"..HEAD >> CHANGES.md
-          else
-            echo "## Initial Release" > CHANGES.md
-            git log --pretty=format:"- %s (%h)" >> CHANGES.md
-          fi
-
-      - name: Create GitHub Release
+          echo "sha_short=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          echo "date=$(date -u +%Y%m%d-%H%M%S)" >> "$GITHUB_OUTPUT"
+      - name: Create GitHub prerelease
         uses: softprops/action-gh-release@v2
         with:
-          body_path: CHANGES.md
-          files: dist/*
+          tag_name: snapshot-${{ steps.meta.outputs.date }}-${{ steps.meta.outputs.sha_short }}
+          name: Main snapshot ${{ steps.meta.outputs.date }} (${{ steps.meta.outputs.sha_short }})
+          prerelease: true
           generate_release_notes: true
+          files: |
+            dist/*

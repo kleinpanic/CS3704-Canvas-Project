@@ -1,16 +1,26 @@
 # Workflow & Governance
 
-## Enforced rules
-- PR-only changes to `main`
-- Required CI checks before merge
-- Required review(s) and conversation resolution
-- No force-push / no branch deletion on protected branch
-- Required signed commits on protected branch
-- Branch naming policy enforced in CI
+## Team workflow
+1. Open or pick an Issue.
+2. Create a branch from `main` using the approved naming rules.
+3. Open a PR early and link the Issue.
+4. Pass CI, security, and branch-policy checks.
+5. Resolve review comments.
+6. Merge through GitHub only.
 
-## Contributor workflow
-1. Create/select Issue
-2. Branch from `main` (`feature/*`, `fix/*`, etc.)
-3. Open PR and link issue
-4. Pass checks and review
-5. Merge via PR
+## Enforced protections
+- PR-only changes to `main`
+- required CI before merge
+- required review and code-owner review
+- no force-push on protected `main`
+- no deletion of protected `main`
+- signed commits required on protected `main`
+- linear history + resolved conversations
+
+## Automation
+- issue templates with default labels
+- Dependabot for dependencies and GitHub Actions
+- stale issue / PR cleanup
+- PR auto-labeling by changed paths
+- CodeQL + dependency review
+- auto package snapshot release on clean `main` push
