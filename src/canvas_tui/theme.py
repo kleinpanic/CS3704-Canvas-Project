@@ -30,11 +30,11 @@ class ThemeColors:
     canvas_logo: str
     # Due date urgency
     overdue: str
-    urgent: str      # < 8h
-    soon: str         # < 12h
-    today: str        # < 24h
-    upcoming: str     # < 48h
-    normal: str       # > 48h
+    urgent: str  # < 8h
+    soon: str  # < 12h
+    today: str  # < 24h
+    upcoming: str  # < 48h
+    normal: str  # > 48h
 
 
 DARK_THEME = ThemeColors(

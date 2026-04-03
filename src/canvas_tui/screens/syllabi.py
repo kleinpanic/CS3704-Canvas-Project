@@ -131,9 +131,7 @@ class SyllabiScreen(Screen):
                 if not self._pdftotext_available():
                     msg = "(pdftotext not found; press 'b' to open in browser or 'w' to save.)"
                 else:
-                    with tempfile.NamedTemporaryFile(
-                        prefix="canvas_syl_", suffix=".pdf", delete=False
-                    ) as f:
+                    with tempfile.NamedTemporaryFile(prefix="canvas_syl_", suffix=".pdf", delete=False) as f:
                         f.write(data)
                         pdf_path = f.name
                     _temp_files.append(pdf_path)
@@ -204,16 +202,12 @@ class SyllabiScreen(Screen):
                 def name_lc(f: dict[str, Any]) -> str:
                     return (f.get("display_name") or f.get("filename") or "").lower()
 
-                files.sort(
-                    key=lambda f: (not is_pdf(f), "syllab" not in name_lc(f), -(f.get("size") or 0))
-                )
+                files.sort(key=lambda f: (not is_pdf(f), "syllab" not in name_lc(f), -(f.get("size") or 0)))
             except Exception:
                 files = []
 
             if not files:
-                self.app.call_from_thread(
-                    self._render_text, "(No syllabus HTML and no matching files.)"
-                )
+                self.app.call_from_thread(self._render_text, "(No syllabus HTML and no matching files.)")
                 return
 
             f0 = files[0]
@@ -283,12 +277,10 @@ class SyllabiScreen(Screen):
                                     f.write(chunk)
                     if api.cfg.open_after_dl and shutil.which("xdg-open"):
                         subprocess.Popen(["xdg-open", path])
-                    self.app.call_from_thread(lambda: (self.body and self.body.write(f"\nSaved → {path}")))
+                    self.app.call_from_thread(lambda: self.body and self.body.write(f"\nSaved → {path}"))
                 except Exception as exc:
                     err_msg = str(exc)
-                    self.app.call_from_thread(
-                        lambda: (self.body and self.body.write(f"\nDownload failed: {err_msg}"))
-                    )
+                    self.app.call_from_thread(lambda: self.body and self.body.write(f"\nDownload failed: {err_msg}"))
 
             threading.Thread(target=worker, daemon=True).start()
 

@@ -137,10 +137,7 @@ def _match_item(it: CanvasItem, q: FilterQuery) -> float:
 
     # Structured filters (must ALL match — AND logic)
     if q.course:
-        matched = any(
-            c in it.course_code.lower() or c in it.course_name.lower()
-            for c in q.course
-        )
+        matched = any(c in it.course_code.lower() or c in it.course_name.lower() for c in q.course)
         if not matched:
             return 0.0
 
@@ -157,7 +154,11 @@ def _match_item(it: CanvasItem, q: FilterQuery) -> float:
 
     if q.has:
         for h in q.has:
-            if (h == "points" and (it.points is None or it.points <= 0)) or (h == "due" and not it.due_iso) or (h == "url" and not it.url):
+            if (
+                (h == "points" and (it.points is None or it.points <= 0))
+                or (h == "due" and not it.due_iso)
+                or (h == "url" and not it.url)
+            ):
                 return 0.0
 
     # Free text — fuzzy match across combined fields

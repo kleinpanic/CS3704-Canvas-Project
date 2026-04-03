@@ -61,12 +61,12 @@ class TestResponseCache:
         assert stats["entries"] == 2
         assert stats["size_kb"] > 0
 
-
     def test_purge_expired(self, tmp_dir):
         cache = ResponseCache(tmp_dir, default_ttl=0)
         cache.put("old1", "data1")
         cache.put("old2", "data2")
         import time
+
         time.sleep(0.1)
         removed = cache.purge_expired(max_age_sec=0)
         assert removed == 2

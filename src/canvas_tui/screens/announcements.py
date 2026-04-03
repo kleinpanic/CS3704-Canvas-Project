@@ -132,8 +132,7 @@ class AnnouncementDetailScreen(Screen):
     def on_mount(self) -> None:
         it = self.item
         self.head.update(
-            f"[b]{it.title}[/b]\n{it.course_code} — {it.course_name}\n"
-            f"{it.due_at or '-'} ({it.due_rel or '-'})"
+            f"[b]{it.title}[/b]\n{it.course_code} — {it.course_name}\n{it.due_at or '-'} ({it.due_rel or '-'})"
         )
         self.body.write("[dim]Loading announcement…[/dim]")
         self.link_table.clear(columns=True)

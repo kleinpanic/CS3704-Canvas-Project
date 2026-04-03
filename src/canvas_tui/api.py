@@ -168,11 +168,7 @@ class CanvasAPI:
         tz = ZoneInfo(self.cfg.user_tz)
         now = dt.datetime.now(tz)
         start = _iso(now - dt.timedelta(hours=self.cfg.past_hours))
-        end = _iso(
-            (now + dt.timedelta(days=self.cfg.days_ahead)).replace(
-                hour=23, minute=59, second=59, microsecond=0
-            )
-        )
+        end = _iso((now + dt.timedelta(days=self.cfg.days_ahead)).replace(hour=23, minute=59, second=59, microsecond=0))
         params = {"start_date": start, "end_date": end, "per_page": 100}
         ck = cache_key("planner_items", params)
         return self._cached_get_all(ck, self._url("/api/v1/planner/items"), params)
@@ -257,9 +253,7 @@ class CanvasAPI:
 
     def fetch_submission(self, course_id: int, assignment_id: int) -> dict[str, Any] | None:
         """Fetch user's submission for an assignment."""
-        return self.get_json(
-            self._url(f"/api/v1/courses/{course_id}/assignments/{assignment_id}/submissions/self")
-        )
+        return self.get_json(self._url(f"/api/v1/courses/{course_id}/assignments/{assignment_id}/submissions/self"))
 
     def fetch_discussion(self, course_id: int, topic_id: int) -> dict[str, Any] | None:
         """Fetch a discussion topic or announcement."""
@@ -296,9 +290,7 @@ class CanvasAPI:
         now = dt.datetime.now(tz)
         start = _iso(now - dt.timedelta(days=self.cfg.ann_past_days))
         end = _iso(
-            (now + dt.timedelta(days=self.cfg.ann_future_days)).replace(
-                hour=23, minute=59, second=59, microsecond=0
-            )
+            (now + dt.timedelta(days=self.cfg.ann_future_days)).replace(hour=23, minute=59, second=59, microsecond=0)
         )
         params: dict[str, Any] = {
             "start_date": start,

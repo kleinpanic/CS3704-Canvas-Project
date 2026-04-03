@@ -164,9 +164,7 @@ class FileManagerScreen(Screen):
             self.file_table.add_row("[ ]", fname, size_str, ctype, updated)
 
         total_size = sum(f.get("size") or 0 for f in files)
-        self.file_status.update(
-            f"{len(folders)} folders, {len(files)} files ({_human_size(total_size)})"
-        )
+        self.file_status.update(f"{len(folders)} folders, {len(files)} files ({_human_size(total_size)})")
 
         with contextlib.suppress(Exception):
             self.file_table.cursor_coordinate = (0, 0)
@@ -223,10 +221,15 @@ class FileManagerScreen(Screen):
         if not indices:
             return
 
-        files_to_dl = [(self._files[i].get("display_name") or "file",
-                        self._files[i].get("url") or self._files[i].get("download_url") or "",
-                        self._files[i].get("size") or 0)
-                       for i in indices if self._files[i].get("url") or self._files[i].get("download_url")]
+        files_to_dl = [
+            (
+                self._files[i].get("display_name") or "file",
+                self._files[i].get("url") or self._files[i].get("download_url") or "",
+                self._files[i].get("size") or 0,
+            )
+            for i in indices
+            if self._files[i].get("url") or self._files[i].get("download_url")
+        ]
 
         code, _ = self.courses.get(self._current_cid, ("course", ""))
         dstdir = os.path.join(get_download_dir(self._owner.api.cfg.download_dir), "Canvas", sanitize_filename(code))

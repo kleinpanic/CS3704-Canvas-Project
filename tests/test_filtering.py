@@ -65,14 +65,33 @@ class TestFuzzyScore:
 class TestFilterItems:
     def _make_items(self) -> list[CanvasItem]:
         return [
-            CanvasItem(key="1", title="Homework 3: Data Structures", course_code="CS3214",
-                       ptype="assignment", points=100.0, status_flags=[]),
-            CanvasItem(key="2", title="Quiz 2: Algorithms", course_code="CS4104",
-                       ptype="quiz", points=50.0, status_flags=["graded"]),
-            CanvasItem(key="3", title="Lab Report", course_code="CS3214",
-                       ptype="assignment", points=None, status_flags=["submitted"]),
-            CanvasItem(key="4", title="Final Exam", course_code="CS4104",
-                       ptype="assignment", points=200.0, status_flags=[]),
+            CanvasItem(
+                key="1",
+                title="Homework 3: Data Structures",
+                course_code="CS3214",
+                ptype="assignment",
+                points=100.0,
+                status_flags=[],
+            ),
+            CanvasItem(
+                key="2",
+                title="Quiz 2: Algorithms",
+                course_code="CS4104",
+                ptype="quiz",
+                points=50.0,
+                status_flags=["graded"],
+            ),
+            CanvasItem(
+                key="3",
+                title="Lab Report",
+                course_code="CS3214",
+                ptype="assignment",
+                points=None,
+                status_flags=["submitted"],
+            ),
+            CanvasItem(
+                key="4", title="Final Exam", course_code="CS4104", ptype="assignment", points=200.0, status_flags=[]
+            ),
         ]
 
     def test_course_filter(self):

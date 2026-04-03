@@ -54,9 +54,7 @@ class TestDueNotifier:
         now = dt.datetime.now(ZoneInfo(tz))
         due_soon = (now + dt.timedelta(minutes=10)).astimezone(dt.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-        items = [
-            CanvasItem(key="s1", due_iso=due_soon, status_flags=["submitted"])
-        ]
+        items = [CanvasItem(key="s1", due_iso=due_soon, status_flags=["submitted"])]
         n = DueNotifier(tz=tz, get_items=lambda: items)
         n._check()
         assert len(n._notified) == 0

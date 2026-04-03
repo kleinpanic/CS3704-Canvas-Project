@@ -44,6 +44,7 @@ def urgency_color(count: int) -> str:
 @dataclass
 class BarEntry:
     """A single bar in a horizontal bar chart."""
+
     label: str
     value: float  # 0-100
     suffix: str = ""  # e.g. "85.2%"
@@ -107,6 +108,7 @@ def render_gauge(
 @dataclass
 class WeightSegment:
     """A segment in a stacked weight bar."""
+
     label: str
     weight: float  # percentage 0-100
     color: str = ""
@@ -168,6 +170,7 @@ _DOT_MAP = [
 @dataclass
 class PlotSeries:
     """A data series for the braille plot."""
+
     values: list[float] = field(default_factory=list)
     color: str = ""
     label: str = ""

@@ -156,9 +156,7 @@ def stable_item_key(course_id: int | None, plannable_id: int | None, ptype: str)
     return f"{cid}:{pid}:{(ptype or '').lower()}"
 
 
-def legacy_item_key(
-    course_id: int | None, plannable_id: int | None, ptype: str, title: str
-) -> str:
+def legacy_item_key(course_id: int | None, plannable_id: int | None, ptype: str, title: str) -> str:
     """Generate legacy key format for migration."""
     return f"{course_id}:{plannable_id}:{ptype}:{abs(hash(title))}"
 

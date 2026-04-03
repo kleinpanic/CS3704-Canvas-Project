@@ -98,14 +98,10 @@ class DashboardScreen(Screen):
                     with contextlib.suppress(Exception):
                         course_grades[cid] = self._owner.api.fetch_grades(cid)
 
-                self.app.call_from_thread(
-                    self._render_dashboard, courses, items, course_grades
-                )
+                self.app.call_from_thread(self._render_dashboard, courses, items, course_grades)
             except Exception as exc:
                 err = str(exc)
-                self.app.call_from_thread(
-                    lambda: self.scores_panel.update(f"[red]Error: {err}[/red]")
-                )
+                self.app.call_from_thread(lambda: self.scores_panel.update(f"[red]Error: {err}[/red]"))
             finally:
                 self._loading = False
 
@@ -152,9 +148,7 @@ class DashboardScreen(Screen):
             course_completion.append((code, graded_count, total_count))
 
         if bar_entries:
-            scores_text = render_bar_chart(
-                bar_entries, bar_width=25, title="Course Scores"
-            )
+            scores_text = render_bar_chart(bar_entries, bar_width=25, title="Course Scores")
         else:
             scores_text = "[bold]Course Scores[/bold]\n[dim]No active course score data yet[/dim]"
         self.scores_panel.update(scores_text)
@@ -195,9 +189,7 @@ class DashboardScreen(Screen):
         else:
             for urgency, it in upcoming[:12]:
                 title = it.title[:40]
-                due_lines.append(
-                    f"  {urgency}  [{grade_color(50)}]{it.course_code}[/{grade_color(50)}] {title}"
-                )
+                due_lines.append(f"  {urgency}  [{grade_color(50)}]{it.course_code}[/{grade_color(50)}] {title}")
             if len(upcoming) > 12:
                 due_lines.append(f"  [dim]… and {len(upcoming) - 12} more[/dim]")
         if overdue_count:
@@ -219,17 +211,22 @@ class DashboardScreen(Screen):
         colors = ["cyan", "green", "yellow", "magenta", "blue", "red"]
         for i, (code, pcts) in enumerate(course_sparklines.items()):
             if pcts:
-                series_list.append(PlotSeries(
-                    values=pcts[-20:],
-                    color=colors[i % len(colors)],
-                    label=f"{code} {sparkline(pcts[-10:], colors[i % len(colors)])}",
-                ))
+                series_list.append(
+                    PlotSeries(
+                        values=pcts[-20:],
+                        color=colors[i % len(colors)],
+                        label=f"{code} {sparkline(pcts[-10:], colors[i % len(colors)])}",
+                    )
+                )
 
         if series_list:
             plot_text = render_braille_plot(
-                series_list, width=50, height=6,
+                series_list,
+                width=50,
+                height=6,
                 title="Grade Trends (recent assignments)",
-                y_min=0, y_max=100,
+                y_min=0,
+                y_max=100,
             )
             self.trends_panel.update(plot_text)
         else:

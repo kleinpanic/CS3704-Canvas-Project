@@ -196,7 +196,8 @@ class GradesScreen(Screen):
         if groups:
             segments = [
                 WeightSegment(label=g.get("name", "?"), weight=g.get("group_weight", 0))
-                for g in groups if g.get("group_weight", 0) > 0
+                for g in groups
+                if g.get("group_weight", 0) > 0
             ]
             if segments:
                 summary_text += "\n" + render_weight_bar(segments, width=28, title="Grade Weights")
@@ -211,9 +212,7 @@ class GradesScreen(Screen):
                 break
         if row_idx is not None:
             with contextlib.suppress(Exception):
-                self.course_table.update_cell_at(
-                    (row_idx, 1), f"[{avg_color}]{avg:.1f}%[/{avg_color}]"
-                )
+                self.course_table.update_cell_at((row_idx, 1), f"[{avg_color}]{avg:.1f}%[/{avg_color}]")
 
     def action_select_course(self) -> None:
         cid = self._selected_course()

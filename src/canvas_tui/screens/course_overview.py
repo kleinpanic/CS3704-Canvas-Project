@@ -99,19 +99,12 @@ class CourseOverviewScreen(Screen):
                 course_info = api.fetch_course_info(cid)
 
                 # Items for this course
-                course_items = [
-                    it for it in self._owner.items
-                    if it.course_id == cid
-                ]
+                course_items = [it for it in self._owner.items if it.course_id == cid]
 
-                self.app.call_from_thread(
-                    self._render_course, grades, groups, course_info, course_items
-                )
+                self.app.call_from_thread(self._render_course, grades, groups, course_info, course_items)
             except Exception as exc:
                 err = str(exc)
-                self.app.call_from_thread(
-                    lambda: self.header_panel.update(f"[red]Error: {err}[/red]")
-                )
+                self.app.call_from_thread(lambda: self.header_panel.update(f"[red]Error: {err}[/red]"))
             finally:
                 self._loading = False
 
@@ -147,10 +140,7 @@ class CourseOverviewScreen(Screen):
 
         # ── Upcoming assignments for this course ──
         upcoming_lines = ["[bold]Upcoming[/bold]"]
-        upcoming = [
-            it for it in course_items
-            if "submitted" not in it.status_flags and it.due_iso
-        ]
+        upcoming = [it for it in course_items if "submitted" not in it.status_flags and it.due_iso]
         upcoming.sort(key=lambda it: it.due_iso)
         if not upcoming:
             upcoming_lines.append("  [green]Nothing upcoming! [/green]")
@@ -183,11 +173,13 @@ class CourseOverviewScreen(Screen):
                 total_score += float(score)
                 total_possible += float(pts)
                 pcts.append(pct)
-                score_entries.append(BarEntry(
-                    label=aname,
-                    value=pct,
-                    suffix=f"{float(score):.0f}/{float(pts):.0f} ({pct:.0f}%)",
-                ))
+                score_entries.append(
+                    BarEntry(
+                        label=aname,
+                        value=pct,
+                        suffix=f"{float(score):.0f}/{float(pts):.0f} ({pct:.0f}%)",
+                    )
+                )
 
         # Show last 8 graded
         recent = score_entries[-8:] if len(score_entries) > 8 else score_entries
@@ -222,8 +214,12 @@ class CourseOverviewScreen(Screen):
         if pcts:
             series = [PlotSeries(values=pcts[-20:], color="cyan", label=self._code)]
             trend_text = render_braille_plot(
-                series, width=35, height=5,
-                title="Score Trend", y_min=0, y_max=100,
+                series,
+                width=35,
+                height=5,
+                title="Score Trend",
+                y_min=0,
+                y_max=100,
             )
         else:
             trend_text = "[dim]No graded assignments yet[/dim]"
@@ -234,4 +230,3 @@ class CourseOverviewScreen(Screen):
 
     def action_pop(self) -> None:
         self.app.pop_screen()
-

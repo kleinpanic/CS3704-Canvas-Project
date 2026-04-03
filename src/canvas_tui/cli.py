@@ -34,12 +34,14 @@ examples:
     )
 
     p.add_argument(
-        "-V", "--version",
+        "-V",
+        "--version",
         action="version",
         version=f"canvas-tui {__version__}",
     )
     p.add_argument(
-        "-c", "--config",
+        "-c",
+        "--config",
         metavar="PATH",
         help="Path to config file (TOML or JSON)",
     )
@@ -181,8 +183,7 @@ def _prefetch_daemon(args: argparse.Namespace) -> None:
         cfg.past_hours = args.past_hours
 
     print(
-        f"Starting prefetch daemon (interval={args.prefetch_interval}s, "
-        f"include_grades={not args.prefetch_no_grades})"
+        f"Starting prefetch daemon (interval={args.prefetch_interval}s, include_grades={not args.prefetch_no_grades})"
     )
     prefetch_daemon_loop(
         cfg,

@@ -34,6 +34,7 @@ def _chart_palette() -> list[str]:
 
 # ─── Horizontal Bar Chart ────────────────────────────────────────────────
 
+
 def score_bar_chart(
     labels: list[str],
     scores: list[float],
@@ -70,7 +71,7 @@ def score_bar_chart(
         # Place tick mark
         while len(axis_line) < axis_pad + pos:
             axis_line += "─"
-        axis_line = axis_line[:axis_pad + pos] + "┼" + axis_line[axis_pad + pos + 1:]
+        axis_line = axis_line[: axis_pad + pos] + "┼" + axis_line[axis_pad + pos + 1 :]
     lines.append(f"[dim]{axis_line}[/dim]")
     tick_labels = " " * axis_pad
     for tick in tick_positions:
@@ -86,6 +87,7 @@ def score_bar_chart(
 
 
 # ─── Vertical Histogram ──────────────────────────────────────────────────
+
 
 def grade_histogram(
     scores: list[float],
@@ -154,7 +156,7 @@ def grade_histogram(
         target = y_width + 1 + pos
         while len(label_line) < target:
             label_line += " "
-        label_line = label_line[:target] + lbl + label_line[target + len(lbl):]
+        label_line = label_line[:target] + lbl + label_line[target + len(lbl) :]
     lines.append(f"[dim]{label_line}[/dim]")
 
     return Text.from_markup("\n".join(lines))
@@ -291,6 +293,7 @@ def multi_line_chart(
 
 # ─── Scatter Plot (Braille) ──────────────────────────────────────────────
 
+
 def scatter_scores(
     x: list[float],
     y: list[float],
@@ -349,12 +352,15 @@ def scatter_scores(
         lines.append(f"[dim]{y_label:>{y_width}}│[/dim][{dot_color}]{chars}[/{dot_color}]")
 
     lines.append(f"[dim]{' ' * (y_width + 1)}{'─' * chart_w}[/dim]")
-    lines.append(f"[dim]{' ' * (y_width + 1)}{x_min:.0f}{' ' * (chart_w - len(f'{x_min:.0f}') - len(f'{x_max:.0f}'))}{x_max:.0f}[/dim]")
+    lines.append(
+        f"[dim]{' ' * (y_width + 1)}{x_min:.0f}{' ' * (chart_w - len(f'{x_min:.0f}') - len(f'{x_max:.0f}'))}{x_max:.0f}[/dim]"
+    )
 
     return Text.from_markup("\n".join(lines))
 
 
 # ─── Submission Heatmap ──────────────────────────────────────────────────
+
 
 def submission_heatmap(
     day_hour_counts: list[list[int]],
@@ -426,6 +432,7 @@ def submission_heatmap(
 
 # ─── Completion Bullet Chart ─────────────────────────────────────────────
 
+
 def completion_bullet(
     labels: list[str],
     actual: list[float],
@@ -474,13 +481,25 @@ def completion_bullet(
     # X-axis
     axis_pad = max_label + 3
     lines.append(f"[dim]{' ' * axis_pad}{'─' * bar_width}[/dim]")
-    tick_line = " " * axis_pad + "0" + " " * (bar_width // 4 - 1) + "25" + " " * (bar_width // 4 - 2) + "50" + " " * (bar_width // 4 - 2) + "75" + " " * (bar_width // 4 - 3) + "100"
+    tick_line = (
+        " " * axis_pad
+        + "0"
+        + " " * (bar_width // 4 - 1)
+        + "25"
+        + " " * (bar_width // 4 - 2)
+        + "50"
+        + " " * (bar_width // 4 - 2)
+        + "75"
+        + " " * (bar_width // 4 - 3)
+        + "100"
+    )
     lines.append(f"[dim]{tick_line}[/dim]")
 
     return Text.from_markup("\n".join(lines))
 
 
 # ─── Weekly Activity Chart ───────────────────────────────────────────────
+
 
 def weekly_activity_chart(
     days: list[str],
@@ -543,6 +562,7 @@ def weekly_activity_chart(
 
 # ─── Score Line Chart ────────────────────────────────────────────────────
 
+
 def score_line_chart(
     labels: list[str],
     values: list[float],
@@ -560,6 +580,7 @@ def score_line_chart(
 
 
 # ─── Pie Chart (Stacked Bar Simulation) ──────────────────────────────────
+
 
 def pie_chart(
     labels: list[str],
@@ -596,6 +617,6 @@ def pie_chart(
     lines.append("  " + "".join(bar_parts))
     # Wrap legend
     for i in range(0, len(legend_parts), 3):
-        lines.append("  " + "  ".join(legend_parts[i:i + 3]))
+        lines.append("  " + "  ".join(legend_parts[i : i + 3]))
 
     return Text.from_markup("\n".join(lines))
