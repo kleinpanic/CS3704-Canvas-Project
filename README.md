@@ -8,18 +8,108 @@ This repository includes:
 - Mermaid + SVG architecture diagrams
 - PM3 review notes and a concrete remaining-work roadmap
 
+[![CI](https://img.shields.io/github/actions/workflow/status/kleinpanic/CS7304-Canvas-Project/ci.yml?branch=main&label=CI)](https://github.com/kleinpanic/CS7304-Canvas-Project/actions/workflows/ci.yml)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![Repo](https://img.shields.io/badge/repo-public-success)](https://github.com/kleinpanic/CS7304-Canvas-Project)
+
 ## Architecture Visuals
+
+### Inline SVG diagrams
+
+#### Complex architecture (SVG)
+![Complex Architecture](docs/architecture/complex-architecture.svg)
+
+#### Sync/action flow (SVG)
+![Sync Flow](docs/architecture/sync-flow.svg)
+
+### Mermaid diagram (rendered by GitHub)
+
+```mermaid
+flowchart TB
+  subgraph CLI[CLI Frontend]
+    CLI_CMD[Command Router\n(argparse/typer)]
+    CLI_TUI[Textual TUI Screens]
+    CLI_NOTIF[Notification Adapter]
+  end
+
+  subgraph EXT[Browser Extension Frontend]
+    EXT_POPUP[Popup UI]
+    EXT_BG[Background Service Worker]
+    EXT_CONTENT[Content Script Bridge]
+  end
+
+  subgraph CORE[Shared Domain Core]
+    ORCH[Use Cases / Orchestrators]
+    POLICY[Policy Engine]
+    NORM[Normalization + Mapping]
+    DIFF[State + Diff Engine]
+  end
+
+  subgraph INFRA[Infrastructure + Integration]
+    API[Canvas API Gateway]
+    AUTH[Auth + Session Manager]
+    CACHE[Persistence + Cache\nSQLite / IndexedDB]
+    QUEUE[Event Queue + Scheduler]
+    OBS[Observability + Metrics]
+  end
+
+  CLI_CMD --> ORCH
+  CLI_TUI --> ORCH
+  CLI_NOTIF --> ORCH
+  EXT_POPUP --> ORCH
+  EXT_BG --> ORCH
+  EXT_CONTENT --> ORCH
+
+  ORCH --> POLICY --> API
+  ORCH --> NORM --> CACHE
+  ORCH --> DIFF --> CACHE
+  ORCH --> QUEUE
+  API --> AUTH
+  OBS -. traces .-> ORCH
+```
+
+### Mermaid sequence view
+
+```mermaid
+sequenceDiagram
+  participant U as User (CLI/Extension)
+  participant F as Frontend
+  participant O as Shared Orchestrator
+  participant P as Policy Engine
+  participant G as API Gateway
+  participant C as Canvas API
+  participant N as Normalizer
+  participant D as Diff Engine
+  participant S as Cache/State
+  participant Q as Scheduler/Queue
+
+  U->>F: Trigger refresh / open dashboard
+  F->>O: getDashboard()
+  O->>P: authorize(scope,rateLimit)
+  P-->>O: allow
+  O->>G: fetchAssignments(), fetchCourses(), fetchGrades()
+  G->>C: paginated REST requests
+  C-->>G: JSON payloads
+  G-->>O: raw responses
+  O->>N: map to canonical models
+  N-->>O: normalized entities
+  O->>D: computeDelta(previous,current)
+  D-->>O: created/updated/deleted sets
+  O->>S: persist snapshot + indexes
+  O->>Q: enqueue reminders + badge updates
+  O-->>F: unified response envelope
+  F-->>U: refreshed UI with new state
+```
 
 ### Figma captures
 - `docs/assets/architecture/figma-architecture-full-canvas.png`
 - `docs/assets/architecture/figma-architecture-detail-canvas.png`
 - `docs/assets/architecture/figma-architecture-capture.pdf`
 
-### Diagram sources
+### Diagram source files
 - `docs/architecture/complex-architecture.mmd`
 - `docs/architecture/sync-sequence.mmd`
-- `docs/architecture/complex-architecture.svg`
-- `docs/architecture/sync-flow.svg`
 
 ### Planning docs
 - `docs/CS3704-PM3-REVIEW.md`
