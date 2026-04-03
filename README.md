@@ -28,7 +28,7 @@ This repository includes:
 ```mermaid
 flowchart TB
   subgraph CLI[CLI Frontend]
-    CLI_CMD[Command Router (argparse/typer)]
+    CLI_CMD[Command Router - argparse-typer]
     CLI_TUI[Textual TUI Screens]
     CLI_NOTIF[Notification Adapter]
   end
