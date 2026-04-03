@@ -1,0 +1,15 @@
+target-version = "py311"
+line-length = 120
+
+[lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "RUF"]
+ignore = [
+    "E501",     # line too long (handled by formatter)
+    "E741",     # ambiguous variable names (single-letter vars in compact code)
+    "B008",     # function call in default arg
+    "SIM108",   # ternary instead of if/else
+    "RUF012",   # mutable class attrs — standard pattern for Textual BINDINGS/CSS
+]
+
+[lint.per-file-ignores]
+"tests/*" = ["B", "SIM"]

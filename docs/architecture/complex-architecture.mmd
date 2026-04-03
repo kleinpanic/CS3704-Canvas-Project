@@ -1,0 +1,52 @@
+flowchart TB
+  subgraph CLI[CLI Frontend]
+    CLI_CMD[Command Router\n(argparse/typer)]
+    CLI_TUI[Textual TUI Screens]
+    CLI_NOTIF[Notification Adapter]
+  end
+
+  subgraph EXT[Browser Extension Frontend]
+    EXT_POPUP[Popup UI]
+    EXT_BG[Background Service Worker]
+    EXT_CONTENT[Content Script Bridge]
+  end
+
+  subgraph CORE[Shared Domain Core]
+    ORCH[Use Cases / Orchestrators]
+    POLICY[Policy Engine]
+    NORM[Normalization + Mapping]
+    DIFF[State + Diff Engine]
+  end
+
+  subgraph INFRA[Infrastructure + Integration]
+    API[Canvas API Gateway]
+    AUTH[Auth + Session Manager]
+    CACHE[Persistence + Cache\nSQLite / IndexedDB]
+    QUEUE[Event Queue + Scheduler]
+    OBS[Observability + Metrics]
+  end
+
+  subgraph EXTERNAL[External Systems]
+    CANVAS[Canvas LMS REST API]
+    CAL[Calendar (ICS / CalDAV)]
+    NOTIF[Desktop/Mobile Notifications]
+  end
+
+  CLI_CMD --> ORCH
+  CLI_TUI --> ORCH
+  CLI_NOTIF --> ORCH
+
+  EXT_POPUP --> ORCH
+  EXT_BG --> ORCH
+  EXT_CONTENT --> ORCH
+
+  ORCH --> POLICY --> API
+  ORCH --> NORM --> CACHE
+  ORCH --> DIFF --> CACHE
+  ORCH --> QUEUE --> NOTIF
+
+  API --> AUTH
+  API --> CANVAS
+  QUEUE --> CAL
+  OBS -. traces .-> ORCH
+  OBS -. metrics .-> API

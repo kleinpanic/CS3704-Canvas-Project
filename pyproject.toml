@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "canvas-tui"
+version = "1.0.0"
+description = "Canvas LMS TUI client — planner, announcements, syllabi, downloads, ICS export, pomodoro"
+readme = "README.md"
+license = "GPL-3.0-or-later"
+requires-python = ">=3.11"
+authors = [
+    { name = "Collin Schaufele", email = "kleinpanic@proton.me" }
+]
+dependencies = [
+    "requests>=2.28",
+    "urllib3>=2.0",
+    "textual>=0.40",
+]
+
+[project.optional-dependencies]
+keyring = ["keyring>=23.0"]
+dev = [
+    "ruff",
+    "mypy",
+    "types-requests",
+    "pytest",
+    "pytest-cov",
+    "black",
+]
+
+[project.scripts]
+canvas-tui = "canvas_tui.app:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

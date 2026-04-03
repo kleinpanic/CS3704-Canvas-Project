@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="840" viewBox="0 0 1400 840">
+  <defs>
+    <style>
+      .title{font:700 28px Inter,Arial,sans-serif;fill:#0f172a}
+      .h{font:700 15px Inter,Arial,sans-serif;fill:#e2e8f0}
+      .t{font:500 12px Inter,Arial,sans-serif;fill:#cbd5e1}
+    </style>
+    <marker id="a" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563eb"/>
+    </marker>
+  </defs>
+  <rect width="1400" height="840" fill="#f8fafc"/>
+  <text x="30" y="46" class="title">Sync + Action Flow (Shared Core)</text>
+  <rect x="30" y="70" width="1340" height="730" rx="14" fill="#0f172a"/>
+
+  <rect x="60" y="110" width="180" height="72" rx="10" fill="#1e293b"/>
+  <text x="74" y="138" class="h">User</text>
+  <text x="74" y="160" class="t">CLI / Extension</text>
+
+  <rect x="300" y="110" width="200" height="72" rx="10" fill="#1e293b"/>
+  <text x="316" y="138" class="h">Frontend Adapter</text>
+  <text x="316" y="160" class="t">input + response binding</text>
+
+  <rect x="560" y="110" width="220" height="72" rx="10" fill="#1e293b"/>
+  <text x="576" y="138" class="h">Shared Orchestrator</text>
+  <text x="576" y="160" class="t">use-case coordinator</text>
+
+  <rect x="840" y="110" width="220" height="72" rx="10" fill="#1e293b"/>
+  <text x="856" y="138" class="h">Policy + API + Normalize</text>
+  <text x="856" y="160" class="t">auth, fetch, map</text>
+
+  <rect x="1120" y="110" width="220" height="72" rx="10" fill="#1e293b"/>
+  <text x="1136" y="138" class="h">Cache + Queue + Alerts</text>
+  <text x="1136" y="160" class="t">persist + reminders</text>
+
+  <line x1="240" y1="146" x2="300" y2="146" stroke="#2563eb" stroke-width="3" marker-end="url(#a)"/>
+  <line x1="500" y1="146" x2="560" y2="146" stroke="#2563eb" stroke-width="3" marker-end="url(#a)"/>
+  <line x1="780" y1="146" x2="840" y2="146" stroke="#2563eb" stroke-width="3" marker-end="url(#a)"/>
+  <line x1="1060" y1="146" x2="1120" y2="146" stroke="#2563eb" stroke-width="3" marker-end="url(#a)"/>
+
+  <rect x="80" y="240" width="1240" height="130" rx="12" fill="#1e293b"/>
+  <text x="104" y="276" class="h">Read Path</text>
+  <text x="104" y="304" class="t">1) authorize → 2) fetch paginated Canvas data → 3) normalize → 4) compute diff → 5) persist + return unified response</text>
+
+  <rect x="80" y="400" width="1240" height="130" rx="12" fill="#1e293b"/>
+  <text x="104" y="436" class="h">Write/Action Path</text>
+  <text x="104" y="464" class="t">1) validate intent → 2) enforce policy gate → 3) execute adapter action → 4) update state → 5) enqueue notifications/calendar effects</text>
+
+  <rect x="80" y="560" width="1240" height="190" rx="12" fill="#1e293b"/>
+  <text x="104" y="596" class="h">Recovery Path</text>
+  <text x="104" y="624" class="t">• 429/5xx: exponential backoff + stale cache fallback</text>
+  <text x="104" y="648" class="t">• auth expiry: silent refresh, then explicit re-auth prompt</text>
+  <text x="104" y="672" class="t">• schema drift: quarantine unknown fields + telemetry alert</text>
+  <text x="104" y="696" class="t">• queue failure: dead-letter + idempotent retry</text>
+  <text x="104" y="720" class="t">• all failures carry trace_id for debugging</text>
+</svg>
