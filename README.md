@@ -1,8 +1,6 @@
 # CS3704 Canvas Project
 
-A maintainable, team-ready **Canvas LMS productivity client** built around a Textual TUI today and a documented shared-core architecture for future browser-extension parity.
-
-This repository is the cleaned-up **CS3704** project home for the team deliverables, source code, architecture artifacts, governance rules, and release automation.
+A maintainable, team-ready **Canvas LMS productivity client** with a Textual TUI frontend and a documented shared-core architecture for future browser-extension parity.
 
 [![CI](https://img.shields.io/github/actions/workflow/status/kleinpanic/CS3704-Canvas-Project/ci.yml?branch=main&label=CI)](https://github.com/kleinpanic/CS3704-Canvas-Project/actions/workflows/ci.yml)
 [![Security](https://img.shields.io/github/actions/workflow/status/kleinpanic/CS3704-Canvas-Project/security.yml?branch=main&label=Security)](https://github.com/kleinpanic/CS3704-Canvas-Project/actions/workflows/security.yml)
@@ -10,162 +8,200 @@ This repository is the cleaned-up **CS3704** project home for the team deliverab
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 
-## Why this repo exists
+---
 
-The project started from the earlier `CanvasTui-Proposal` work and was promoted into a course repo with:
-- stronger project governance
-- documentation and architecture assets for PM3+
-- maintainable team workflows for a 4-person group
-- CI/CD, security checks, and protected-branch discipline
+## Overview
 
-## Core product direction
+This is the **CS3704 team project repository** for a Canvas LMS productivity tool. It combines a working Textual TUI application with architecture documentation, team governance, and automated CI/CD.
 
-- **Current frontend:** Textual-based TUI for Canvas
-- **Shared-core goal:** reusable orchestration, normalization, policy, and caching concepts
-- **Future parity target:** browser extension can reuse the same domain logic and workflows conceptually
+### What this project does
+- Centralized dashboard for Canvas assignments, announcements, and grades
+- Offline-first caching for reliable access
+- Calendar integration and ICS export
+- Pomodoro timer and notification support
+- Course filtering and quick navigation
 
-## Key features
+### Architecture goals
+- **Current**: Feature-complete TUI application
+- **Shared core**: Reusable domain logic and orchestration
+- **Future**: Browser extension parity with same business logic
 
-- planner / assignment dashboard
-- announcements and syllabus browsing
-- grades overview and trend widgets
-- file browsing + download workflows
-- calendar / ICS export
-- offline cache support
-- pomodoro + notifications
-- structured filtering and course views
+---
 
-## Repository layout
+## Architecture
 
-```text
-.github/                  GitHub governance and workflow automation
-src/canvas_tui/           application source
-tests/                    automated tests
-docs/architecture/        Mermaid + SVG architecture artifacts
-docs/assets/architecture/ exported figures and captures
-docs/project/             planning / migration / legacy project docs
-docs-site/                GitHub Pages documentation source
-```
+### High-level system design
 
-## Architecture snapshot
-
-### Static diagram
-![Complex Architecture](docs/architecture/complex-architecture.svg)
-
-### Sync flow
-![Sync Flow](docs/architecture/sync-flow.svg)
-
-### Mermaid overview
 ```mermaid
 flowchart TB
   subgraph CLI[CLI Frontend]
-    CLI_CMD[Command Router - argparse-typer]
-    CLI_TUI[Textual TUI Screens]
-    CLI_NOTIF[Notification Adapter]
+    CMD[Command Router]
+    TUI[Textual TUI Screens]
+    NOTIF[Notifications]
   end
 
-  subgraph EXT[Browser Extension Frontend]
-    EXT_POPUP[Popup UI]
-    EXT_BG[Background Service Worker]
-    EXT_CONTENT[Content Script Bridge]
+  subgraph EXT[Browser Extension]
+    POPUP[Popup UI]
+    BG[Background Worker]
+    CONTENT[Content Scripts]
   end
 
   subgraph CORE[Shared Domain Core]
-    ORCH[Use Cases / Orchestrators]
+    ORCH[Orchestrators]
     POLICY[Policy Engine]
-    NORM[Normalization + Mapping]
-    DIFF[State + Diff Engine]
+    NORM[Normalization Layer]
+    DIFF[State and Diff Engine]
   end
 
-  subgraph INFRA[Infrastructure + Integration]
+  subgraph INFRA[Infrastructure Layer]
     API[Canvas API Gateway]
-    AUTH[Auth + Session Manager]
-    CACHE[Persistence + Cache<br/>SQLite / IndexedDB]
-    QUEUE[Event Queue + Scheduler]
-    OBS[Observability + Metrics]
+    AUTH[Auth Manager]
+    CACHE[SQLite and IndexedDB Cache]
+    QUEUE[Event Scheduler]
   end
 
-  CLI_CMD --> ORCH
-  CLI_TUI --> ORCH
-  CLI_NOTIF --> ORCH
-  EXT_POPUP --> ORCH
-  EXT_BG --> ORCH
-  EXT_CONTENT --> ORCH
+  CMD --> ORCH
+  TUI --> ORCH
+  NOTIF --> ORCH
+  POPUP --> ORCH
+  BG --> ORCH
+  CONTENT --> ORCH
   ORCH --> POLICY --> API
   ORCH --> NORM --> CACHE
   ORCH --> DIFF --> CACHE
   ORCH --> QUEUE
   API --> AUTH
-  OBS -. traces .-> ORCH
 ```
 
-## Install
+### Static diagrams
+- **[Full Architecture](docs/architecture/complex-architecture.svg)** — component relationships
+- **[Sync Flow](docs/architecture/sync-flow.svg)** — data refresh sequence
 
-### pipx
+---
+
+## Quick Start
+
+### Installation
+
 ```bash
+# Using pipx (recommended)
 pipx install .
-```
 
-### pip
-```bash
+# Or using pip
 pip install .
 ```
 
-## Local development
+### Configuration
+
+Set your Canvas API token:
+
+```bash
+export CANVAS_TOKEN="your_canvas_token_here"
+export CANVAS_BASE_URL="https://canvas.vt.edu"  # optional, defaults to VT
+```
+
+### Run
+
+```bash
+canvas-tui
+```
+
+---
+
+## Development
+
+### Setup
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
-ruff check src tests
-pytest -q
-python -m build
 ```
 
-## Configuration
-
-Set a Canvas token and optional base URL:
+### Testing
 
 ```bash
-export CANVAS_TOKEN="your_token_here"
-export CANVAS_BASE_URL="https://canvas.vt.edu"
+ruff check src tests      # linting
+pytest -q                  # run tests
+python -m build           # build package
 ```
 
-## Maintainer workflow
+---
 
-1. Open or pick an Issue
-2. Branch from `main`
-3. Open a PR
-4. Pass CI/security checks
-5. Get review
-6. Merge through GitHub
+## Repository Structure
 
-See also:
-- `CONTRIBUTING.md`
-- `MAINTAINERS.md`
-- `SECURITY.md`
-- `docs-site/`
+```
+.github/                  CI/CD workflows and governance
+src/canvas_tui/           Application source code
+tests/                    Test suite
+docs/architecture/        Mermaid diagrams and SVG exports
+docs/assets/              Static images and captures
+docs/project/             Planning artifacts and legacy docs
+docs-site/                GitHub Pages documentation
+```
 
-## Automation in this repo
+---
 
-- PR-only protected `main`
-- required signed commits on protected branch
-- CI: lint + tests + package build
-- security: CodeQL + dependency review
-- dependabot updates
-- stale issue / PR handling
-- PR auto-labeling by changed paths
-- GitHub Pages docs portal
-- automatic snapshot package release on clean `main` pushes
+## Team Workflow
 
-## Course context
+### For maintainers
+1. Push directly to `main` (protected, but admin bypass enabled)
+2. Ensure CI passes before merging others' PRs
+3. Review team PRs promptly
 
-This repo supports the **CS3704** project milestones. PM3 specifically emphasizes:
-- high-level design
-- low-level design + pattern reasoning
-- design sketch / architecture visualization
-- process evidence (Scrum review + planning)
+### For team members
+1. **Never push directly to `main`**
+2. Create a feature branch: `feature/your-feature-name`
+3. Open a Pull Request
+4. Wait for CI to pass and a maintainer to review
+5. Merge when approved
+
+### Branch naming convention
+- `feature/*` — new features
+- `fix/*` — bug fixes
+- `chore/*` — maintenance tasks
+- `docs/*` — documentation updates
+
+---
+
+## Automation
+
+This repository has extensive automation:
+
+| Workflow | Purpose |
+|----------|---------|
+| **CI** | Ruff linting, pytest on Python 3.11/3.12/3.13, package build |
+| **Security** | CodeQL analysis, dependency review |
+| **Pages** | Auto-deploy documentation site |
+| **Release** | Create snapshot release on main push |
+| **Stale** | Close inactive issues/PRs after 30 days |
+| **Labeler** | Auto-label PRs by changed files |
+
+All commits to protected branches must be **GPG signed**.
+
+---
+
+## Documentation
+
+- **[Architecture docs](docs-site/architecture.md)** — system design decisions
+- **[Workflow guide](docs-site/workflow.md)** — how the team works
+- **[Contributing](CONTRIBUTING.md)** — contribution guidelines
+- **[Maintainers](MAINTAINERS.md)** — maintainer responsibilities
+- **[Security policy](SECURITY.md)** — security procedures
+
+---
+
+## Course Context
+
+This repository supports **CS3704: Intermediate Software Design and Engineering** project milestones:
+
+- **PM3**: Design documentation, architecture visualization, process evidence
+- **PM4+**: Implementation, testing, and delivery
+
+The architecture emphasizes maintainability for a mixed-skill team while protecting the codebase from accidental damage.
+
+---
 
 ## License
 
-GPL-3.0-or-later. See `LICENSE`.
+GPL-3.0-or-later. See [LICENSE](LICENSE).
