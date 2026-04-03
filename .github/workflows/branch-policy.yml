@@ -1,0 +1,26 @@
+name: Branch Policy
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  branch-name:
+    name: Branch Name Policy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enforce feature branch naming
+        env:
+          BRANCH_NAME: ${{ github.head_ref }}
+        run: |
+          echo "Checking branch: $BRANCH_NAME"
+          if [[ "$BRANCH_NAME" =~ ^(feature|fix|chore|docs|refactor|test|hotfix)/[a-z0-9._-]+$ ]]; then
+            echo "✅ Branch name is valid"
+          else
+            echo "❌ Invalid branch name: $BRANCH_NAME"
+            echo "Expected: feature/*, fix/*, chore/*, docs/*, refactor/*, test/*, hotfix/*"
+            exit 1
+          fi

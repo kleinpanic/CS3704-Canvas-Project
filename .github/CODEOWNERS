@@ -1,0 +1,7 @@
+# Require review from project maintainers for all changes
+* @kleinpanic
+
+# Workflow and governance files are especially sensitive
+.github/workflows/* @kleinpanic
+README.md @kleinpanic
+docs/** @kleinpanic

@@ -28,7 +28,7 @@ This repository includes:
 ```mermaid
 flowchart TB
   subgraph CLI[CLI Frontend]
-    CLI_CMD[Command Router\n(argparse/typer)]
+    CLI_CMD[Command Router (argparse/typer)]
     CLI_TUI[Textual TUI Screens]
     CLI_NOTIF[Notification Adapter]
   end
@@ -49,7 +49,7 @@ flowchart TB
   subgraph INFRA[Infrastructure + Integration]
     API[Canvas API Gateway]
     AUTH[Auth + Session Manager]
-    CACHE[Persistence + Cache\nSQLite / IndexedDB]
+    CACHE[Persistence + Cache<br/>SQLite / IndexedDB]
     QUEUE[Event Queue + Scheduler]
     OBS[Observability + Metrics]
   end
