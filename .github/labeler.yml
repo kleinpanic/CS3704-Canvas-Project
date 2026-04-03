@@ -1,0 +1,12 @@
+docs:
+  - changed-files:
+      - any-glob-to-any-file: ['docs/**', 'docs-site/**', '*.md', 'mkdocs.yml']
+ci-cd:
+  - changed-files:
+      - any-glob-to-any-file: ['.github/workflows/**']
+security:
+  - changed-files:
+      - any-glob-to-any-file: ['SECURITY.md', '.github/workflows/security.yml', '.github/dependabot.yml']
+architecture:
+  - changed-files:
+      - any-glob-to-any-file: ['docs/architecture/**', 'docs/assets/architecture/**']

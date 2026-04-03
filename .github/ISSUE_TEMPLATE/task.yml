@@ -1,0 +1,34 @@
+name: "🧩 Task"
+description: Execution task for project contributors
+labels: ["task", "triage"]
+assignees: ["kleinpanic"]
+body:
+  - type: input
+    id: scope
+    attributes:
+      label: Scope
+      placeholder: Short task title
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      placeholder: What exactly needs to be done?
+    validations:
+      required: true
+  - type: textarea
+    id: done_definition
+    attributes:
+      label: Definition of done
+      placeholder: |
+        - [ ] tests updated
+        - [ ] docs updated
+        - [ ] PR merged
+    validations:
+      required: true
+  - type: input
+    id: branch_hint
+    attributes:
+      label: Branch naming hint
+      placeholder: feature/<name> or fix/<name>

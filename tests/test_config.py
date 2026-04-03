@@ -45,6 +45,8 @@ class TestLoadConfig:
 
     def test_exits_without_token(self, monkeypatch):
         monkeypatch.delenv("CANVAS_TOKEN", raising=False)
+        monkeypatch.setattr("canvas_tui.config._try_keyring", lambda: "")
+        monkeypatch.setattr("canvas_tui.config._load_dotenv", lambda: None)
         with pytest.raises(SystemExit):
             load_config()
 
