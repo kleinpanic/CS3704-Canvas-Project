@@ -1,0 +1,35 @@
+name: "✨ Feature request"
+description: Propose a new capability
+labels: ["enhancement", "triage"]
+assignees: ["kleinpanic"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / opportunity
+      description: What pain point does this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What should we build?
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      placeholder: |
+        - [ ] criterion 1
+        - [ ] criterion 2
+    validations:
+      required: true
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options: ["high", "medium", "low"]
+    validations:
+      required: true
