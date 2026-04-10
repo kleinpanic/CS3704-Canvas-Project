@@ -1,9 +1,10 @@
-"""Grades screen — per-course grade breakdown with averages."""
+"""Grades screen — per-course grade breakdown with trend charts and what-if calculator."""
 
 from __future__ import annotations
 
 import contextlib
 import threading
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from textual.app import ComposeResult
@@ -12,25 +13,158 @@ from textual.events import Key
 from textual.screen import Screen
 from textual.widgets import DataTable, Footer, Static
 
+from ..screens.modals import InputPrompt
 from ..widgets.plots import (
     WeightSegment,
     grade_color,
     render_gauge,
     render_weight_bar,
+    sparkline,
 )
 
 if TYPE_CHECKING:
     from ..app import CanvasTUI
 
+# Cycle order for sort modes
+_SORT_MODES = ["Default", "Score ↓", "% ↓", "Name"]
+
+
+# ─── Grade summary dataclass (pure, testable) ────────────────────────────────
+
+@dataclass
+class GradeSummary:
+    """Computed grade summary for a single course."""
+
+    avg: float  # Canvas-authoritative or manual average (0-100)
+    projected_avg: float  # avg with what-if scores applied (0-100)
+    total_score: float  # sum of graded scores (no what-if)
+    total_possible: float  # sum of graded points possible (no what-if)
+    graded: list[tuple[str, float, float]] = field(default_factory=list)  # (name, score, pts)
+    ungraded: list[str] = field(default_factory=list)  # names of pending/submitted assignments
+    has_whatif: bool = False
+
+
+def calculate_grade_summary(
+    assignments: list[dict[str, Any]],
+    whatif_map: dict[str, float],
+    canvas_score_override: float | None = None,
+) -> GradeSummary:
+    """Compute grade summary from raw Canvas assignment data plus optional what-if scores.
+
+    Args:
+        assignments: Raw assignment dicts from Canvas API (each may have a 'submission' key).
+        whatif_map: Mapping of assignment name → hypothetical score for ungraded assignments.
+        canvas_score_override: Canvas-computed current score to use in place of manual average.
+
+    Returns:
+        A GradeSummary with actual and projected averages.
+    """
+    graded: list[tuple[str, float, float]] = []
+    ungraded: list[str] = []
+    total_score = 0.0
+    total_possible = 0.0
+    whatif_score = 0.0
+    whatif_possible = 0.0
+    has_whatif = bool(whatif_map)
+
+    for a in assignments:
+        aname = a.get("name") or "(untitled)"
+        pts = a.get("points_possible")
+        sub = a.get("submission") or {}
+        score = sub.get("score")
+        workflow = sub.get("workflow_state") or ""
+        whatif_val = whatif_map.get(aname)
+
+        if sub.get("excused"):
+            continue
+
+        if score is not None:
+            graded.append((aname, float(score), float(pts or 0)))
+            if pts:
+                total_score += float(score)
+                total_possible += float(pts)
+                whatif_score += float(score)
+                whatif_possible += float(pts)
+        elif whatif_val is not None:
+            # Count as graded for projection purposes only
+            if pts:
+                whatif_score += whatif_val
+                whatif_possible += float(pts)
+            if workflow not in ("submitted",) and not sub.get("missing"):
+                ungraded.append(aname)
+        elif workflow == "submitted":
+            ungraded.append(aname)
+        elif sub.get("missing"):
+            pass  # Missing doesn't go into ungraded pending list
+        else:
+            ungraded.append(aname)
+
+    manual_avg = (100.0 * total_score / total_possible) if total_possible > 0 else 0.0
+    avg = canvas_score_override if canvas_score_override is not None else manual_avg
+    projected_avg = (100.0 * whatif_score / whatif_possible) if whatif_possible > 0 else avg
+
+    return GradeSummary(
+        avg=avg,
+        projected_avg=projected_avg,
+        total_score=total_score,
+        total_possible=total_possible,
+        graded=graded,
+        ungraded=ungraded,
+        has_whatif=has_whatif,
+    )
+
+
+def sort_assignments(assignments: list[dict[str, Any]], mode: int) -> list[dict[str, Any]]:
+    """Return assignments sorted by mode index (0=default, 1=score↓, 2=pct↓, 3=name).
+
+    Args:
+        assignments: Raw assignment dicts.
+        mode: Sort mode index matching _SORT_MODES.
+
+    Returns:
+        A new sorted list (original is not mutated).
+    """
+    if mode == 0:
+        return list(assignments)
+
+    if mode == 1:  # Score ↓ — ungraded to end
+        def _key_score(a: dict[str, Any]) -> float:
+            sub = a.get("submission") or {}
+            s = sub.get("score")
+            return -(float(s) if s is not None else -1.0)
+
+        return sorted(assignments, key=_key_score)
+
+    if mode == 2:  # % ↓ — ungraded to end
+        def _key_pct(a: dict[str, Any]) -> float:
+            sub = a.get("submission") or {}
+            s = sub.get("score")
+            pts = a.get("points_possible")
+            if s is not None and pts:
+                return -(float(s) / float(pts))
+            return 1.0  # ungraded sorts last
+
+        return sorted(assignments, key=_key_pct)
+
+    if mode == 3:  # Name A-Z
+        return sorted(assignments, key=lambda a: (a.get("name") or "").lower())
+
+    return list(assignments)
+
+
+# ─── Screen ──────────────────────────────────────────────────────────────────
 
 class GradesScreen(Screen):
-    """Grades overview — course list + assignment grades with averages."""
+    """Grades overview — course list, assignment breakdown, trend sparkline, and what-if calculator."""
 
     BINDINGS = [
         ("backspace", "pop", "Back"),
         ("escape", "pop", "Back"),
         ("enter", "select_course", "View grades"),
         ("r", "refresh_grades", "Refresh"),
+        ("w", "whatif_prompt", "What-If"),
+        ("W", "clear_whatif", "Clear What-If"),
+        ("s", "toggle_sort", "Sort"),
     ]
 
     def __init__(self, owner_app: CanvasTUI, courses: dict[int, tuple[str, str]]) -> None:
@@ -40,6 +174,9 @@ class GradesScreen(Screen):
         self._row_to_cid: list[int] = []
         self._course_grades: dict[int, list[dict[str, Any]]] = {}
         self._loading = False
+        # what-if: {course_id: {assignment_name: hypothetical_score}}
+        self._whatif: dict[int, dict[str, float]] = {}
+        self._sort_mode = 0  # index into _SORT_MODES
 
     def compose(self) -> ComposeResult:
         with Vertical(id="grades-root"):
@@ -72,7 +209,6 @@ class GradesScreen(Screen):
 
         self.summary.update("[dim]Select a course to view grades[/dim]")
 
-        # Auto-load first course
         cid = self._selected_course()
         if cid is not None:
             self._load_grades(cid)
@@ -82,11 +218,23 @@ class GradesScreen(Screen):
             event.stop()
             self.app.pop_screen()
 
+    # ── Helpers ──────────────────────────────────────────────────────────────
+
     def _selected_course(self) -> int | None:
         row = self.course_table.cursor_row
         if row is not None and 0 <= row < len(self._row_to_cid):
             return self._row_to_cid[row]
         return None
+
+    def _selected_assignment(self, cid: int) -> dict[str, Any] | None:
+        """Return the assignment dict under the grade_table cursor."""
+        row = self.grade_table.cursor_row
+        if row is None or row < 0:
+            return None
+        ordered = sort_assignments(self._course_grades.get(cid, []), self._sort_mode)
+        return ordered[row] if row < len(ordered) else None
+
+    # ── Data loading ─────────────────────────────────────────────────────────
 
     def on_data_table_cursor_moved(self, event: Any) -> None:
         src = getattr(event, "data_table", None) or getattr(event, "control", None)
@@ -104,94 +252,104 @@ class GradesScreen(Screen):
 
         def worker() -> None:
             try:
-                if cid in self._course_grades:
-                    grades = self._course_grades[cid]
-                else:
-                    grades = self._owner.api.fetch_grades(cid)
+                if cid not in self._course_grades:
+                    # Prefer the app-level pre-fetched cache to avoid redundant requests
+                    app_cache: dict[int, list[dict[str, Any]]] = getattr(self._owner, "_grade_cache", {})
+                    grades = app_cache.get(cid) or self._owner.api.fetch_grades(cid)
                     self._course_grades[cid] = grades
-                self.app.call_from_thread(self._render_grades, cid, grades)
+                self.app.call_from_thread(self._render_grades, cid, self._course_grades[cid])
             except Exception as exc:
                 err = str(exc)
-                self.app.call_from_thread(lambda: self.summary.update(f"[red]Error: {err}[/red]"))
+                self.app.call_from_thread(lambda: self.summary.update(f"[red]Error loading grades: {err}[/red]"))
             finally:
                 self._loading = False
 
         threading.Thread(target=worker, daemon=True).start()
 
+    # ── Rendering ────────────────────────────────────────────────────────────
+
     def _render_grades(self, cid: int, assignments: list[dict[str, Any]]) -> None:
         code, name = self.courses.get(cid, ("?", "?"))
+        whatif_map = self._whatif.get(cid, {})
+
+        # Compute summary (pure function — easy to test)
+        canvas_score = self._owner._course_score_cache.get(cid)
+        summary = calculate_grade_summary(assignments, whatif_map, canvas_score)
+
+        # Rebuild assignment table in current sort order
         self.grade_table.clear()
-
-        graded = []
-        ungraded = []
-        total_score = 0.0
-        total_possible = 0.0
-
-        for a in assignments:
+        for a in sort_assignments(assignments, self._sort_mode):
             aname = a.get("name") or "(untitled)"
             pts = a.get("points_possible")
             sub = a.get("submission") or {}
             score = sub.get("score")
-            workflow = sub.get("workflow_state") or ""
+            whatif_val = whatif_map.get(aname)
 
             status_parts: list[str] = []
+            display_score = score
+
             if sub.get("excused"):
                 status_parts.append("excused")
             elif score is not None:
                 status_parts.append("graded")
-                graded.append((aname, float(score), float(pts or 0)))
-                if pts:
-                    total_score += float(score)
-                    total_possible += float(pts)
-            elif workflow == "submitted":
+            elif whatif_val is not None:
+                display_score = whatif_val
+                status_parts.append("[cyan]what-if[/cyan]")
+            elif (sub.get("workflow_state") or "") == "submitted":
                 status_parts.append("submitted")
-                ungraded.append(aname)
             elif sub.get("missing"):
                 status_parts.append("[red]missing[/red]")
             else:
                 status_parts.append("pending")
-                ungraded.append(aname)
 
             if sub.get("late"):
                 status_parts.append("[yellow]late[/yellow]")
 
-            score_str = f"{float(score):.1f}" if score is not None else "-"
+            score_str = f"{float(display_score):.1f}" if display_score is not None else "-"
             pts_str = f"{float(pts):.1f}" if pts else "-"
             pct_str = ""
-            if score is not None and pts:
-                pct = 100.0 * float(score) / float(pts)
-                color = grade_color(pct)
-                pct_str = f"[{color}]{pct:.1f}%[/{color}]"
+            if display_score is not None and pts:
+                pct = 100.0 * float(display_score) / float(pts)
+                if whatif_val is not None and score is None:
+                    pct_str = f"[cyan]~{pct:.1f}%[/cyan]"
+                else:
+                    color = grade_color(pct)
+                    pct_str = f"[{color}]{pct:.1f}%[/{color}]"
 
-            status = ", ".join(status_parts) or "-"
-            self.grade_table.add_row(aname[:50], score_str, pts_str, pct_str, status)
+            self.grade_table.add_row(aname[:50], score_str, pts_str, pct_str, ", ".join(status_parts) or "-")
 
-        # Summary: prefer authoritative Canvas course score when available
-        manual_avg = (100.0 * total_score / total_possible) if total_possible > 0 else 0.0
-        avg = self._owner._course_score_cache.get(cid, manual_avg)
-        avg_color = grade_color(avg)
+        # Build summary panel text
+        avg_color = grade_color(summary.avg)
+        summary_lines: list[str] = [
+            f"[b]{code} — {name}[/b]",
+            f"Average: [{avg_color}]{summary.avg:.1f}%[/{avg_color}]  "
+            f"({len(summary.graded)} graded, {len(summary.ungraded)} pending)",
+            f"Total: {summary.total_score:.1f} / {summary.total_possible:.1f}",
+            f"Progress: {render_gauge(len(summary.graded), len(summary.graded) + len(summary.ungraded), width=20)}",
+        ]
 
-        # Sparkline of recent grades
-        recent_pcts = []
-        for _, sc, pt in graded[-10:]:
-            if pt > 0:
-                recent_pcts.append(sc / pt)
-        spark = _sparkline(recent_pcts) if recent_pcts else ""
+        # What-if projected grade line
+        if summary.has_whatif:
+            proj_color = grade_color(summary.projected_avg)
+            summary_lines.append(
+                f"[bold cyan]⟳ WHAT-IF[/bold cyan]  "
+                f"Projected: [{proj_color}]{summary.projected_avg:.1f}%[/{proj_color}]  "
+                f"[dim]([W] to clear)[/dim]"
+            )
 
-        # Completion gauge
-        gauge = render_gauge(len(graded), len(graded) + len(ungraded), width=20)
+        # Trend sparkline from recent 10 graded assignments (% values)
+        recent_pcts = [sc / pt * 100 for _, sc, pt in summary.graded[-10:] if pt > 0]
+        if recent_pcts:
+            spark = sparkline(recent_pcts)
+            summary_lines.append(f"Trend: {spark}")
 
-        summary_text = (
-            f"[b]{code} — {name}[/b]\n"
-            f"Average: [{avg_color}]{avg:.1f}%[/{avg_color}]  "
-            f"({len(graded)} graded, {len(ungraded)} pending)\n"
-            f"Total: {total_score:.1f} / {total_possible:.1f}\n"
-            f"Progress: {gauge}\n"
+        # Sort mode hint
+        summary_lines.append(
+            f"[dim]Sort: {_SORT_MODES[self._sort_mode]}  "
+            f"[s] cycle · [w] what-if · [r] refresh[/dim]"
         )
-        if spark:
-            summary_text += f"Trend: {spark}\n"
 
-        # Fetch and render assignment group weights
+        # Assignment group weight bar
         groups = self._owner.api.fetch_assignment_groups(cid)
         if groups:
             segments = [
@@ -200,19 +358,18 @@ class GradesScreen(Screen):
                 if g.get("group_weight", 0) > 0
             ]
             if segments:
-                summary_text += "\n" + render_weight_bar(segments, width=28, title="Grade Weights")
+                summary_lines.append("\n" + render_weight_bar(segments, width=28, title="Grade Weights"))
 
-        self.summary.update(summary_text)
+        self.summary.update("\n".join(summary_lines))
 
-        # Update course list avg column
-        row_idx = None
+        # Update the course list Avg column
         for i, c in enumerate(self._row_to_cid):
             if c == cid:
-                row_idx = i
+                with contextlib.suppress(Exception):
+                    self.course_table.update_cell_at((i, 1), f"[{avg_color}]{summary.avg:.1f}%[/{avg_color}]")
                 break
-        if row_idx is not None:
-            with contextlib.suppress(Exception):
-                self.course_table.update_cell_at((row_idx, 1), f"[{avg_color}]{avg:.1f}%[/{avg_color}]")
+
+    # ── Actions ──────────────────────────────────────────────────────────────
 
     def action_select_course(self) -> None:
         cid = self._selected_course()
@@ -225,18 +382,73 @@ class GradesScreen(Screen):
         if cid is not None:
             self._load_grades(cid)
 
+    def action_toggle_sort(self) -> None:
+        """Cycle through sort modes and re-render the current course."""
+        self._sort_mode = (self._sort_mode + 1) % len(_SORT_MODES)
+        cid = self._selected_course()
+        if cid is not None and cid in self._course_grades:
+            self._render_grades(cid, self._course_grades[cid])
+
+    def action_whatif_prompt(self) -> None:
+        """Open an input prompt to enter a hypothetical score for the selected assignment."""
+        cid = self._selected_course()
+        if cid is None:
+            return
+        if not self._course_grades.get(cid):
+            return
+
+        a = self._selected_assignment(cid)
+        if a is None:
+            return
+
+        aname = a.get("name") or "(untitled)"
+        pts = a.get("points_possible")
+        sub = a.get("submission") or {}
+        real_score = sub.get("score")
+
+        if real_score is not None:
+            self.summary.update(
+                f"[yellow]'{aname[:40]}' already has a real grade ({real_score:.1f} pts).\n"
+                "Select an ungraded assignment for what-if.[/yellow]"
+            )
+            return
+
+        pts_display = f"{float(pts):.1f}" if pts else "?"
+        existing_val: float | None = self._whatif.get(cid, {}).get(aname)
+        default_str = f"{existing_val:.1f}" if existing_val is not None else ""
+
+        def _apply(val: str) -> None:
+            if not val:
+                return
+            try:
+                score_val = float(val)
+            except ValueError:
+                return
+            # Cap at points possible to prevent impossible scores
+            if pts and score_val > float(pts):
+                score_val = float(pts)
+            score_val = max(0.0, score_val)
+            if cid not in self._whatif:
+                self._whatif[cid] = {}
+            self._whatif[cid][aname] = score_val
+            if cid in self._course_grades:
+                self._render_grades(cid, self._course_grades[cid])
+
+        modal = InputPrompt(
+            title=f"What-If Score: {aname[:45]}\nEnter hypothetical score (0 - {pts_display} pts):",
+            placeholder=f"e.g. {int(float(pts) * 0.85) if pts else 85}",
+            default=default_str,
+        )
+        self.app.push_screen(modal, callback=_apply)
+
+    def action_clear_whatif(self) -> None:
+        """Clear all what-if scores for the current course and re-render."""
+        cid = self._selected_course()
+        if cid is None:
+            return
+        self._whatif.pop(cid, None)
+        if cid in self._course_grades:
+            self._render_grades(cid, self._course_grades[cid])
+
     def action_pop(self) -> None:
         self.app.pop_screen()
-
-
-def _sparkline(values: list[float]) -> str:
-    """Render a sparkline from 0-1 values."""
-    chars = "▁▂▃▄▅▆▇█"
-    if not values:
-        return ""
-    parts = []
-    for v in values:
-        v = max(0.0, min(1.0, v))
-        idx = int(v * (len(chars) - 1))
-        parts.append(chars[idx])
-    return "".join(parts)

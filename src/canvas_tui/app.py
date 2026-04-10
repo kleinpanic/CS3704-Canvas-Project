@@ -234,7 +234,7 @@ class CanvasTUI(App):
     #grades-split { layout: horizontal; height: 1fr; }
     #grades-courses { width: 1fr; min-width: 24; max-width: 40; border-right: solid #30363d; }
     #grades-detail { width: 3fr; }
-    #grades-summary { padding: 1 2; height: auto; max-height: 8; border-bottom: solid #30363d; }
+    #grades-summary { padding: 1 2; height: auto; max-height: 14; border-bottom: solid #30363d; }
     #grades-table { height: 1fr; }
 
     /* === Files === */
