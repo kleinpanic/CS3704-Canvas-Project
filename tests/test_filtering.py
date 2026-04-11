@@ -141,6 +141,9 @@ class TestFilterItems:
         result = filter_items(items, q)
         assert len(result) == len(items)
 
+def test_quoted_text(self):
+    q = FilterQuery.parse('"data structures"')
+    assert q.text == ["data structures"]
 
 class TestFormatFilterSummary:
     def test_basic(self):
