@@ -40,7 +40,7 @@ Welcome to the team documentation portal. This site is built with MkDocs and dep
 - Browser extension scaffolding with shared-domain architecture
 - Deployment automation: PyPI upload, Chrome/Firefox extension stores
 
-See [VISUAL-AUDIT.md](https://github.com/kleinpanic/CS3704-Canvas-Project/blob/main/docs/project/VISUAL-AUDIT.md) for the full advancement plan.
+See [VISUAL-AUDIT.md](https://github.com/kleinpanic/CS3704-Canvas-Project/blob/main/docs-site/VISUAL-AUDIT.md) for the full advancement plan.
 
 ## Deployment
 
