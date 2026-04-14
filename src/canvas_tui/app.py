@@ -65,6 +65,10 @@ _TYPE_ICONS: dict[str, str] = {
 class CanvasTUI(App):
     """Main Canvas TUI application."""
 
+    # Read version from __init__ to avoid duplication
+    from . import __version__
+    title = f"CanvasTUI v{__version__}"
+
     CSS = """
     /* === Main layout (GideonWolfe-inspired) === */
     Screen { layout: vertical; }
