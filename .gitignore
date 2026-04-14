@@ -44,3 +44,4 @@ Thumbs.db
 state.json
 cache/
 *.log
+data/rerank_train*.jsonl
