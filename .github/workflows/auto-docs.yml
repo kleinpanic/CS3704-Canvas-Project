@@ -1,0 +1,162 @@
+name: Auto Docs
+
+# Post-merge documentation generator — runs after every push to main
+# Uses local Nemotron model to generate missing docstrings for new/modified modules
+# Separate from CI — does NOT affect PR pass/fail status
+# Takes up to 10 minutes due to local model latency
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**/*.py'
+  workflow_dispatch:
+    inputs:
+      modules:
+        description: "Specific modules to document (comma-separated, leave empty for all new/changed)"
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+
+env:
+  SPARK_HOST: ${{ vars.SPARK_HOST }}
+  SPARK_PORT: ${{ vars.SPARK_PORT }}
+  MODEL_NAME: nemotron
+  DOC_TIMEOUT_SEC: 300
+  MAX_MODULES_PER_RUN: 10
+
+jobs:
+  generate-docs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install package
+        run: pip install -e ".[dev]" --quiet
+
+      - name: Find modules missing docstrings
+        id: scan
+        run: |
+          python3 << 'EOF'
+          import subprocess
+          import os
+          import ast
+
+          # Get list of changed .py files in last N commits
+          result = subprocess.run(
+              ['git', 'log', '--oneline', '-20', '--name-only'],
+              capture_output=True, text=True, cwd='__REPO_ROOT__/'
+          )
+          files = set()
+          for line in result.stdout.splitlines():
+              if line.endswith('.py') and line.startswith('src/'):
+                  files.add(line.strip())
+
+          missing = []
+          for f in sorted(files)[:10]:
+              path = os.path.join('__REPO_ROOT__/', f)
+              if not os.path.exists(path):
+                  continue
+              try:
+                  with open(path) as src:
+                      tree = ast.parse(src.read())
+                  has_doc = any(
+                      (isinstance(n, (ast.FunctionDef, ast.ClassDef, ast.Module))
+                       and ast.get_docstring(n))
+                      for n in ast.walk(tree)
+                  )
+                  if not has_doc:
+                      missing.append(f)
+              except:
+                  pass
+
+          print('MISSING_DOCS=' + ','.join(missing))
+          EOF
+        env:
+          GITHUB_OUTPUT: /tmp/gha_output.txt
+
+      - name: Generate docstrings via Nemotron
+        id: generate
+        if: steps.scan.outputs.MISSING_DOCS != ''
+        run: |
+          MISSING_FILES="${{ steps.scan.outputs.MISSING_DOCS }}"
+          SPARK_URL="http://${{ env.SPARK_HOST }}:${{ env.SPARK_PORT }}/v1/chat/completions"
+
+          for MODULE in $(echo "$MISSING_FILES" | tr ',' '\n'); do
+            echo "Processing: $MODULE"
+
+            # Read the module
+            MODULE_PATH="__REPO_ROOT__//$MODULE"
+            CONTENT=$(python3 -c "
+with open('$MODULE_PATH') as f:
+    print(f.read()[:4000])
+")
+
+            # Call Nemotron for docstring generation
+            RESPONSE=$(python3 -c "
+import urllib.request
+import json
+
+payload = json.dumps({
+    'model': 'nemotron',
+    'messages': [
+        {'role': 'system', 'content': '''You are a documentation generator. For the Python module below, generate a module-level docstring and docstrings for all public functions/classes. Output ONLY valid Python docstrings, nothing else.'''},
+        {'role': 'user', 'content': f'Module:\n{CONTENT}'}
+    ],
+    'max_tokens': 2048,
+    'temperature': 0.3
+}).encode()
+
+req = urllib.request.Request(
+    '$SPARK_URL',
+    data=payload,
+    headers={'Content-Type': 'application/json', 'Authorization': 'Bearer ${{ secrets.SPARK_API_KEY }}'},
+    method='POST'
+)
+with urllib.request.urlopen(req, timeout=300) as r:
+    result = json.loads(r.read())
+    print(result['choices'][0]['message']['content'])
+" 2>&1 || echo "nemotron_unavailable")
+
+            echo "--- Generated docstring for $MODULE ---" >> /tmp/doc-output.txt
+            echo "$RESPONSE" >> /tmp/doc-output.txt
+            echo "" >> /tmp/doc-output.txt
+          done
+
+      - name: Create auto-docs PR
+        if: steps.generate.outputs.RESPONSE != '' && steps.generate.outputs.RESPONSE != 'nemotron_unavailable'
+        run: |
+          BRANCH="auto-docs/$(date +%Y%m%d-%H%M%S)"
+          git checkout -b "$BRANCH"
+          git add -A
+          git commit -m "Auto-generated documentation stubs"
+          git push -u origin "$BRANCH"
+
+          gh pr create --title "Auto-generated Documentation" \
+            --body "## Documentation Update
+
+AI-generated docstring stubs for recently merged modules.
+
+Review carefully — AI-generated, may need adjustment.
+
+Merging is optional but recommended." \
+            --base main --reviewer kleinpanic
+
+      - name: Report Nemotron unavailable
+        if: steps.generate.outputs.RESPONSE == 'nemotron_unavailable'
+        run: |
+          echo "Nemotron unavailable — skipping auto-docs this run"
+          echo "This workflow will retry on the next main push"
