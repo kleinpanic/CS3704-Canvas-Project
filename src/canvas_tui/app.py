@@ -737,23 +737,18 @@ class CanvasTUI(App):
             self.side_charts.update("\n".join(side_lines))
 
     def _update_status_bar(self, extra: str = "") -> None:
-        """Update the bottom status bar."""
+        """Update the bottom status bar with concise, useful info."""
         if not self.status_bar:
             return
         rate = self.api.rate_limit_remaining
-        rate_str = f"Rate: {rate}" if rate is not None else "Rate: ?"
-        refresh_str = (
-            f"Last refresh: {dt.datetime.fromtimestamp(self._last_refresh).strftime('%H:%M:%S')}"
-            if self._last_refresh > 0
-            else "Last refresh: never"
-        )
-        err_str = f"Errors: {self._error_count}" if self._error_count else ""
+        rate_str = f"Rate: {rate}" if rate is not None else ""
         offline_str = "[yellow]!! OFFLINE[/yellow]" if self.api.is_offline else ""
-        hydrate_str = "[cyan]Hydrating grades…[/cyan]" if self._grade_hydrating else ""
+        hydrate_str = "[cyan]Hydrating grades...[/cyan]" if self._grade_hydrating else ""
+        err_str = f"[red]Errors: {self._error_count}[/red]" if self._error_count else ""
         cache_stats = self._response_cache.stats()
         cache_str = f"Cache: {cache_stats['entries']} ({cache_stats['size_kb']}KB)"
-        parts = [p for p in [offline_str, hydrate_str, refresh_str, rate_str, cache_str, err_str, extra] if p]
-        self.status_bar.update(" │ ".join(parts))
+        parts = [p for p in [offline_str, hydrate_str, cache_str, err_str, rate_str, extra] if p]
+        self.status_bar.update("  │  ".join(parts))
 
     # ---------- mount / teardown ----------
     def on_mount(self) -> None:

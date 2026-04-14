@@ -329,7 +329,11 @@ class GradesScreen(Screen):
         ]
 
         # What-if projected grade line
-        if summary.has_whatif:
+        if not summary.has_whatif:
+            summary_lines.append(
+                f"[dim]Press [w] on an ungraded row to try what-if scores[/dim]"
+            )
+        else:
             proj_color = grade_color(summary.projected_avg)
             summary_lines.append(
                 f"[bold cyan]⟳ WHAT-IF[/bold cyan]  "
@@ -346,7 +350,7 @@ class GradesScreen(Screen):
         # Sort mode hint
         summary_lines.append(
             f"[dim]Sort: {_SORT_MODES[self._sort_mode]}  "
-            f"[s] cycle · [w] what-if · [r] refresh[/dim]"
+            f"[s] cycle  [w] what-if  [r] refresh[/dim]"
         )
 
         # Assignment group weight bar
