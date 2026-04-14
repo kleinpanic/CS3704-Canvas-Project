@@ -1,0 +1,11 @@
+"""Data model types for Canvas TUI.
+
+Re-exports all model classes for convenience.
+"""
+from __future__ import annotations
+
+from .item import CanvasItem
+from .course import CourseInfo
+from .modal import ModalContext
+
+__all__ = ["CanvasItem", "CourseInfo", "ModalContext"]
