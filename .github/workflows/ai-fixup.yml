@@ -1,8 +1,5 @@
 name: AI Fixup
 
-# Runs when CI fails on a PR — attempts an automated fix using local Nemotron model
-# Non-blocking: does not prevent merge, posts results as a PR comment + fixup branch
-
 on:
   workflow_run:
     workflow: CI
@@ -11,20 +8,10 @@ on:
 permissions:
   contents: write
   pull-requests: write
-  issues: write
-
-env:
-  # DGX Spark — local Nemotron endpoint (no external traffic)
-  SPARK_HOST: ${{ vars.SPARK_HOST }}
-  SPARK_PORT: ${{ vars.SPARK_PORT }}
-  MODEL_NAME: nemotron
-  TIMEOUT_SEC: 120
 
 jobs:
   ai-fixup:
-    if: >-
-      github.event.workflow_run.conclusion == 'failure' &&
-      github.event.workflow_run.actor != 'dependabot[bot]'
+    if: github.event.workflow_run.conclusion == 'failure'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -43,96 +30,43 @@ jobs:
       - name: Install package
         run: pip install -e ".[dev]" --quiet
 
-      - name: Get CI failure details
-        id: failures
+      - name: Get CI failure logs
+        env:
+          RUN_ID: ${{ github.event.workflow_run.id }}
+        run: gh run view $RUN_ID --log 2>/dev/null | tail -150 > ci-log.txt
+
+      - name: Generate fix via Nemotron
+        env:
+          SPARK_HOST: ${{ vars.SPARK_HOST }}
+          SPARK_PORT: ${{ vars.SPARK_PORT }}
+          SPARK_API_KEY: ${{ secrets.SPARK_API_KEY }}
         run: |
-          # Collect failed jobs and their error messages
-          echo "failures=$(gh api repos/{owner}/{repo}/actions/runs/{run_id}/jobs 2>/dev/null | \\
-            jq -r '.jobs[] | select(.conclusion == "failure") | .name')" >> $GITHUB_OUTPUT
+          pip install requests --quiet 2>/dev/null
+          python3 scripts/nemotron-fixup.py --log ci-log.txt --host "$SPARK_HOST" --port "$SPARK_PORT" --key "$SPARK_API_KEY" > fixup_response.txt || true
 
-      - name: Run fixup attempt via Nemotron
-        id: fixup
+      - name: Create fixup branch
+        env:
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
         run: |
-          SPARK_URL="http://${{ env.SPARK_HOST }}:${{ env.SPARK_PORT }}/v1/chat/completions"
-          MODEL="${{ env.MODEL_NAME }}"
-          TIMEOUT=${{ env.TIMEOUT_SEC }}
-
-          RESPONSE=$(python3 -c "
-import urllib.request
-import urllib.error
-import json
-import os
-
-payload = json.dumps({
-    'model': '$MODEL',
-    'messages': [
-        {'role': 'system', 'content': 'You are a code fix assistant. Fix the failing tests or lint errors. Output only the git diff patch.'},
-        {'role': 'user', 'content': f'The following tests/lint failed in the PR. Generate a minimal fix.\n\nError: {os.environ.get(\"FAILURE_MSG\", \"unknown\")}'}
-    ],
-    'max_tokens': 2048,
-    'temperature': 0.2
-}).encode()
-
-req = urllib.request.Request(
-    '$SPARK_URL',
-    data=payload,
-    headers={'Content-Type': 'application/json', 'Authorization': 'Bearer ${{ secrets.SPARK_API_KEY }}'},
-    method='POST'
-)
-try:
-    with urllib.request.urlopen(req, timeout=$TIMEOUT) as r:
-        result = json.loads(r.read())
-        print(result['choices'][0]['message']['content'])
-except Exception as e:
-    print(f'ERROR: {e}')
-" 2>&1)
-
-          echo "fixup_response=$RESPONSE" >> $GITHUB_OUTPUT
-
-      - name: Create fixup branch if patch generated
-        if: steps.fixup.outputs.fixup_response != '' && !contains(steps.fixup.outputs.fixup_response, 'ERROR:')
-        run: |
-          BRANCH="fixup/${{ github.event.workflow_run.id }}-attempt-1"
-
-          # Write the patch to a temp file
-          echo "${{ steps.fixup.outputs.fixup_response }}" > /tmp/fixup.patch
-
-          # Apply patch and push
+          BRANCH="fixup/${RUN_ID}-attempt-1"
           git checkout -b "$BRANCH"
-          git apply /tmp/fixup.patch 2>/dev/null || echo "Patch did not apply cleanly — see full output"
-
-          if git diff --stat | grep -q .; then
+          cat fixup_response.txt | git apply --3way 2>/dev/null && APPLIED=true || APPLIED=false
+          if [ "$APPLIED" = "true" ] && git diff --stat | grep -q .; then
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
             git add -A
-            git commit -m "Auto-fixup: fix test/lint failures"
+            git commit -m "Auto-fixup: resolve test failures via Nemotron"
             git push -u origin "$BRANCH" --force
             echo "fixup_pushed=true" >> $GITHUB_OUTPUT
           else
             echo "fixup_pushed=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Post PR comment with results
+      - name: Post PR comment
         if: always()
+        env:
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
         run: |
-          PR_NUMBER=$(gh api repos/{owner}/{repo}/pulls --jq '.[] | select(.head.ref == "${{ github.event.workflow_run.head_branch }}") | .number')
-
-          if [ "${{ steps.fixup.outputs.fixup_pushed }}" == "true" ]; then
-            gh pr comment "$PR_NUMBER" --body "## AI Fixup Applied
-
-Automated fix attempt succeeded — `fixup/${{ github.event.workflow_run.id }}-attempt-1` branch pushed.
-
-Review the fixup branch and merge it into your PR to resolve CI failures.
-
-If this still fails, the failures are non-trivial and need manual attention."
-          else
-            gh pr comment "$PR_NUMBER" --body "## AI Fixup Attempted
-
-Automated fix could not be applied automatically. Failures require manual review:
-
-```
-${{ steps.fixup.outputs.fixup_response }}
-```
-
-See CI workflow for full error output."
-          fi
+          PR_NUM=$(gh pr list --head "$HEAD_BRANCH" --json number --jq \'.[0].number\')
+          if [ -n "$PR_NUM" ]; then gh pr comment "$PR_NUM" --body "AI Fixup: review fixup branch and merge to resolve CI"; fi
