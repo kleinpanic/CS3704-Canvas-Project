@@ -2,6 +2,44 @@
 
 All notable changes to Canvas TUI are documented here.
 
+## [1.1.0] — 2026-04-14
+
+### Added
+- **Version display** in TUI header (title bar shows `CanvasTUI v1.1.0`)
+- **Type badges** in dashboard: ASGN / QUIZ / DISC / EXAM / EVNT inline labels
+- **Box-drawing panel headers** with Unicode border characters
+- **Inline urgency labels** on due items (e.g. "today", "tomorrow", "3d")
+- **Grades what-if discoverability hint** on grades screen
+- **`src/canvas_tui/models/` package**: `item.py`, `course.py`, `modal.py`, `__init__.py` (restructured from `models.py`)
+- **Reranker fine-tuning pipeline** (Gemma 2B target):
+  - `scripts/generate_rerank_data.py` — 20 query types, 5 pair types, multi-dim urgency scoring
+  - `scripts/train_reranker.py` — LoRA fine-tuning with configurable rank/alpha/lr/dropout
+  - `scripts/eval_reranker.py` — pairwise accuracy evaluation against ground truth
+- **CI fixup workflow** (`ai-fixup.yml`) — auto-generates fix patches via Nemotron on DGX Spark on CI failure
+- **Auto-docs workflow** (`auto-docs.yml`) — post-merge docstring generation via Nemotron
+
+### Fixed
+- Status bar: removed stale "Last refresh" and "Rate: ?" fields
+- Prompt defense skill integration for school agent pipelines
+
+### Changed
+- **CI simplified**: lint no longer blocks merges; coverage advisory at 80% with `#no-coverage-check` bypass
+- Python compatibility smoke test runs on 3.11/3.12/3.13 (informational, non-blocking)
+- Branch protection: only Test, Coverage, Python Compat block merge
+
+### Docs
+- `docs/project/VISUAL-AUDIT.md` — full visual audit + 4-phase advancement plan
+- `docs/project/CLAIMS-AUDIT.md` — concrete claims: what promised vs. what exists
+- `docs/project/DEVELOPER_GUIDE.md` — onboarding, setup, test/run/build commands
+- `docs-site/` deployed docs site updated with visual and claims audits
+
+### Dependencies
+- PRs merged: dependabot updates for `actions/github-script` v7→9 (#22), `actions/download-artifact` v5→8 (#21)
+
+### Project Maintenance
+- Issues closed: #15 (dashboard type badges), #24 (PM4 test_cache.py), #19, #18, #16 (Phase 2/3 future work)
+- 241 tests passing
+
 ## [1.0.0] — 2026-02-23
 
 ### Added

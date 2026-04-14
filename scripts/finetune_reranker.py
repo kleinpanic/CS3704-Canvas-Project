@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-Canvas Item Reranker — Fine-tune Gemma 4B on Brev cloud GPU.
+Canvas Item Reranker — Fine-tune Gemma 2B on Brev cloud GPU.
 
 This script:
 1. Generates augmented training data from Canvas item history
-2. Spins up a Brev GPU instance (cheapest adequate for Gemma 4B)
-3. Runs LoRA fine-tuning on Gemma 4B
+2. Spins up a Brev GPU instance (cheapest adequate for Gemma 2B)
+3. Runs LoRA fine-tuning on Gemma 2B
 4. Saves the adapter weights
 
 Usage:
@@ -16,7 +16,7 @@ Usage:
 Requirements:
     - brev CLI configured
     - brev python package installed
-    - Gemma 4B model on HuggingFace (google/gemma-4b-it or 2b variant)
+    - Gemma 2B model on HuggingFace (google/gemma-2b-it)
 """
 
 from __future__ import annotations
@@ -30,7 +30,7 @@ from pathlib import Path
 
 REPO_DIR = Path("/home/broklein/codeWS/Python/CS3704-Canvas-Project")
 DATA_DIR = REPO_DIR / "data"
-MODEL_NAME = "google/gemma-4b-it"  # or "google/gemma-2b-it" for smaller
+MODEL_NAME = "google/gemma-2b-it"  # Gemma 2B — 8B needs ~16GB VRAM; 2B at 4-bit fits on L4/RTX4000
 OUTPUT_DIR = DATA_DIR / "reranker_model"
 TRAIN_DATA = DATA_DIR / "rerank_train.jsonl"
 AUGMENTED_DATA = DATA_DIR / "rerank_train_augmented.jsonl"
@@ -129,7 +129,7 @@ def write_training_script() -> str:
     script = f"""#!/bin/bash
 set -euo pipefail
 
-echo "=== Canvas Item Reranker — Gemma 4B Fine-tune ==="
+echo "=== Canvas Item Reranker — Gemma 2B Fine-tune ==="
 echo "Model: {MODEL_NAME}"
 echo "Data: {TRAIN_DATA}"
 echo "Output: {OUTPUT_DIR}"
@@ -155,9 +155,9 @@ fi
 echo "Downloading {MODEL_NAME}..."
 python3 -c "
 from huggingface_hub import snapshot_download
-snapshot_download(repo_id='{MODEL_NAME}', local_dir='/root/gemma-4b')
+snapshot_download(repo_id='{MODEL_NAME}', local_dir='/root/gemma-2b')
 "
-MODEL_DIR="/root/gemma-4b"
+MODEL_DIR="/root/gemma-2b"
 
 # ── Format data for training ────────────────────────────────────────────────────
 echo "Formatting training data..."
@@ -199,7 +199,7 @@ from peft import get_peft_model, LoraConfig, TaskType
 from datasets import Dataset
 
 # Load model in 4-bit
-model_id = "/root/gemma-4b"
+model_id = "/root/gemma-2b"
 tokenizer = AutoTokenizer.from_pretrained(model_id)
 model = AutoModelForCausalLM.from_pretrained(
     model_id,
@@ -267,7 +267,7 @@ def run_brev_setup() -> str:
         ["brev", "instance", "create",
          "--name", "canvas-reranker-gemma",
          "--gpu", "1",
-         "--machine", "L40S",  # 24GB VRAM — good for Gemma 4B at 4-bit
+         "--machine", "L4",     # 24GB VRAM — plenty for Gemma 2B at 4-bit, cheaper than L40S
          "--region", "us-east-1",
          "--framework", "python",
          "--jupyter",
@@ -283,7 +283,7 @@ def run_brev_setup() -> str:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Fine-tune Gemma 4B reranker on Brev")
+    parser = argparse.ArgumentParser(description="Fine-tune Gemma 2B reranker on Brev")
     parser.add_argument("--action", choices=["setup", "train", "download", "generate-data"], default="generate-data")
     parser.add_argument("--instance-id", help="Brev instance ID (for train/download)")
     parser.add_argument("--output", default=str(OUTPUT_DIR), help="Local output path for model")
