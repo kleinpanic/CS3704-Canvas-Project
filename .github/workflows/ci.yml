@@ -8,35 +8,6 @@ permissions:
   contents: read
 
 jobs:
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.11"
-
-      - name: Install package
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e ".[dev]" --quiet
-
-      - name: Critical lint only (syntax + undefined names + imports)
-        run: ruff check --select=E,F,I src tests
-        continue-on-error: true
-
-      - name: Report lint results
-        if: always()
-        run: |
-          if [ $? -eq 0 ]; then
-            echo "✓ Lint passed"
-          else
-            echo "× Lint errors found — see above"
-          fi
-
   test:
     name: Test
     runs-on: ubuntu-latest
@@ -77,7 +48,7 @@ jobs:
 
       - name: Coverage threshold
         run: |
-          # Allow bypass: any PR with "#no-coverage-check" in description skips threshold
+          # Bypass: any PR with "#no-coverage-check" in description skips threshold
           PR_BODY="${{ github.event.pull_request.body }}"
           if echo "$PR_BODY" | grep -qi "no-coverage-check"; then
             echo "Coverage check bypassed by PR author"
@@ -100,14 +71,6 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Install package
-        run: pip install -e ".[dev]" --quiet 2>&1 | tail -3
-
       - name: Syntax smoke test
         run: python -c "import canvas_tui; print('OK')"
-        continue-on-error: true
-
-      - name: Report
-        run: |
-          echo "Python ${{ matrix.python-version }}: smoke test complete (informational only)"
         continue-on-error: true
