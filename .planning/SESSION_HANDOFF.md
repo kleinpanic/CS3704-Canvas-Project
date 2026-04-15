@@ -98,7 +98,7 @@ Best adapter → export_gguf.py → GGUF for inference in TUI
 ---
 
 ## Model Selection (Gemini-audited 2026-04-15)
-- **Student:** `google/gemma-3-4b-it` (upgraded from gemma-2b-it; DGX GB10 easily handles 4B, Gemma 3 has better reasoning)
+- **Student:** `google/gemma-4-2b-it` (Gemma 4, same generation as the teacher; compact 2B for reranker task)
 - **Teacher:** `nvidia/Gemma-4-31B-IT-NVFP4` (loaded on Spark vLLM slot 0 for Path B)
 - **QLoRA config:** r=16, alpha=32, all 7 Gemma attention+MLP modules, NF4 4-bit, BF16 compute
 
