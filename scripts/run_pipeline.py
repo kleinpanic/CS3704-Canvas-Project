@@ -112,14 +112,27 @@ def generate_dpo_dataset(input_path: str, output_path: str) -> bool:
     return True
 
 def train_qlora(data_path: str, output_path: str, tag: str) -> bool:
-    """Run QLoRA fine-tune on Gemma 2B."""
+    """Run QLoRA fine-tune on Gemma 2B. Converts raw pairs to SFT format first."""
     log(f"TRAINING QLoRA ({tag}): {data_path} -> {output_path}")
+
+    # Convert raw pairs to SFT format if needed
+    sft_path = str(Path(output_path) / "train_sft.jsonl")
+    if not Path(sft_path).exists():
+        log(f"  Exporting to SFT format: {sft_path}")
+        r = run_cmd([
+            sys.executable, "scripts/collect_rerank_dataset.py",
+            "export-sft", "--input", data_path, "--output", sft_path,
+        ], timeout=60)
+        if r.returncode != 0:
+            log(f"  SFT export failed: {r.stderr}")
+            return False
+
     r = run_cmd([
         sys.executable, "scripts/train_gemma2b.py",
-        "--data", data_path,
+        "--data", sft_path,
         "--output", output_path,
         "--epochs", "3",
-    ], timeout=3600)
+    ], timeout=7200)
     if r.returncode != 0:
         log(f"QLoRA train failed: {r.stderr}")
         return False
