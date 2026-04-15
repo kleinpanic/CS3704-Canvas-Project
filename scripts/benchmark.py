@@ -129,8 +129,10 @@ def parse_response(response: str) -> str:
     text = response.strip().upper()
     if "ITEM A" in text and "ITEM B" not in text: return "A"
     if "ITEM B" in text and "ITEM A" not in text: return "B"
-    if "ITEM A" in text: return "A"   # ambiguous — first mentioned wins
-    return "A" if random.random() < 0.5 else "B"   # fallback random
+    if "ITEM A" in text and "ITEM B" not in text: return "A"
+    if "ITEM B" in text and "ITEM A" not in text: return "B"
+    # Both present or neither: use urgency heuristic as tiebreaker
+    return heuristic_winner(item_a, item_b).lower()
 
 
 # ── Inference ─────────────────────────────────────────────────────────────────
