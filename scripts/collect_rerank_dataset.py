@@ -414,17 +414,42 @@ def cmd_split(args):
     import random
     pairs = [json.loads(l) for l in open(args.input) if l.strip()]
     random.seed(args.seed)
-    hard_neg = [p for p in pairs if p.get("pair_type")=="hard_negative"]
-    standard = [p for p in pairs if p.get("pair_type")!="hard_negative"]
-    def split_group(lst, frac):
-        random.shuffle(lst)
-        n = max(1, int(len(lst)*frac))
-        return lst[:n], lst[n:]
-    train_hn, test_hn = split_group(hard_neg, 1-args.test_frac)
-    train_std, test_std = split_group(standard, 1-args.test_frac)
-    train = train_hn + train_std; test = test_hn + test_std
+
+    # Item-ID-level split: collect all unique item IDs, split those,
+    # then assign pairs to train/test based on which set BOTH items fall into.
+    # This prevents contamination where the same Canvas item appears in both sets.
+    all_item_ids = set()
+    for p in pairs:
+        all_item_ids.add(p["item_a"].get("id") or p["item_a"].get("name",""))
+        all_item_ids.add(p["item_b"].get("id") or p["item_b"].get("name",""))
+    item_ids = sorted(all_item_ids)
+    random.shuffle(item_ids)
+    n_test_items = max(1, int(len(item_ids) * args.test_frac))
+    test_item_ids = set(item_ids[:n_test_items])
+    train_item_ids = set(item_ids[n_test_items:])
+
+    train, test, overlap = [], [], []
+    for p in pairs:
+        ia = p["item_a"].get("id") or p["item_a"].get("name","")
+        ib = p["item_b"].get("id") or p["item_b"].get("name","")
+        in_test = ia in test_item_ids or ib in test_item_ids
+        in_train = ia in train_item_ids and ib in train_item_ids
+        if in_test and not in_train:
+            test.append(p)
+        elif in_train:
+            train.append(p)
+        else:
+            overlap.append(p)  # both items span train+test — assign to train
+    train.extend(overlap)
+
     random.shuffle(train); random.shuffle(test)
-    print("[SPLIT] Total: " + str(len(pairs)) + " | HardNeg: " + str(len(hard_neg)) + " | Standard: " + str(len(standard)))
+    contaminated = sum(1 for p in test if
+        (p["item_a"].get("id") or p["item_a"].get("name","")) in train_item_ids or
+        (p["item_b"].get("id") or p["item_b"].get("name","")) in train_item_ids)
+    print("[SPLIT] Total: " + str(len(pairs)) + " | Items: " + str(len(all_item_ids)))
+    print("[SPLIT] Train: " + str(len(train)) + " | Test: " + str(len(test)) + " | Cross-item pairs (→train): " + str(len(overlap)))
+    if contaminated:
+        print("[WARN] " + str(contaminated) + " test pairs still share items with train — consider more data for cleaner split")
     print("[SPLIT] Train: " + str(len(train)) + " | Test: " + str(len(test)))
     for label, data in [("train", train), ("test", test)]:
         p = Path(args.train if label=="train" else args.test)
