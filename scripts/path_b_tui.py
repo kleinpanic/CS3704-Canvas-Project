@@ -662,16 +662,28 @@ def parse_args():
                    help="Path to cleaned + merged pairwise dataset")
     p.add_argument("--teacher", default="nvidia/Gemma-4-31B-IT-NVFP4",
                    help="Teacher model ID")
-    p.add_argument("--student", default="nvidia/Llama-3.1-8B-Instruct-FP4",
+    p.add_argument("--student", default="google/gemma-4-2b-it",
                    help="Student model ID")
+    p.add_argument("--headless", action="store_true",
+                   help="Run DPO training without TUI (for subprocess use)")
     return p.parse_args()
 
 
 if __name__ == "__main__":
     args = parse_args()
-    app = PipelineApp(
-        state_path=args.state,
-        output_dir=args.output,
-        dataset_path=args.dataset,
-    )
-    app.run()
+    if args.headless:
+        print(f"[headless] Running DPO training: student={args.student}")
+        adapter_path = run_dpo_training(
+            student_model=args.student,
+            dpo_dataset=args.dataset,
+            output_dir=args.output,
+            progress_callback=lambda msg: print(f"[headless] {msg}"),
+        )
+        print(f"[headless] Adapter saved: {adapter_path}")
+    else:
+        app = PipelineApp(
+            state_path=args.state,
+            output_dir=args.output,
+            dataset_path=args.dataset,
+        )
+        app.run()

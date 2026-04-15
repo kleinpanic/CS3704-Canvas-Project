@@ -45,6 +45,8 @@ import os
 import random
 import sys
 import time
+import urllib.error
+import urllib.request
 import warnings
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
@@ -72,12 +74,6 @@ Which is more urgent and why?"""
 # ── API Clients ─────────────────────────────────────────────────────────────────
 def make_vllm_client(endpoint: str, api_key: str | None = None):
     """Returns a callable that sends a chat completion request to vLLM."""
-    try:
-        import openai
-    except ImportError:
-        # Fallback: use requests directly
-        import urllib.request, urllib.error
-        pass
 
     base = endpoint.rstrip("/")
     headers = {"Content-Type": "application/json"}
@@ -185,10 +181,23 @@ def parse_teacher_response(response: str, item_a: dict, item_b: dict) -> tuple[s
     reasoning = " ".join(reason_lines) if reason_lines else response.strip()[:200]
     reasoning = reasoning.strip('"\' \n')
 
-    if winner == "A":
-        return "A", reasoning, "(less urgent based on teacher reasoning)"
-    else:
-        return "B", reasoning, "(less urgent based on teacher reasoning)"
+    loser = item_b if winner == "A" else item_a
+    loser_label = "B" if winner == "A" else "A"
+    loser_name = loser.get("name", loser.get("title", f"Item {loser_label}"))
+    loser_type = loser.get("type", "assignment")
+    loser_due = loser.get("due_display", loser.get("due_in", ""))
+    loser_pts = loser.get("points", "")
+    rejected_reason = (
+        f"Item {loser_label} ({loser_name}) could be considered more urgent "
+        f"because it is a {loser_type}"
+    )
+    if loser_due:
+        rejected_reason += f" due {loser_due}"
+    if loser_pts:
+        rejected_reason += f" worth {loser_pts} points"
+    rejected_reason += ", but this overlooks the stronger urgency signals favoring the other item."
+
+    return winner, reasoning, rejected_reason
 
 
 # ── Main Generation ────────────────────────────────────────────────────────────
