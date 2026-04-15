@@ -153,10 +153,74 @@ ssh spark "tail -50 /srv/spark-maker/output/pipeline8/pipeline.log"
 
 ---
 
+## Spark Inference Layer — Gemma 4 31B Setup
+
+### gemma4-super/ (on Spark, mirroring nemotron-super/)
+```
+/srv/spark-ai-v2/gemma4-super/
+  slot0.env      — MODEL, PORT, GPU_MEMORY_UTIL, KV_CACHE_DTYPE, EXTRA_ARGS for Gemma 4 31B
+  README.md      — setup instructions
+```
+
+### To start Gemma 4 31B as teacher (slot 0)
+```bash
+ssh spark
+cd /srv/spark-ai-v2
+
+# Load Gemma 4 (stop Nemotron, start Gemma 4):
+docker compose -f compose.base.yaml -f compose.vllm.yaml -f compose.slot0-gemma4.yaml up -d spark-vllm-slot0
+
+# Verify:
+curl http://localhost:8000/v1/models
+
+# Switch back to Nemotron:
+docker compose -f compose.base.yaml -f compose.vllm.yaml up -d spark-vllm-slot0
+```
+
+### Or via forge:
+```bash
+forge load nvidia/Gemma-4-31B-IT-NVFP4 --slot 0   # aliases: gemma4, gemma-4, gemma4-31b
+forge load nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-NVFP4 --slot 0  # switch back
+```
+
+### DPO teacher endpoint
+- Direct: `http://localhost:8000/v1` (from Spark)
+- Use in pipeline: `python3 scripts/generate_teacher_preferences.py --teacher-endpoint http://localhost:8000/v1`
+
+## Dataset State (post-Gemini audit)
+**Gemini audit findings:**
+1. 1719 pairs from 1 user = too small, risk of user-specific bias
+2. Preference labeling consistent with urgency signal (correct for the task)
+3. **Critical: item-level train/test contamination** — fixed (item-ID-level split now)
+4. With only 134 unique items, contamination can't be fully eliminated without more users
+
+**Current split (post-fix):** 1499 train / 413 test (item-ID-level)
+**Warning:** 390/413 test pairs still share item IDs with train due to small item pool
+**Solution:** Need at least 2-3 more teammates' Canvas data to get true item diversity
+
+**Data files on Spark:** `/srv/spark-maker/gemma2b-reranker/data/`
+- `rerank_train.jsonl` — 1499 pairs (re-split 2026-04-15)
+- `rerank_test.jsonl` — 413 pairs (re-split 2026-04-15)
+- `rerank_clean.jsonl` — 1912 pairs (full)
+
+## End-to-End Architecture
+```
+Training (Spark):
+  google/gemma-4-2b-it (student)
+    └─ QLoRA SFT (Path A) → adapter .safetensors
+    └─ DPO distillation (Path B, teacher=Gemma-4-31B) → adapter .safetensors
+    └─ benchmark → pick best
+    └─ export_gguf.py → gemma4-reranker.gguf
+
+Inference (local, bundled in TUI):
+  llama.cpp / ollama running gemma4-reranker.gguf
+  canvas_tui/ → priority query → local reranker → sorted assignments
+```
+
 ## Things NOT Done (next session)
-- [ ] Accept Gemma 3 license at huggingface.co/google/gemma-3-4b-it
-- [ ] Run pipeline8 (first clean run with all fixes)
-- [ ] Set up Gemma 4 isolation on Spark (verify compose.slot0-gemma4.yaml env vars)
-- [ ] Integrate best adapter into TUI src/canvas_tui/
-- [ ] G2: Add direct heuristic-DPO path (train on format_for_dpo without teacher) as ablation
-- [ ] G6: Verify training data is anonymized (source_user field has real handle "kleinpanic" currently)
+- [ ] Accept google/gemma-4-2b-it license at huggingface.co/google/gemma-4-2b-it
+- [ ] Run pipeline8 (first clean run with ALL fixes)
+- [ ] Load Gemma 4 31B via compose.slot0-gemma4.yaml BEFORE Path B
+- [ ] Get 2+ more teammates to run collect_rerank_dataset.py → more item diversity
+- [ ] Integrate best adapter into src/canvas_tui/ (export_gguf.py → ollama)
+- [ ] G6: Training data has `source_user: kleinpanic` — run anonymize step before next training
