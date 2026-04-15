@@ -10,30 +10,16 @@ permissions:
   pull-requests: write
 
 jobs:
-  # Gate job always runs — prevents GitHub from marking the workflow as "failure"
-  # when CI passes (no fixup needed). Sets output for the fixup job.
-  gate:
-    runs-on: ubuntu-latest
-    outputs:
-      should_fix: ${{ steps.check.outputs.should_fix }}
-    steps:
-      - id: check
-        run: |
-          if [ "${{ github.event.workflow_run.conclusion }}" = "failure" ]; then
-            echo "should_fix=true" >> $GITHUB_OUTPUT
-            echo "CI failed — fixup will run"
-          else
-            echo "should_fix=false" >> $GITHUB_OUTPUT
-            echo "CI passed — no fixup needed"
-          fi
-
   ai-fixup:
-    needs: gate
-    if: needs.gate.outputs.should_fix == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
+      - name: Skip if CI did not fail
+        if: github.event.workflow_run.conclusion != 'failure'
+        run: echo "CI conclusion=${{ github.event.workflow_run.conclusion }} — no fixup needed"
+
       - name: Checkout PR branch
+        if: github.event.workflow_run.conclusion == 'failure'
         uses: actions/checkout@v6
         with:
           ref: ${{ github.event.workflow_run.head_branch }}
@@ -41,21 +27,24 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Python
+        if: github.event.workflow_run.conclusion == 'failure'
         uses: actions/setup-python@v6
         with:
           python-version: "3.11"
 
       - name: Install package
+        if: github.event.workflow_run.conclusion == 'failure'
         run: pip install -e ".[dev]" --quiet
 
       - name: Get CI failure logs
+        if: github.event.workflow_run.conclusion == 'failure'
         env:
           RUN_ID: ${{ github.event.workflow_run.id }}
         run: |
-          # Try to get logs from the failed CI run; if unavailable (expired/permissions), skip gracefully
           gh run view $RUN_ID --log 2>/dev/null | tail -150 > ci-log.txt || echo "# Log unavailable" > ci-log.txt
 
       - name: Generate fix via Nemotron
+        if: github.event.workflow_run.conclusion == 'failure'
         env:
           SPARK_HOST: ${{ vars.SPARK_HOST }}
           SPARK_PORT: ${{ vars.SPARK_PORT }}
@@ -65,11 +54,11 @@ jobs:
           python3 scripts/nemotron-fixup.py --log ci-log.txt --host "$SPARK_HOST" --port "$SPARK_PORT" --key "$SPARK_API_KEY" > fixup_response.txt || true
 
       - name: Create fixup branch
+        if: github.event.workflow_run.conclusion == 'failure'
         env:
           HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
           RUN_ID: ${{ github.event.workflow_run.id }}
         run: |
-          # Skip if Nemotron returned nothing or an error
           if [ ! -s fixup_response.txt ] || grep -q "^# NEMOTRON_ERROR" fixup_response.txt 2>/dev/null; then
             echo "fixup_pushed=false" >> $GITHUB_OUTPUT
             exit 0
@@ -89,7 +78,7 @@ jobs:
           fi
 
       - name: Post PR comment
-        if: always()
+        if: github.event.workflow_run.conclusion == 'failure'
         env:
           HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
         run: |
