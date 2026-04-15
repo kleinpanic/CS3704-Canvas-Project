@@ -171,11 +171,11 @@ def train(
 
     # ── Model with QLoRA ────────────────────────────────────────────────────────
     print("[3/5] Loading model with QLoRA config...")
-    bnb_config = get_bnb_config()
+    # bnb_config = get_bnb_config()  # disabled: load BF16 directly (GB10 has 130GB VRAM)
     from transformers import AutoModelForCausalLM
     model = AutoModelForCausalLM.from_pretrained(
         BASE_MODEL,
-        quantization_config=bnb_config,
+        # quantization_config=bnb_config,  # disabled
         device_map="auto",
         trust_remote_code=True,
         dtype=torch.bfloat16,
