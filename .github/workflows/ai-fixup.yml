@@ -1,9 +1,15 @@
 name: AI Fixup
 
+# Only fires when CI fails on a PR branch — never on main.
+# Severity-gated: only attempts a fix for egregious failures
+# (syntax errors, import errors, crashes, >5 test errors).
+# Minor failures (1-2 flaky tests, coverage threshold) are logged and skipped.
+
 on:
   workflow_run:
     workflow: CI
     types: [completed]
+    branches-ignore: [main, master]
 
 permissions:
   contents: write
@@ -11,15 +17,11 @@ permissions:
 
 jobs:
   ai-fixup:
+    if: github.event.workflow_run.conclusion == 'failure'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - name: Skip if CI did not fail
-        if: github.event.workflow_run.conclusion != 'failure'
-        run: echo "CI conclusion=${{ github.event.workflow_run.conclusion }} — no fixup needed"
-
       - name: Checkout PR branch
-        if: github.event.workflow_run.conclusion == 'failure'
         uses: actions/checkout@v6
         with:
           ref: ${{ github.event.workflow_run.head_branch }}
@@ -27,60 +29,93 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Python
-        if: github.event.workflow_run.conclusion == 'failure'
         uses: actions/setup-python@v6
         with:
           python-version: "3.11"
 
       - name: Install package
-        if: github.event.workflow_run.conclusion == 'failure'
         run: pip install -e ".[dev]" --quiet
 
-      - name: Get CI failure logs
-        if: github.event.workflow_run.conclusion == 'failure'
+      - name: Fetch CI logs and triage severity
+        id: triage
         env:
           RUN_ID: ${{ github.event.workflow_run.id }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh run view $RUN_ID --log 2>/dev/null | tail -150 > ci-log.txt || echo "# Log unavailable" > ci-log.txt
+          # Fetch logs (best-effort; may be unavailable for old runs)
+          gh run view "$RUN_ID" --log 2>/dev/null | tail -200 > ci-log.txt \
+            || echo "# Log unavailable" > ci-log.txt
+
+          # Count failure signals
+          SYNTAX=$(grep -cE "SyntaxError|ImportError|ModuleNotFoundError|IndentationError|NameError.*not defined" ci-log.txt 2>/dev/null || true)
+          ERRORS=$(grep -c "^E " ci-log.txt 2>/dev/null || true)
+          CRASHES=$(grep -cE "error: command|FAILED sessions|fatal error|exit code [2-9][0-9]?" ci-log.txt 2>/dev/null || true)
+          SYNTAX=${SYNTAX:-0}; ERRORS=${ERRORS:-0}; CRASHES=${CRASHES:-0}
+
+          echo "syntax=$SYNTAX" >> $GITHUB_OUTPUT
+          echo "errors=$ERRORS" >> $GITHUB_OUTPUT
+          echo "crashes=$CRASHES" >> $GITHUB_OUTPUT
+
+          # Gate: egregious = syntax/import errors, crashes, or >5 pytest errors
+          if [ "$SYNTAX" -gt 0 ] || [ "$CRASHES" -gt 3 ] || [ "$ERRORS" -gt 5 ]; then
+            echo "egregious=true" >> $GITHUB_OUTPUT
+            echo "EGREGIOUS failure (syntax=$SYNTAX crashes=$CRASHES errors=$ERRORS) — will attempt fix"
+          else
+            echo "egregious=false" >> $GITHUB_OUTPUT
+            echo "Minor failure (syntax=$SYNTAX crashes=$CRASHES errors=$ERRORS) — skipping auto-fix"
+          fi
 
       - name: Generate fix via Nemotron
-        if: github.event.workflow_run.conclusion == 'failure'
+        id: nemotron
+        if: steps.triage.outputs.egregious == 'true'
         env:
           SPARK_HOST: ${{ vars.SPARK_HOST }}
           SPARK_PORT: ${{ vars.SPARK_PORT }}
           SPARK_API_KEY: ${{ secrets.SPARK_API_KEY }}
         run: |
-          pip install requests --quiet 2>/dev/null
-          python3 scripts/nemotron-fixup.py --log ci-log.txt --host "$SPARK_HOST" --port "$SPARK_PORT" --key "$SPARK_API_KEY" > fixup_response.txt || true
+          python3 scripts/nemotron-fixup.py \
+            --log ci-log.txt \
+            --host "$SPARK_HOST" --port "$SPARK_PORT" --key "$SPARK_API_KEY" \
+            > fixup_response.txt 2>nemotron_err.txt || true
+          if [ -s fixup_response.txt ] && ! grep -q "^# NEMOTRON_ERROR" fixup_response.txt; then
+            echo "got_fix=true" >> $GITHUB_OUTPUT
+          else
+            echo "got_fix=false" >> $GITHUB_OUTPUT
+            echo "Nemotron unavailable or returned no fix:" && cat nemotron_err.txt || true
+          fi
 
-      - name: Create fixup branch
-        if: github.event.workflow_run.conclusion == 'failure'
+      - name: Apply patch and open fixup PR
+        if: steps.nemotron.outputs.got_fix == 'true'
         env:
           HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
           RUN_ID: ${{ github.event.workflow_run.id }}
         run: |
-          if [ ! -s fixup_response.txt ] || grep -q "^# NEMOTRON_ERROR" fixup_response.txt 2>/dev/null; then
-            echo "fixup_pushed=false" >> $GITHUB_OUTPUT
+          BRANCH="fixup/${RUN_ID}-attempt-1"
+          git checkout -b "$BRANCH"
+          git apply --3way fixup_response.txt 2>/dev/null || { echo "Patch did not apply cleanly"; exit 0; }
+          if ! git diff --stat | grep -q .; then
+            echo "Patch applied but no changes — skipping"
             exit 0
           fi
-          BRANCH="fixup/${RUN_ID}-attempt-1"
-          git checkout -b "$BRANCH" || true
-          cat fixup_response.txt | git apply --3way 2>/dev/null && APPLIED=true || APPLIED=false
-          if [ "$APPLIED" = "true" ] && git diff --stat | grep -q .; then
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            git add -A
-            git commit -m "Auto-fixup: resolve test failures via Nemotron"
-            git push -u origin "$BRANCH" --force
-            echo "fixup_pushed=true" >> $GITHUB_OUTPUT
-          else
-            echo "fixup_pushed=false" >> $GITHUB_OUTPUT
-          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Auto-fixup: resolve egregious CI failures via Nemotron"
+          git push -u origin "$BRANCH" --force
+          PR_BODY="## Auto-generated fix\n\nNemotron detected and fixed egregious CI failures.\n\n**Review carefully before merging.** AI-generated — verify before merge.\n\nTriggered by: syntax/import errors, crashes, or >5 test errors in CI log."
+          gh pr create \
+            --title "Auto-fixup: egregious CI failures on $HEAD_BRANCH" \
+            --body "$PR_BODY" \
+            --base "$HEAD_BRANCH" --head "$BRANCH" || true
 
-      - name: Post PR comment
-        if: github.event.workflow_run.conclusion == 'failure'
+      - name: Comment on PR (minor failure — manual fix needed)
+        if: steps.triage.outputs.egregious == 'false'
         env:
           HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
         run: |
-          PR_NUM=$(gh pr list --head "$HEAD_BRANCH" --json number --jq '.[0].number')
-          if [ -n "$PR_NUM" ]; then gh pr comment "$PR_NUM" --body "AI Fixup: review fixup branch and merge to resolve CI"; fi
+          PR_NUM=$(gh pr list --head "$HEAD_BRANCH" --json number --jq '.[0].number' 2>/dev/null || true)
+          if [ -n "$PR_NUM" ] && [ "$PR_NUM" != "null" ]; then
+            gh pr comment "$PR_NUM" --body \
+              "CI failed with minor issues (no syntax errors, <5 test failures). Auto-fix skipped — fix manually." \
+              2>/dev/null || true
+          fi
