@@ -67,7 +67,7 @@ class PipelineState:
     step: str = "IDLE"
     output_dir: str = ""
     teacher_model: str = "nvidia/Gemma-4-31B-IT-NVFP4"
-    student_model: str = "nvidia/Qwen3-8B-NVFP4"
+    student_model: str = "nvidia/Llama-3.1-8B-Instruct-FP4"
     dataset_path: str = ""
     dpo_dataset_path: str = ""
     adapter_path: str = ""
@@ -590,7 +590,7 @@ def parse_args():
                    help="Path to cleaned + merged pairwise dataset")
     p.add_argument("--teacher", default="nvidia/Gemma-4-31B-IT-NVFP4",
                    help="Teacher model ID")
-    p.add_argument("--student", default="nvidia/Qwen3-8B-NVFP4",
+    p.add_argument("--student", default="nvidia/Llama-3.1-8B-Instruct-FP4",
                    help="Student model ID")
     return p.parse_args()
 
