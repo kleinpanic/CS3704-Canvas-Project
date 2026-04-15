@@ -67,7 +67,7 @@ class PipelineState:
     step: str = "IDLE"
     output_dir: str = ""
     teacher_model: str = "nvidia/Gemma-4-31B-IT-NVFP4"
-    student_model: str = "google/gemma-3-4b-it"
+    student_model: str = "google/gemma-4-2b-it"
     dataset_path: str = ""
     dpo_dataset_path: str = ""
     adapter_path: str = ""

@@ -68,7 +68,7 @@ except ImportError:
 warnings.filterwarnings("ignore", category=FutureWarning)
 
 # ── Model & Training Config ────────────────────────────────────────────────────
-BASE_MODEL = "google/gemma-3-4b-it"
+BASE_MODEL = "google/gemma-4-2b-it"
 
 LORA_CONFIG = LoraConfig(
     task_type=TaskType.CAUSAL_LM,
