@@ -182,6 +182,7 @@ def train(
         config=override_config,
         device_map="auto",
         torch_dtype=torch.bfloat16,
+        ignore_mismatched_sizes=True,  # Allow loading despite FP4 quantization dimension mismatches
     )
 
     # Print trainable param count
