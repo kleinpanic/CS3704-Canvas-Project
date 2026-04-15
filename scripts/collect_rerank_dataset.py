@@ -677,6 +677,54 @@ def stats(pairs: list[dict]) -> str:
 
 # ── CLI Parser ─────────────────────────────────────────────────────────────────
 
+
+
+def cmd_split(args):
+    """Split a clean dataset into train/test sets (stratified by pair_type)."""
+    pairs = []
+    with open(args.input) as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                pairs.append(json.loads(line))
+
+    import random
+    random.seed(args.seed)
+
+    # Stratified split: maintain pair_type distribution
+    hard_neg = [p for p in pairs if p.get("pair_type") == "hard_negative"]
+    standard = [p for p in pairs if p.get("pair_type") != "hard_negative"]
+
+    def split(lst, frac):
+        random.shuffle(lst)
+        n = max(1, int(len(lst) * frac))
+        return lst[:n], lst[n:]
+
+    train_hn, test_hn = split(hard_neg, 1 - args.test_frac)
+    train_std, test_std = split(standard, 1 - args.test_frac)
+
+    train = train_hn + train_std
+    test = test_hn + test_std
+    random.shuffle(train)
+    random.shuffle(test)
+
+    print(f"Total: {len(pairs)} | HardNeg: {len(hard_neg)}, Standard: {len(standard)}")
+    print(f"Train: {len(train)} ({len(train_hn)} hard_neg, {len(train_std)} standard)")
+    print(f"Test:  {len(test)} ({len(test_hn)} hard_neg, {len(test_std)} standard)")
+
+    def write(path, lst):
+        p = Path(path)
+        p.parent.mkdir(parents=True, exist_ok=True)
+        with open(p, "w") as f:
+            for pair in lst:
+                f.write(json.dumps(pair) + "\n")
+        print(f"  Wrote: {path} ({p.stat().st_size // 1024}KB)")
+
+    write(args.train, train)
+    write(args.test, test)
+    print(f"\nTrain/test split done. Test set: {args.test}")
+
+
 def parse_args():
     p = argparse.ArgumentParser(
         description="Canvas Priority Reranker — Collaborative Dataset Collection",
@@ -714,6 +762,15 @@ def parse_args():
     sft_p.add_argument("--output", required=True, help="Output SFTTrainer JSONL")
     sft_p.add_argument("--anonymize", action="store_true", help="Anonymize during export")
     sft_p.set_defaults(fn=cmd_export_sft)
+
+    split_p = sub.add_parser("split", help="Split into train/test sets (stratified)")
+    split_p.add_argument("--input", required=True, help="Input JSONL (cleaned pairs)")
+    split_p.add_argument("--train", required=True, help="Output train JSONL")
+    split_p.add_argument("--test", required=True, help="Output test JSONL")
+    split_p.add_argument("--test-frac", type=float, default=0.1,
+                         help="Fraction for test set (default: 0.1)")
+    split_p.add_argument("--seed", type=int, default=42, help="Random seed")
+    split_p.set_defaults(fn=cmd_split)
 
     args = p.parse_args()
     args.fn(args)

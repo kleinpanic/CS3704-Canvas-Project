@@ -74,7 +74,7 @@ def heuristic_score(item: dict) -> float:
         W_TIME   * (1.0 / (max(h, 0.1) ** 0.5)) +
         W_TYPE   * _type_weight(item) +
         W_POINTS * (min(float(item.get("points_possible", 0) or 0), 200) / 200.0) +
-        W_STATUS * (0.0 if item.get("submitted") else 1.0)
+        W_STATUS * (0.0 if item.get("has_submitted_submissions") else 1.0)
     )
     return round(score, 4)
 
@@ -208,7 +208,7 @@ def adversarial_accuracy(
         # For programmatic detection:
         ua = ia.get("hours_until_due", 999); ub = ib.get("hours_until_due", 999)
         pa = float(ia.get("points_possible") or 0); pb = float(ib.get("points_possible") or 0)
-        sa = ia.get("submitted"); sb = ib.get("submitted")
+        sa = ia.get("has_submitted_submissions"); sb = ib.get("has_submitted_submissions")
 
         # Detect: high-pts trap (high pts but distant due)
         if pa > 50 and ua > 72 and pb < pa and ub < 24:
