@@ -241,7 +241,7 @@ class TestPipelineState:
 
 
 # ── Data File Tests ────────────────────────────────────────────────────────
-@pytest.mark.skipif(not DATA_DIR.exists(), reason="Local data only — requires Gemma2B-Reranker data at DATA_DIR")
+@pytest.mark.skipif(not (DATA_DIR / "rerank_train.jsonl").exists(), reason="Local data only — requires Gemma2B-Reranker data at DATA_DIR")
 class TestDataFiles:
     def test_rerank_train_exists_and_not_empty(self):
         p = DATA_DIR / "rerank_train.jsonl"
