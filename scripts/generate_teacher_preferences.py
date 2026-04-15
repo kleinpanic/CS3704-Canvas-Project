@@ -153,9 +153,9 @@ def parse_teacher_response(response: str, item_a: dict, item_b: dict) -> tuple[s
     """
     text = response.strip().upper()
 
-    # Determine winner
-    a_count = text.count("ITEM A") + text.count("Item A")
-    b_count = text.count("ITEM B") + text.count("Item B")
+    # Determine winner — text is already uppercased, so only count uppercase patterns
+    a_count = text.count("ITEM A")
+    b_count = text.count("ITEM B")
 
     # Count explicit mentions
     explicit_a = any(kw in text for kw in ["ITEM A IS MORE URGENT", "ITEM A:", "CHOICE: A", "PREFER A", "A IS MORE"])
@@ -274,24 +274,18 @@ def generate_preferences(
             response, item_a, item_b
         )
 
-        if winner == "A":
-            return {
-                "pair_id": pair.get("id"),
-                "prompt": prompt_a,
-                "chosen": chosen_reason,
-                "rejected": rejected_reason,
-                "teacher_model": teacher_model,
-                "teacher_raw": response,
-            }
-        else:
-            return {
-                "pair_id": pair.get("id"),
-                "prompt": prompt_a,
-                "chosen": rejected_reason,   # teacher said B is better, so B's reason is "chosen"
-                "rejected": chosen_reason,   # A's reason is "rejected"
-                "teacher_model": teacher_model,
-                "teacher_raw": response,
-            }
+        # DPO format: "chosen" = winner's reasoning, "rejected" = loser's placeholder
+        # parse_teacher_response always puts the winner's reasoning in chosen_reason.
+        # rejected_reason is always the generic fallback regardless of winner.
+        return {
+            "pair_id": pair.get("id"),
+            "prompt": prompt_a,
+            "chosen": chosen_reason,    # winner's actual reasoning (A or B)
+            "rejected": rejected_reason,  # "(less urgent based on teacher reasoning)"
+            "winner": winner,
+            "teacher_model": teacher_model,
+            "teacher_raw": response,
+        }
 
     print(f"\nProcessing {len(pairs)} pairs...")
     done = len(all_results)

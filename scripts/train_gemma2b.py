@@ -67,8 +67,8 @@ BASE_MODEL = "google/gemma-2b-it"
 
 LORA_CONFIG = LoraConfig(
     task_type=TaskType.CAUSAL_LM,
-    r=64,                          # LoRA rank — 64 is good for 2B models
-    lora_alpha=128,                # scaling = lora_alpha / r = 2.0
+    r=16,                          # LoRA rank — 16 is appropriate for small reranking datasets
+    lora_alpha=32,                 # scaling = lora_alpha / r = 2.0
     lora_dropout=0.05,
     target_modules=[                # Gemma 2B attention modules
         "q_proj", "k_proj", "v_proj", "o_proj",
@@ -78,32 +78,34 @@ LORA_CONFIG = LoraConfig(
     inference_mode=False,
 )
 
-# QLoRA bitsandbytes config — applied at model loading
+# QLoRA bitsandbytes config — applied at model loading when BNB available
 def get_bnb_config():
     if not BNB_AVAILABLE:
         return None
-    return {
-        "load_in_4bit": True,
-        "bnb_4bit_quant_type": "nf4",         # Normal Float 4 — optimal for pretrained
-        "bnb_4bit_compute_dtype": torch.bfloat16,  # BF16 for training compute
-        "bnb_4bit_use_double_quant": True,      # saves ~0.4 bits/param via double quant
-    }
+    from transformers import BitsAndBytesConfig
+    return BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_quant_type="nf4",            # Normal Float 4 — optimal for pretrained weights
+        bnb_4bit_compute_dtype=torch.bfloat16, # BF16 for training compute
+        bnb_4bit_use_double_quant=True,        # saves ~0.4 bits/param via double quant
+    )
 
 # SFTTrainer hyperparameters
 SFT_ARGS = {
     "per_device_train_batch_size": 1,     # Gemma 2B is small; batch 1 is fine
     "gradient_accumulation_steps": 16,   # effective batch = 16 × 1 = 16
-    "warmup_steps": 3,
+    "warmup_steps": 20,                  # ~5-10% of expected total steps
     "learning_rate": 2e-4,
     "weight_decay": 0.01,
     "fp16": False,
     "bf16": True,                          # GB10 supports BF16 natively
     "logging_steps": 10,
-    "optim": "paged_adamw_32bit",           # paged — NVIDIA extension, falls back gracefully
+    "optim": "paged_adamw_32bit" if BNB_AVAILABLE else "adamw_torch",
     "lr_scheduler_type": "cosine",
     "seed": 42,
     "report_to": "none",                   # no wandb needed
     "max_grad_norm": 0.3,
+    "gradient_checkpointing": True,        # reduces activation memory ~40-60%
 }
 
 
@@ -170,14 +172,21 @@ def train(
     print(f"  Loaded {len(train_data)} training examples")
 
     # ── Model with QLoRA ────────────────────────────────────────────────────────
-    print("[3/5] Loading model with QLoRA config...")
+    bnb_config = get_bnb_config()
+    if bnb_config:
+        print("[3/5] Loading model with QLoRA (4-bit NF4 quantization)...")
+    else:
+        print("[3/5] Loading model in BF16 (bitsandbytes not available — LoRA only, not QLoRA)...")
     from transformers import AutoModelForCausalLM
-    model = AutoModelForCausalLM.from_pretrained(
-        BASE_MODEL,
-        device_map="auto",
-        torch_dtype=torch.bfloat16,
-        trust_remote_code=True,
-    )
+    model_kwargs = {
+        "device_map": "auto",
+        "trust_remote_code": True,
+    }
+    if bnb_config:
+        model_kwargs["quantization_config"] = bnb_config
+    else:
+        model_kwargs["torch_dtype"] = torch.bfloat16
+    model = AutoModelForCausalLM.from_pretrained(BASE_MODEL, **model_kwargs)
 
     # Print trainable param count
     model = get_peft_model(model, LORA_CONFIG)
@@ -208,7 +217,7 @@ def train(
         formatting_func=lambda x: x["text"],
     )
 
-    # Suppress SDPA flash attention warning
+    # gradient_checkpointing requires use_cache=False
     trainer.model.config.use_cache = False
 
     # Snapshot loss before training (baseline)

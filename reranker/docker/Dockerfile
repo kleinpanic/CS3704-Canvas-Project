@@ -62,7 +62,7 @@ RUN pip install \
 WORKDIR /tmp/llama.cpp
 RUN git clone --depth 1 https://github.com/ggerganov/llama.cpp && \
     cd llama.cpp && \
-    cmake . -DLLAMA_CUBLAS=ON -DCMAKE_CUDA_ARCHITECTURES="80;86;89;90" && \
+    cmake . -DLLAMA_CUBLAS=ON -DCMAKE_CUDA_ARCHITECTURES="80;86;89;90;100" && \
     make -j$(nproc) && \
     cp quantize /usr/local/bin/ && \
     cp convert_hf_to_gguf.py /usr/local/bin/ && \

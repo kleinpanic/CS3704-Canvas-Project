@@ -278,7 +278,7 @@ def main():
         state.phase = "path_b"
 
         # Step 1: Export DPO dataset
-        dpo_path = str(Path(args.output, "path_b" / "dpo_pairs.jsonl"))
+        dpo_path = str(Path(args.output) / "path_b" / "dpo_pairs.jsonl")
         ok = generate_dpo_dataset(args.data, dpo_path)
         if not ok:
             errors.append("DPO export failed")
@@ -287,7 +287,7 @@ def main():
 
         if ok:
             # Step 2: Teacher labeling (Gemma-4-31B)
-            teacher_prefs = str(Path(args.output, "path_b" / "teacher_prefs.jsonl"))
+            teacher_prefs = str(Path(args.output) / "path_b" / "teacher_prefs.jsonl")
             ok = generate_teacher_preferences(dpo_path, teacher_prefs)
 
         if ok:
