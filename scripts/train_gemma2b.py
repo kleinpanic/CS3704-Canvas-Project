@@ -143,7 +143,7 @@ def train(
     print(f"  QLoRA r:    {LORA_CONFIG.r}")
     print(f"  BNB avail:  {BNB_AVAILABLE}")
     print(f"  GPU:        {torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'CPU'}")
-    print(f"  GPU mem:    {torch.cuda.get_device_properties(0).total_mem / 1e9:.1f}GB" if torch.cuda.is_available() else "  GPU mem:    N/A")
+    print(f"  GPU mem:    {torch.cuda.get_device_properties(0).total_memory / 1e9:.1f}GB" if torch.cuda.is_available() else "  GPU mem:    N/A")
     print("=" * 60)
 
     t0 = time.time()
