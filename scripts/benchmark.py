@@ -29,7 +29,7 @@ Usage:
 
     # Option C: compare base Gemma 2B (no fine-tune) as baseline
     python3 scripts/benchmark.py \
-        --base-model nvidia/Qwen3-8B-NVFP4 \
+        --base-model nvidia/Llama-3.1-8B-Instruct-FP4 \
         --test ~/codeWS/Gemma2B-Reranker/data/rerank_test.jsonl \
         --output ~/codeWS/Gemma2B-Reranker/benchmarks/baseline.json
 """
@@ -85,7 +85,7 @@ def heuristic_winner(item_a: dict, item_b: dict) -> Literal["A", "B"]:
 
 
 # ── Model Loading ─────────────────────────────────────────────────────────────
-def load_model(adapter_path: str | None, base_model: str = "nvidia/Qwen3-8B-NVFP4"):
+def load_model(adapter_path: str | None, base_model: str = "nvidia/Llama-3.1-8B-Instruct-FP4"):
     """Load fine-tuned Gemma 2B (LoRA adapter) or base model for comparison."""
     bnb = BitsAndBytesConfig(
         load_in_4bit=True,
@@ -394,8 +394,8 @@ def parse_args():
     p = argparse.ArgumentParser(description="Gemma 2B Reranker Benchmark Suite")
     p.add_argument("--adapter", default=None,
                    help="Path to fine-tuned LoRA adapter (omit to benchmark base model)")
-    p.add_argument("--base-model", default="nvidia/Qwen3-8B-NVFP4",
-                   help="Base model ID (default: nvidia/Qwen3-8B-NVFP4)")
+    p.add_argument("--base-model", default="nvidia/Llama-3.1-8B-Instruct-FP4",
+                   help="Base model ID (default: nvidia/Llama-3.1-8B-Instruct-FP4)")
     p.add_argument("--test", required=True,
                    help="Path to test set JSONL (rerank_test.jsonl)")
     p.add_argument("--output", required=True,
