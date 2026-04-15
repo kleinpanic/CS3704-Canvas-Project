@@ -124,7 +124,7 @@ def format_pair_prompt(query: str, item_a: dict, item_b: dict) -> str:
     )
 
 
-def parse_response(response: str) -> str:
+def parse_response(response: str, item_a: dict, item_b: dict) -> str:
     """Extract winner (A or B) from model response."""
     text = response.strip().upper()
     if "ITEM A" in text and "ITEM B" not in text: return "A"
@@ -154,7 +154,7 @@ def predict_winner(
             eos_token_id=tokenizer.eos_token_id,
         )
     response = tokenizer.decode(out[0][inputs["input_ids"].shape[1]:], skip_special_tokens=True)
-    return parse_response(response.strip())
+    return parse_response(response.strip(), item_a, item_b)
 
 
 # ── Metric Functions ───────────────────────────────────────────────────────────

@@ -1,8 +1,14 @@
-# Changelog
+## [1.1.1] — 2026-04-15
 
-All notable changes to Canvas TUI are documented here.
+### Added
+- **DPO support in dataset pipeline**: `collect_rerank_dataset.py` now supports `export-dpo` for distillation workflows.
+- **Anonymization in SFT export**: added `--anonymize` flag to `export-sft` for safer data sharing.
+- **Deterministic benchmark tiebreaker**: `benchmark.py` updated to use heuristic scoring as a stable fallback instead of random choice.
 
-## [1.1.0] — 2026-04-14
+### Changed
+- **Collaborative dataset workflow**: standardized on 8 core commands (setup, generate, merge, clean, anonymize, export-sft, export-dpo, split).
+- **Heuristic weights alignment**: synchronized `W_TIME=3.0`, `W_TYPE=2.5`, `W_POINTS=1.5`, `W_STATUS=2.0` across all reranker scripts.
+
 
 ### Added
 - **Version display** in TUI header (title bar shows `CanvasTUI v1.1.0`)

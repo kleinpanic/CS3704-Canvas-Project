@@ -302,7 +302,10 @@ def anonymize_pairs(pairs: list[dict], output_path: str) -> list[dict]:
         for p_item in anon_pairs:
             f.write(json.dumps(p_item) + "\n")
     print("[ANON] " + str(len(anon_pairs)) + " pairs | " + str(len(course_map)) + " courses -> COURSE001-COURSE" + str(len(course_map)).zfill(3) + " | " + str(len(seen_users)) + " contributors")
-    print("[ANON] Wrote: " + str(out))
+    with open(str(out) + ".course_map.json", "w") as f:
+        json.dump({str(k): v for k, v in course_map.items()}, f, indent=2)
+    print("[ANON] Wrote: " + str(out) + " + " + str(out) + ".course_map.json")
+    print("[ANON] NOTE: Do NOT commit the .course_map.json file — it maps real course IDs!")
     return anon_pairs
 
 # ── CLI commands ─────────────────────────────────────────────────────────────
