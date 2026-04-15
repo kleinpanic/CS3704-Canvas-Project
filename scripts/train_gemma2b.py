@@ -48,6 +48,11 @@ import warnings
 from datetime import datetime
 from pathlib import Path
 
+# Resolve HF token from environment (supports both common env var names)
+HF_TOKEN = os.environ.get("HF_TOKEN") or os.environ.get("HUGGINGFACE_TOKEN") or ""
+if not HF_TOKEN:
+    print("[WARN] HF_TOKEN not set — gated models like google/gemma-2b-it will fail", flush=True)
+
 import torch
 from transformers import AutoTokenizer, TrainingArguments
 from peft import LoraConfig, get_peft_model, TaskType
@@ -63,7 +68,7 @@ except ImportError:
 warnings.filterwarnings("ignore", category=FutureWarning)
 
 # ── Model & Training Config ────────────────────────────────────────────────────
-BASE_MODEL = "google/gemma-2b-it"
+BASE_MODEL = "google/gemma-3-4b-it"
 
 LORA_CONFIG = LoraConfig(
     task_type=TaskType.CAUSAL_LM,
@@ -150,26 +155,35 @@ def train(
 
     t0 = time.time()
 
+    # ── BF16 guard ──────────────────────────────────────────────────────────────
+    if torch.cuda.is_available() and not torch.cuda.is_bf16_supported():
+        print("[WARN] GPU does not support BF16 — switching to FP16")
+        SFT_ARGS["bf16"] = False
+        SFT_ARGS["fp16"] = True
+
     # ── Tokenizer ───────────────────────────────────────────────────────────────
     print("\n[1/5] Loading tokenizer...")
-    tokenizer = AutoTokenizer.from_pretrained(
-        BASE_MODEL,
-        trust_remote_code=True,
-        use_fast=True,
-    )
+    tok_kwargs = {"trust_remote_code": True, "use_fast": True}
+    if HF_TOKEN:
+        tok_kwargs["token"] = HF_TOKEN
+    tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL, **tok_kwargs)
+    # Add dedicated pad token — avoids polluting the EOS embedding with padding
     if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token
-    if tokenizer.pad_token_id is None:
-        tokenizer.pad_token_id = tokenizer.eos_token_id
+        tokenizer.add_special_tokens({"pad_token": "[PAD]"})
     tokenizer.model_max_length = max_seq_len
 
     # ── Data ───────────────────────────────────────────────────────────────────
     print("[2/5] Loading dataset...")
     raw_data = load_sft_data(data_path)
-    train_data = [format_sample(ex) for ex in raw_data]
+    all_samples = [format_sample(ex) for ex in raw_data]
     from datasets import Dataset
-    train_data = Dataset.from_list(train_data)
-    print(f"  Loaded {len(train_data)} training examples")
+    # Reserve 10% for eval (min 50 samples)
+    n_eval = max(50, int(len(all_samples) * 0.1))
+    eval_samples = all_samples[-n_eval:]
+    train_samples = all_samples[:-n_eval]
+    train_data = Dataset.from_list(train_samples)
+    eval_data = Dataset.from_list(eval_samples)
+    print(f"  Train: {len(train_data)} | Eval: {len(eval_data)} examples")
 
     # ── Model with QLoRA ────────────────────────────────────────────────────────
     bnb_config = get_bnb_config()
@@ -182,11 +196,17 @@ def train(
         "device_map": "auto",
         "trust_remote_code": True,
     }
+    if HF_TOKEN:
+        model_kwargs["token"] = HF_TOKEN
     if bnb_config:
         model_kwargs["quantization_config"] = bnb_config
     else:
         model_kwargs["torch_dtype"] = torch.bfloat16
     model = AutoModelForCausalLM.from_pretrained(BASE_MODEL, **model_kwargs)
+
+    # Resize embeddings if we added a pad token
+    if len(tokenizer) > model.config.vocab_size:
+        model.resize_token_embeddings(len(tokenizer))
 
     # Print trainable param count
     model = get_peft_model(model, LORA_CONFIG)
@@ -204,6 +224,9 @@ def train(
         save_only_model=True,
         dataloader_num_workers=2,
         remove_unused_columns=False,
+        eval_strategy="steps",
+        eval_steps=50,
+        load_best_model_at_end=False,   # adapter — save best manually if needed
         **SFT_ARGS,
     )
 
@@ -213,6 +236,7 @@ def train(
         model=model,
         args=training_args,
         train_dataset=train_data,
+        eval_dataset=eval_data,
         processing_class=tokenizer,
         formatting_func=lambda x: x["text"],
     )

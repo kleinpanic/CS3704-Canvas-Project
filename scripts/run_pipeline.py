@@ -38,7 +38,7 @@ class PipelineState:
     output_dir: str = ""
     data_path: str = ""
     teacher_model: str = "nvidia/Gemma-4-31B-IT-NVFP4"
-    student_model: str = "google/gemma-2b-it"
+    student_model: str = "google/gemma-3-4b-it"
     adapter_a1: str = ""
     adapter_a2: str = ""
     adapter_b: str = ""

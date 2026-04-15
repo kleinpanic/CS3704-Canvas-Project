@@ -67,7 +67,7 @@ class PipelineState:
     step: str = "IDLE"
     output_dir: str = ""
     teacher_model: str = "nvidia/Gemma-4-31B-IT-NVFP4"
-    student_model: str = "nvidia/Llama-3.1-8B-Instruct-FP4"
+    student_model: str = "google/gemma-3-4b-it"
     dataset_path: str = ""
     dpo_dataset_path: str = ""
     adapter_path: str = ""
@@ -157,6 +157,7 @@ def generate_preferences(
     output_path: str,
     endpoint: str = "http://localhost:8000/v1",
     batch_size: int = 8,
+    teacher_model: str = "nvidia/Gemma-4-31B-IT-NVFP4",
     progress_callback=None,
 ) -> int:
     """
@@ -171,6 +172,7 @@ def generate_preferences(
         "--input", input_path,
         "--output", output_path,
         "--teacher-endpoint", endpoint,
+        "--teacher-model", teacher_model,
         "--batch-size", str(batch_size),
         "--workers", "4",
     ]
@@ -182,6 +184,7 @@ def generate_preferences(
         "--input", input_path,
         "--output", output_path,
         "--teacher-endpoint", "http://host.docker.internal:8000/v1",
+        "--teacher-model", teacher_model,
         "--batch-size", str(batch_size),
         "--workers", "4",
     ]
@@ -208,38 +211,107 @@ def run_dpo_training(
     epochs: int = 3,
     progress_callback=None,
 ) -> str:
-    """Run DPO training. Returns path to trained adapter."""
-    # Generate LLaMA-Factory config
-    gen_cmd = [
-        "docker", "compose", "run", "--rm", "-T",
-        "trainer",
-        "python3", "/workspace/scripts/train_config_gen.py",
-        "--model", student_model,
-        "--method", "dpo",
-        "--dataset", dpo_dataset,
-        "--output", "/workspace/configs/generated/gemma2b-dpo.yaml",
-        "--lora-rank", "64",
-        "--bf16",
-    ]
-    result = subprocess.run(gen_cmd, capture_output=True, text=True, timeout=120, cwd="/srv/spark-maker")
-    if result.returncode != 0:
-        raise RuntimeError(f"Config generation failed:\n{result.stderr[-500:]}")
+    """Run DPO training via TRL DPOTrainer. Returns path to trained adapter."""
+    import json, torch
+    from pathlib import Path
+    from datasets import Dataset
+    from transformers import AutoTokenizer, AutoModelForCausalLM, TrainingArguments
+    from peft import LoraConfig, get_peft_model, TaskType
+    from trl import DPOTrainer, DPOConfig
 
-    # Run training
-    train_cmd = [
-        "docker", "compose", "run", "--rm", "-T",
-        "trainer",
-        "python3", "/workspace/LLaMA-Factory/src/train.py",
-        "/workspace/configs/generated/gemma2b-dpo.yaml",
-    ]
-    result = subprocess.run(train_cmd, capture_output=True, text=True, timeout=7200, cwd="/srv/spark-maker")
-    if result.returncode != 0:
-        raise RuntimeError(f"DPO training failed:\n{result.stderr[-1000:]}")
+    hf_token = os.environ.get("HF_TOKEN") or os.environ.get("HUGGINGFACE_TOKEN") or ""
+    tok_kwargs = {"trust_remote_code": True}
+    if hf_token:
+        tok_kwargs["token"] = hf_token
 
     if progress_callback:
-        for line in result.stdout.strip().split("\n")[-50:]:
-            progress_callback(line)
-    return output_dir
+        progress_callback(f"Loading tokenizer: {student_model}")
+    tokenizer = AutoTokenizer.from_pretrained(student_model, **tok_kwargs)
+    if tokenizer.pad_token is None:
+        tokenizer.add_special_tokens({"pad_token": "[PAD]"})
+
+    # Load DPO dataset
+    pairs = []
+    with open(dpo_dataset) as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                pairs.append(json.loads(line))
+    n_eval = max(20, int(len(pairs) * 0.1))
+    train_ds = Dataset.from_list(pairs[:-n_eval])
+    eval_ds  = Dataset.from_list(pairs[-n_eval:])
+    if progress_callback:
+        progress_callback(f"DPO dataset: {len(train_ds)} train / {len(eval_ds)} eval pairs")
+
+    # Load student model
+    model_kwargs = {"device_map": "auto", "trust_remote_code": True, "torch_dtype": torch.bfloat16}
+    if hf_token:
+        model_kwargs["token"] = hf_token
+    try:
+        import bitsandbytes  # noqa
+        from transformers import BitsAndBytesConfig
+        model_kwargs["quantization_config"] = BitsAndBytesConfig(
+            load_in_4bit=True, bnb_4bit_quant_type="nf4",
+            bnb_4bit_compute_dtype=torch.bfloat16, bnb_4bit_use_double_quant=True,
+        )
+        del model_kwargs["torch_dtype"]
+        if progress_callback:
+            progress_callback("Loading student in 4-bit QLoRA mode")
+    except ImportError:
+        if progress_callback:
+            progress_callback("bitsandbytes not available — loading student in BF16")
+
+    model = AutoModelForCausalLM.from_pretrained(student_model, **model_kwargs)
+    if len(tokenizer) > model.config.vocab_size:
+        model.resize_token_embeddings(len(tokenizer))
+
+    lora_cfg = LoraConfig(
+        task_type=TaskType.CAUSAL_LM, r=16, lora_alpha=32, lora_dropout=0.05, bias="none",
+        target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
+    )
+    model = get_peft_model(model, lora_cfg)
+    model.config.use_cache = False
+    model.print_trainable_parameters()
+
+    out = Path(output_dir)
+    out.mkdir(parents=True, exist_ok=True)
+
+    dpo_config = DPOConfig(
+        output_dir=str(out),
+        num_train_epochs=epochs,
+        per_device_train_batch_size=1,
+        gradient_accumulation_steps=16,
+        learning_rate=5e-5,
+        bf16=True,
+        warmup_steps=10,
+        max_length=512,           # longer than SFT — DPO pairs include prompt + chosen/rejected
+        max_prompt_length=256,
+        logging_steps=5,
+        eval_strategy="steps",
+        eval_steps=50,
+        save_strategy="no",
+        report_to="none",
+        gradient_checkpointing=True,
+        optim="paged_adamw_32bit" if "bitsandbytes" in sys.modules else "adamw_torch",
+    )
+
+    trainer = DPOTrainer(
+        model=model,
+        args=dpo_config,
+        train_dataset=train_ds,
+        eval_dataset=eval_ds,
+        processing_class=tokenizer,
+    )
+
+    if progress_callback:
+        progress_callback("Starting DPO training...")
+    trainer.train()
+
+    trainer.save_model(str(out))
+    tokenizer.save_pretrained(str(out))
+    if progress_callback:
+        progress_callback(f"DPO training complete. Adapter saved to {out}")
+    return str(out)
 
 
 # ── Textual App ────────────────────────────────────────────────────────────────

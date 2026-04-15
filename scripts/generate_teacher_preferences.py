@@ -263,7 +263,7 @@ def generate_preferences(
         ]
 
         try:
-            response = client(messages, model=teacher_model, temperature=0.3, max_tokens=256)
+            response = client(messages, model=teacher_model, temperature=0.3, max_tokens=350)
         except Exception as e:
             return {"error": str(e), "pair_id": pair.get("id")}
 
