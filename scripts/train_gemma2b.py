@@ -216,6 +216,7 @@ def train(
     trainer.model.config.use_cache = False
 
     # Snapshot loss before training (baseline)
+    baseline_loss = None  # init: set to None, computed below if resuming from scratch
     if resume_from is None:
         print("  Running baseline eval (first 50 samples)...")
         # Simple eval: compute loss on first 50 samples without grad

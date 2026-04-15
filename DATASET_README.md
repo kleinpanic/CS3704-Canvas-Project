@@ -97,10 +97,15 @@ python3 scripts/collect_rerank_dataset.py clean \
     --input data/collab/rerank_merged.jsonl \
     --output data/collab/rerank_clean.jsonl
 
-# Step 7: Export for Gemma 2B training
+# Step 7: Export for Gemma 2B training (SFT)
 python3 scripts/collect_rerank_dataset.py export-sft \
     --input data/collab/rerank_clean.jsonl \
     --output data/rerank_sft.jsonl
+
+# Step 7b: Export for Path B DPO distillation (optional)
+python3 scripts/collect_rerank_dataset.py export-dpo \
+    --input data/collab/rerank_clean.jsonl \
+    --output data/rerank_dpo.jsonl
 
 # Step 8: Train (see Gemma2B-Reranker/plans/PLAN.md)
 ```

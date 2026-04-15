@@ -51,12 +51,12 @@ except ImportError:
 
 class Step(Enum):
     IDLE = auto()
-    UNLOAD_NEMTORON = auto()
+    UNLOAD_NEMOTRON = auto()
     LOAD_TEACHER = auto()
     GENERATE_PREFERENCES = auto()
     LOAD_STUDENT = auto()
     DPO_TRAIN = auto()
-    RESTART_NEMTORON = auto()
+    RESTART_NEMOTRON = auto()
     DONE = auto()
     ERROR = auto()
 
@@ -78,7 +78,7 @@ class PipelineState:
     generation_total: int = 0
     train_progress: float = 0.0
     # Forge slot tracking
-    nemtron_slot: int = 0
+    nemotron_slot: int = 0
     teacher_slot: int = 0
     student_slot: int = 0
     # Resume
@@ -246,12 +246,12 @@ def run_dpo_training(
 
 STEPS = [
     (Step.IDLE,              "Ready",                     "Configure and start the pipeline"),
-    (Step.UNLOAD_NEMTORON,   "Unloading Nemotron",         "Stopping Nemotron to free ~58GB"),
+    (Step.UNLOAD_NEMOTRON,   "Unloading Nemotron",         "Stopping Nemotron to free ~58GB"),
     (Step.LOAD_TEACHER,      "Loading Gemma-4-31B Teacher","Loading teacher model into vLLM slot"),
     (Step.GENERATE_PREFERENCES, "Generating Preferences",  "Labeling pairs with teacher model"),
     (Step.LOAD_STUDENT,      "Loading Gemma-2B Student",   "Preparing student model for DPO"),
     (Step.DPO_TRAIN,         "DPO Training",               "Training student on synthetic preferences"),
-    (Step.RESTART_NEMTORON,  "Restarting Nemotron",         "Reloading Nemotron for inference"),
+    (Step.RESTART_NEMOTRON,  "Restarting Nemotron",         "Reloading Nemotron for inference"),
     (Step.DONE,              "Complete",                    "Pipeline finished successfully"),
     (Step.ERROR,             "Error",                      "Pipeline encountered an error"),
 ]
@@ -423,7 +423,7 @@ Button {
         try:
             # ── Step 1: Unload Nemotron ────────────────────────────────────
             if not self.state.restart_done:
-                self._set_step(Step.UNLOAD_NEMTORON, "Unloading Nemotron...")
+                self._set_step(Step.UNLOAD_NEMOTRON, "Unloading Nemotron...")
                 self._log("[1/6] Unloading Nemotron from slot 0...")
                 self._log("  (Freeing ~58GB for teacher + student models)")
                 ok = forge_unload(slot=0)
@@ -490,7 +490,7 @@ Button {
             self.state.save(self.state_path)
 
             # ── Step 5: Restart Nemotron ─────────────────────────────────────
-            self._set_step(Step.RESTART_NEMTORON, "Restarting Nemotron...")
+            self._set_step(Step.RESTART_NEMOTRON, "Restarting Nemotron...")
             self._log(f"\n[5/6] Restarting Nemotron inference...")
             nem_model = "nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-NVFP4"
             ok = forge_load(nem_model, slot=0)
@@ -548,7 +548,7 @@ Button {
             self._log("ERROR: --dataset required")
             return
         self.state.started_at = datetime.now(timezone.utc).isoformat()
-        self.state.step = Step.UNLOAD_NEMTORON.name
+        self.state.step = Step.UNLOAD_NEMOTRON.name
         self.state.error = ""
         self.state.save(self.state_path)
         self._run_async(self._run_pipeline())
@@ -564,7 +564,7 @@ Button {
         log_widget = self.query_one("#log", RichLog)
         log_widget.clear()
 
-    def on_button_pressed(self, event: events.ButtonPressed):
+    def on_button_pressed(self, event: events.Click):
         btn_id = event.button.id
         if btn_id == "btn-start":
             self.action_start()
