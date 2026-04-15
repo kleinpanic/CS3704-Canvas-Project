@@ -208,7 +208,7 @@ def train(
         args=training_args,
         train_dataset=train_data,
         processing_class=tokenizer,
-        formatting_func=format_sample,
+        formatting_func=lambda x: x["text"],
     )
 
     # Suppress SDPA flash attention warning
