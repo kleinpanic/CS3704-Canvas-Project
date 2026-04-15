@@ -10,8 +10,26 @@ permissions:
   pull-requests: write
 
 jobs:
+  # Gate job always runs — prevents GitHub from marking the workflow as "failure"
+  # when CI passes (no fixup needed). Sets output for the fixup job.
+  gate:
+    runs-on: ubuntu-latest
+    outputs:
+      should_fix: ${{ steps.check.outputs.should_fix }}
+    steps:
+      - id: check
+        run: |
+          if [ "${{ github.event.workflow_run.conclusion }}" = "failure" ]; then
+            echo "should_fix=true" >> $GITHUB_OUTPUT
+            echo "CI failed — fixup will run"
+          else
+            echo "should_fix=false" >> $GITHUB_OUTPUT
+            echo "CI passed — no fixup needed"
+          fi
+
   ai-fixup:
-    if: github.event.workflow_run.conclusion == 'failure'
+    needs: gate
+    if: needs.gate.outputs.should_fix == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -75,5 +93,5 @@ jobs:
         env:
           HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
         run: |
-          PR_NUM=$(gh pr list --head "$HEAD_BRANCH" --json number --jq \'.[0].number\')
+          PR_NUM=$(gh pr list --head "$HEAD_BRANCH" --json number --jq '.[0].number')
           if [ -n "$PR_NUM" ]; then gh pr comment "$PR_NUM" --body "AI Fixup: review fixup branch and merge to resolve CI"; fi
