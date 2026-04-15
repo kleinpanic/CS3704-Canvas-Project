@@ -330,7 +330,7 @@ def cmd_generate(args):
     if not token: sys.exit("ERROR: Set CANVAS_TOKEN env var")
     print("Fetching courses...")
     courses = canvas_api("courses")
-    CANVAS_COURSE_IDS = {c.get("id"): COURSE_CODE_OVERRIDES.get(c.get("id")) or c.get("course_code","COURSE"+str(c.get("id","")[-3:])) for c in courses}
+    CANVAS_COURSE_IDS = {c.get("id"): COURSE_CODE_OVERRIDES.get(c.get("id")) or c.get("course_code","COURSE"+str(c.get("id") or "")[-3:]) for c in courses}
     if args.courses:
         for cid in args.courses:
             CANVAS_COURSE_IDS[cid] = CANVAS_COURSE_IDS.get(cid, "COURSE"+str(cid%999))
