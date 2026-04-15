@@ -166,7 +166,8 @@ def generate_teacher_preferences(dpo_path: str, output_path: str) -> bool:
         sys.executable, "scripts/generate_teacher_preferences.py",
         "--input", dpo_path,
         "--output", output_path,
-        "--teacher", "nvidia/Gemma-4-31B-IT-NVFP4",
+        "--teacher-endpoint", "http://localhost:8000/v1",
+        "--teacher-model", "nvidia/Gemma-4-31B-IT-NVFP4",
     ], timeout=7200)
     if r.returncode != 0:
         log(f"Teacher labeling failed: {r.stderr}")
@@ -177,9 +178,9 @@ def generate_teacher_preferences(dpo_path: str, output_path: str) -> bool:
 def run_dpo_training(teacher_prefs_path: str, student_model: str, output_path: str) -> bool:
     """Run DPO distillation on the student model."""
     log(f"RUNNING DPO distillation: teacher={teacher_prefs_path}")
-    # Use the Path B TUI for DPO if available
     r = run_cmd([
         sys.executable, "scripts/path_b_tui.py",
+        "--headless",
         "--state", str(Path(output_path).parent / "path_b_state.json"),
         "--output", output_path,
         "--dataset", teacher_prefs_path,
@@ -198,7 +199,7 @@ def main():
     p.add_argument("--test-data", default=None, help="Path to rerank_test.jsonl (auto-find if omitted)")
     p.add_argument("--output", default="/srv/spark-maker/output/pipeline", help="Output base dir")
     p.add_argument("--teacher", default="nvidia/Gemma-4-31B-IT-NVFP4", help="Teacher model")
-    p.add_argument("--student", default="google/gemma-2b-it", help="Student model")
+    p.add_argument("--student", default="google/gemma-4-2b-it", help="Student model")
     p.add_argument("--skip-path-a", action="store_true", help="Skip Path A QLoRA")
     p.add_argument("--skip-path-b", action="store_true", help="Skip Path B DPO")
     p.add_argument("--state", default="/tmp/pipeline_state.json", help="State file for resume")
