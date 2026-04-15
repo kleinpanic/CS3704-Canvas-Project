@@ -49,7 +49,7 @@ jobs:
           wc -l docs-output.txt >> $GITHUB_OUTPUT
 
       - name: Create auto-docs PR
-        if: steps.generate.outputs.stdout != ''
+        if: steps.scan.outputs.MISSING_MODULES != ''
         run: |
           if [ ! -s docs-output.txt ]; then exit 0; fi
           BRANCH="auto-docs/$(date +%Y%m%d-%H%M%S)"
