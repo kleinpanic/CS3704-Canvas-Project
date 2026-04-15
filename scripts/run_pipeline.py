@@ -198,6 +198,12 @@ def main():
     state.teacher_model = args.teacher
     state.student_model = args.student
 
+    Path(args.output).mkdir(parents=True, exist_ok=True)
+    Path(args.output, "path_a1").mkdir(exist_ok=True)
+    Path(args.output, "path_a2").mkdir(exist_ok=True)
+    Path(args.output, "path_b").mkdir(exist_ok=True)
+    Path(args.output, "benchmarks").mkdir(exist_ok=True)
+
     log_file = args.log or str(Path(args.output) / "pipeline.log")
 
     if state.started_at == "":
@@ -220,13 +226,6 @@ def main():
             log(f"WARNING: test data not found at {test_data}", log_file)
 
     log(f"Test data: {test_data}", log_file)
-
-    # Auto-create subdirs
-    Path(args.output).mkdir(parents=True, exist_ok=True)
-    Path(args.output, "path_a1").mkdir(exist_ok=True)
-    Path(args.output, "path_a2").mkdir(exist_ok=True)
-    Path(args.output, "path_b").mkdir(exist_ok=True)
-    Path(args.output, "benchmarks").mkdir(exist_ok=True)
 
     results = {}
     errors = []

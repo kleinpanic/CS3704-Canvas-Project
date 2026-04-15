@@ -414,6 +414,48 @@ def cmd_split(args):
             for item in data: f.write(json.dumps(item) + "\n")
         print("[SPLIT] Wrote: " + str(p) + " (" + str(p.stat().st_size//1024) + "KB)")
 
+def cmd_expand_benchmark(args):
+    """Add 12 new adversarial/edge-case query types to existing test data."""
+    new_queries = [
+        "Which is a last-minute emergency?",
+        "What would a professor expect me to prioritize?",
+        "Which assignment is worth the most relative to others?",
+        "What can I safely skip if I run out of time?",
+        "Which item has no submission yet and is long overdue?",
+        "What's the highest-value task I should start?",
+        "Which exam is most imminent?",
+        "What requires the most time to complete?",
+        "What's closing soon and worth significant points?",
+        "What has the lowest urgency but highest grade impact?",
+        "Which assignment has the strictest type urgency?",
+        "What should I tackle after 10pm?",
+    ]
+    pairs = [json.loads(l) for l in open(args.input) if l.strip()]
+    new_pairs = []
+    for qi, query in enumerate(new_queries):
+        count = 0
+        for pi, pair in enumerate(pairs):
+            if pi % len(new_queries) == qi % len(pairs):
+                new_pair = dict(pair)
+                new_pair["id"] = f"exp{qi:02d}_{pi:04d}"
+                new_pair["query"] = query
+                new_pair["pair_type"] = "expanded_adversarial"
+                new_pairs.append(new_pair)
+                count += 1
+                if count >= 16:  # ~16 pairs per new query for even distribution
+                    break
+    all_pairs = pairs + new_pairs
+    Path(args.output).parent.mkdir(parents=True, exist_ok=True)
+    with open(args.output, "w") as f:
+        for p in all_pairs: f.write(json.dumps(p) + "\n")
+    q_counts = {}
+    for p in all_pairs:
+        q = p["query"]; q_counts[q] = q_counts.get(q, 0) + 1
+    print("[EXPAND] +" + str(len(new_pairs)) + " pairs across " + str(len(new_queries)) + " queries -> " + str(args.output))
+    print("[EXPAND] Total: " + str(len(all_pairs)) + " pairs | " + str(len(q_counts)) + " unique queries")
+    for q, c in sorted(q_counts.items(), key=lambda x: -x[1]):
+        print("  [" + str(c) + "] " + q)
+
 def cmd_anonymize(args):
     pairs = [json.loads(l) for l in open(args.input) if l.strip()]
     print("[ANON] Loaded: " + str(len(pairs)) + " pairs")
@@ -464,9 +506,17 @@ def parse_args():
     c.add_argument("--input", required=True); c.add_argument("--output", required=True); c.set_defaults(fn=cmd_clean)
 
     sp = sub.add_parser("split", help="Stratified train/test split")
-    sp.add_argument("--input", required=True); sp.add_argument("--train", required=True)
-    sp.add_argument("--test", required=True); sp.add_argument("--test-frac", type=float, default=0.1)
-    sp.add_argument("--seed", type=int, default=42); sp.set_defaults(fn=cmd_split)
+    sp.add_argument("--input", required=True)
+    sp.add_argument("--train", default="data/rerank_train.jsonl")
+    sp.add_argument("--test", default="data/rerank_test.jsonl")
+    sp.add_argument("--seed", type=int, default=42)
+    sp.add_argument("--test-frac", type=float, default=0.1)
+    sp.set_defaults(fn=cmd_split)
+
+    ep = sub.add_parser("expand-benchmark", help="Add new query types to test set for richer benchmarks")
+    ep.add_argument("--input", required=True, help="Existing test set")
+    ep.add_argument("--output", required=True, help="Expanded output path")
+    ep.set_defaults(fn=cmd_expand_benchmark)
 
     a = sub.add_parser("anonymize", help="Anonymize for safe publication")
     a.add_argument("--input", required=True); a.add_argument("--output", required=True); a.set_defaults(fn=cmd_anonymize)
