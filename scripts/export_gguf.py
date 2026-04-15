@@ -10,7 +10,7 @@ Usage:
     docker compose run --rm trainer \
         python3 /workspace/scripts/export_gguf.py \
             --adapter /workspace/outputs/gemma2b-reranker \
-            --base-model google/gemma-2b-it \
+            --base-model nvidia/Qwen3-8B-NVFP4 \
             --output /workspace/gemma2b-reranker/data/gemma-2b-reranker-Q4_K_M.gguf
 
     # Option B: via Python directly
@@ -43,7 +43,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 
 warnings.filterwarnings("ignore")
 
-BASE_MODEL = "google/gemma-2b-it"
+BASE_MODEL = "nvidia/Qwen3-8B-NVFP4"
 
 # GGUF quantization type → llama.cpp argument
 # Q4_K_M: 4-bit with medium quantization — good quality/size tradeoff for reranking
@@ -150,7 +150,7 @@ def parse_args():
     p.add_argument("--adapter", required=True,
                    help="Path to LoRA adapter directory")
     p.add_argument("--base-model", default=BASE_MODEL,
-                   help="HF model ID (default: google/gemma-2b-it)")
+                   help="HF model ID (default: nvidia/Qwen3-8B-NVFP4)")
     p.add_argument("--output", required=True,
                    help="Output GGUF file path")
     p.add_argument("--quant", default="Q4_K_M",

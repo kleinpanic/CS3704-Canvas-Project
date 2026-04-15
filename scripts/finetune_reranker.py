@@ -16,7 +16,7 @@ Usage:
 Requirements:
     - brev CLI configured
     - brev python package installed
-    - Gemma 2B model on HuggingFace (google/gemma-2b-it)
+    - Gemma 2B model on HuggingFace (nvidia/Qwen3-8B-NVFP4)
 """
 
 from __future__ import annotations
@@ -30,7 +30,7 @@ from pathlib import Path
 
 REPO_DIR = Path("__REPO_ROOT__/")
 DATA_DIR = REPO_DIR / "data"
-MODEL_NAME = "google/gemma-2b-it"  # Gemma 2B — 8B needs ~16GB VRAM; 2B at 4-bit fits on L4/RTX4000
+MODEL_NAME = "nvidia/Qwen3-8B-NVFP4"  # Gemma 2B — 8B needs ~16GB VRAM; 2B at 4-bit fits on L4/RTX4000
 OUTPUT_DIR = DATA_DIR / "reranker_model"
 TRAIN_DATA = DATA_DIR / "rerank_train.jsonl"
 AUGMENTED_DATA = DATA_DIR / "rerank_train_augmented.jsonl"
