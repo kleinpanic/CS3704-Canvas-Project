@@ -172,14 +172,16 @@ def train(
     # ── Model with QLoRA ────────────────────────────────────────────────────────
     print("[3/5] Loading model with QLoRA config...")
     # bnb_config = get_bnb_config()  # disabled: load BF16 directly (GB10 has 130GB VRAM)
+    # Override model_type so Llama architecture is used (nvidia FP4 variants have qwen3 in config)
+    override_config = config
+    override_config.model_type = "llama"
+    override_config._attn_implementation = "eager"
     from transformers import AutoModelForCausalLM
     model = AutoModelForCausalLM.from_pretrained(
         BASE_MODEL,
-        # quantization_config=bnb_config,  # disabled
+        config=override_config,
         device_map="auto",
-        trust_remote_code=True,
-        dtype=torch.bfloat16,
-        attn_implementation="eager",   # Gemma 2B works with eager; sdpa can sometimes have issues
+        torch_dtype=torch.bfloat16,
     )
 
     # Print trainable param count
