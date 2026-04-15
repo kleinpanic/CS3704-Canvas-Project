@@ -1,6 +1,8 @@
 name: CI
 
 on:
+  push:
+    branches: [main]
   pull_request:
     branches: [main]
 
@@ -48,6 +50,11 @@ jobs:
 
       - name: Coverage threshold
         run: |
+          # On direct push to main, skip threshold (coverage.yml handles it)
+          if [ "${{ github.event_name }}" = "push" ]; then
+            echo "Push to main — coverage threshold check skipped (see coverage.yml)"
+            exit 0
+          fi
           # Bypass: any PR with "#no-coverage-check" in description skips threshold
           PR_BODY="${{ github.event.pull_request.body }}"
           if echo "$PR_BODY" | grep -qi "no-coverage-check"; then
