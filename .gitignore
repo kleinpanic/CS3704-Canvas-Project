@@ -45,3 +45,19 @@ state.json
 cache/
 *.log
 data/rerank_train*.jsonl
+
+# ─── Gemma 2B Reranker / Dataset Pipeline ─────────────────────────────────────
+# Generated training data — NEVER commit these
+data/collab/*.jsonl
+data/rerank_*.jsonl
+rerank_*.jsonl
+outputs/
+*.gguf
+*.safetensors
+
+# Model checkpoints
+checkpoints/
+adapter_model.safetensors
+
+# Local Spark data (contains private API tokens)
+spark-maker-data/
