@@ -2,7 +2,7 @@
 """
 Gemma 2B Reranker — QLoRA Fine-Tune Script
 ===========================================
-Trains google/gemma-2b-it as a Canvas priority reranker using QLoRA + SFTTrainer.
+Trains nvidia/Qwen3-8B-NVFP4 as a Canvas priority reranker using QLoRA + SFTTrainer.
 
 Hardware: NVIDIA DGX Spark GB10 (128GB UMA) or any GPU with >= 16GB total memory.
           QLoRA 4-bit NF4 fits comfortably — Gemma 2B base is ~2.5GB, + 4-bit = ~1.3GB.
@@ -63,7 +63,7 @@ except ImportError:
 warnings.filterwarnings("ignore", category=FutureWarning)
 
 # ── Model & Training Config ────────────────────────────────────────────────────
-BASE_MODEL = "google/gemma-2b-it"
+BASE_MODEL = "nvidia/Qwen3-8B-NVFP4"
 
 LORA_CONFIG = LoraConfig(
     task_type=TaskType.CAUSAL_LM,
