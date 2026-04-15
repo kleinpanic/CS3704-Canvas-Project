@@ -19,8 +19,11 @@ from collect_rerank_dataset import (
 )
 from run_pipeline import PipelineState
 
-# Data lives in Gemma2B-Reranker
-DATA_DIR = Path("/home/broklein/codeWS/Gemma2B-Reranker/data")
+# Data directory: env var > project-relative reranker/data > legacy Gemma2B-Reranker path
+DATA_DIR = Path(
+    os.environ.get("RERANKER_DATA_DIR")
+    or (Path(__file__).parent.parent / "reranker" / "data")
+)
 
 
 # ── Heuristic Weight Tests ──────────────────────────────────────────────────

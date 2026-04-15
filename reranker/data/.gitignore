@@ -1,0 +1,8 @@
+# Reranker training data — contains Canvas PII, never commit
+# To run tests locally: populate this dir with data from Gemma2B-Reranker/data/
+# or set RERANKER_DATA_DIR env var to point at your local data.
+*.jsonl
+*.gguf
+*.safetensors
+collab/
+outputs/

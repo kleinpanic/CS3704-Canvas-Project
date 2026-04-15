@@ -47,10 +47,14 @@ cache/
 data/rerank_train*.jsonl
 
 # ─── Gemma 2B Reranker / Dataset Pipeline ─────────────────────────────────────
-# Generated training data — NEVER commit these
+# Training data contains Canvas PII — NEVER commit
 data/collab/*.jsonl
 data/rerank_*.jsonl
 rerank_*.jsonl
+# Reranker subdir data (same rules — local only)
+reranker/data/*.jsonl
+reranker/data/collab/
+reranker/outputs/
 outputs/
 *.gguf
 *.safetensors
