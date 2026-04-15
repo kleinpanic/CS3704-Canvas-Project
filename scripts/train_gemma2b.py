@@ -193,7 +193,7 @@ def train(
         num_train_epochs=epochs,
         max_steps=-1,
         save_strategy="no",             # We save manually after training
-        save_safetensors=True,
+        save_only_model=True,
         dataloader_num_workers=2,
         remove_unused_columns=False,
         **SFT_ARGS,
