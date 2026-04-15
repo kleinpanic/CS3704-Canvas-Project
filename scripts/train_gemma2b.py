@@ -247,7 +247,10 @@ def train(
         }))
 
     # Train
-    trainer.train(resume_from_adapter=resume_from)
+    if resume_from is not None:
+        trainer.train(resume_from_checkpoint=resume_from)
+    else:
+        trainer.train()
 
     # ── Save ────────────────────────────────────────────────────────────────────
     print("[5/5] Saving adapter...")
