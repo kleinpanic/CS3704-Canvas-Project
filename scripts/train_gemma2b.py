@@ -93,7 +93,7 @@ def get_bnb_config():
 SFT_ARGS = {
     "per_device_train_batch_size": 1,     # Gemma 2B is small; batch 1 is fine
     "gradient_accumulation_steps": 16,   # effective batch = 16 × 1 = 16
-    "warmup_ratio": 0.03,
+    "warmup_steps": 3,
     "learning_rate": 2e-4,
     "weight_decay": 0.01,
     "fp16": False,
@@ -165,6 +165,8 @@ def train(
     print("[2/5] Loading dataset...")
     raw_data = load_sft_data(data_path)
     train_data = [format_sample(ex) for ex in raw_data]
+    from datasets import Dataset
+    train_data = Dataset.from_list(train_data)
     print(f"  Loaded {len(train_data)} training examples")
 
     # ── Model with QLoRA ────────────────────────────────────────────────────────
@@ -176,7 +178,7 @@ def train(
         quantization_config=bnb_config,
         device_map="auto",
         trust_remote_code=True,
-        torch_dtype=torch.bfloat16,
+        dtype=torch.bfloat16,
         attn_implementation="eager",   # Gemma 2B works with eager; sdpa can sometimes have issues
     )
 
