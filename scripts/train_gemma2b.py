@@ -216,10 +216,11 @@ def train(
 
     # Snapshot loss before training (baseline)
     baseline_loss = None  # init: set to None, computed below if resuming from scratch
+    # Snapshot loss before training (baseline) — must be BEFORE SFTTrainer processes data
+    baseline_loss = None
     if resume_from is None:
         print("  Running baseline eval (first 50 samples)...")
-        # Simple eval: compute loss on first 50 samples without grad
-        sample_texts = [d["text"] for d in train_data[:50]]
+        sample_texts = [train_data[i]["text"] for i in range(min(50, len(train_data)))]
         encs = tokenizer(sample_texts, return_tensors="pt", truncation=True,
                          max_length=max_seq_len, padding=True)
         with torch.no_grad():
