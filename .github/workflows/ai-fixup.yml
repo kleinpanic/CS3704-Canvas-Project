@@ -9,7 +9,6 @@ on:
   workflow_run:
     workflow: CI
     types: [completed]
-    branches-ignore: [main, master]
 
 permissions:
   contents: write
@@ -17,19 +16,19 @@ permissions:
 
 jobs:
   ai-fixup:
-    if: github.event.workflow_run.conclusion == 'failure'
+    if: github.event.workflow_run.conclusion == 'failure' && github.event.workflow_run.head_branch != 'main' && github.event.workflow_run.head_branch != 'master'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - name: Checkout PR branch
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
         with:
           ref: ${{ github.event.workflow_run.head_branch }}
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
