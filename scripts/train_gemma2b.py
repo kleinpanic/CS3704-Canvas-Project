@@ -159,6 +159,7 @@ def train(
         tokenizer.pad_token = tokenizer.eos_token
     if tokenizer.pad_token_id is None:
         tokenizer.pad_token_id = tokenizer.eos_token_id
+    tokenizer.model_max_length = max_seq_len
 
     # ── Data ───────────────────────────────────────────────────────────────────
     print("[2/5] Loading dataset...")
@@ -191,7 +192,6 @@ def train(
         output_dir=str(output_path),
         num_train_epochs=epochs,
         max_steps=-1,
-        max_seq_length=max_seq_len,
         save_strategy="no",             # We save manually after training
         save_safetensors=True,
         dataloader_num_workers=2,
@@ -205,11 +205,8 @@ def train(
         model=model,
         args=training_args,
         train_dataset=train_data,
-        tokenizer=tokenizer,
-        max_seq_length=max_seq_len,
-        dataset_text_field="text",
-        packing=True,                   # pack shorter sequences for efficiency
-        format_prompt_forGeneration=False,
+        processing_class=tokenizer,
+        formatting_func=format_sample,
     )
 
     # Suppress SDPA flash attention warning
