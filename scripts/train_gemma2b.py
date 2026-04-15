@@ -173,6 +173,8 @@ def train(
     print("[3/5] Loading model with QLoRA config...")
     # bnb_config = get_bnb_config()  # disabled: load BF16 directly (GB10 has 130GB VRAM)
     # Override model_type so Llama architecture is used (nvidia FP4 variants have qwen3 in config)
+    from transformers import AutoConfig
+    config = AutoConfig.from_pretrained(BASE_MODEL)
     override_config = config
     override_config.model_type = "llama"
     override_config._attn_implementation = "eager"
