@@ -2,10 +2,10 @@
 """
 Gemma 2B Reranker — QLoRA Fine-Tune Script
 ===========================================
-Trains nvidia/Llama-3.1-8B-Instruct-FP4 as a Canvas priority reranker using QLoRA + SFTTrainer.
+Trains google/gemma-2b-it as a Canvas priority reranker using QLoRA + SFTTrainer.
 
-Hardware: NVIDIA DGX Spark GB10 (128GB UMA) or any GPU with >= 16GB total memory.
-          QLoRA 4-bit NF4 fits comfortably — Gemma 2B base is ~2.5GB, + 4-bit = ~1.3GB.
+Hardware: NVIDIA DGX Spark GB10 (128GB UMA) or any GPU with >= 8GB total memory.
+          BF16 loading: ~4.5GB VRAM. Fits alongside Nemotron on GB10 with headroom.
 
 Usage:
     # Option A: via Spark trainer container (preferred on Spark)
@@ -63,7 +63,7 @@ except ImportError:
 warnings.filterwarnings("ignore", category=FutureWarning)
 
 # ── Model & Training Config ────────────────────────────────────────────────────
-BASE_MODEL = "nvidia/Llama-3.1-8B-Instruct-FP4"
+BASE_MODEL = "google/gemma-2b-it"
 
 LORA_CONFIG = LoraConfig(
     task_type=TaskType.CAUSAL_LM,
@@ -171,20 +171,12 @@ def train(
 
     # ── Model with QLoRA ────────────────────────────────────────────────────────
     print("[3/5] Loading model with QLoRA config...")
-    # bnb_config = get_bnb_config()  # disabled: load BF16 directly (GB10 has 130GB VRAM)
-    # Override model_type so Llama architecture is used (nvidia FP4 variants have qwen3 in config)
-    from transformers import AutoConfig
-    config = AutoConfig.from_pretrained(BASE_MODEL)
-    override_config = config
-    override_config.model_type = "llama"
-    override_config._attn_implementation = "eager"
     from transformers import AutoModelForCausalLM
     model = AutoModelForCausalLM.from_pretrained(
         BASE_MODEL,
-        config=override_config,
         device_map="auto",
         torch_dtype=torch.bfloat16,
-        ignore_mismatched_sizes=True,  # Allow loading despite FP4 quantization dimension mismatches
+        trust_remote_code=True,
     )
 
     # Print trainable param count

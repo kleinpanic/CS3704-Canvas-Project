@@ -38,7 +38,7 @@ class PipelineState:
     output_dir: str = ""
     data_path: str = ""
     teacher_model: str = "nvidia/Gemma-4-31B-IT-NVFP4"
-    student_model: str = "nvidia/Llama-3.1-8B-Instruct-FP4"
+    student_model: str = "google/gemma-2b-it"
     adapter_a1: str = ""
     adapter_a2: str = ""
     adapter_b: str = ""
@@ -198,7 +198,7 @@ def main():
     p.add_argument("--test-data", default=None, help="Path to rerank_test.jsonl (auto-find if omitted)")
     p.add_argument("--output", default="/srv/spark-maker/output/pipeline", help="Output base dir")
     p.add_argument("--teacher", default="nvidia/Gemma-4-31B-IT-NVFP4", help="Teacher model")
-    p.add_argument("--student", default="nvidia/Llama-3.1-8B-Instruct-FP4", help="Student model")
+    p.add_argument("--student", default="google/gemma-2b-it", help="Student model")
     p.add_argument("--skip-path-a", action="store_true", help="Skip Path A QLoRA")
     p.add_argument("--skip-path-b", action="store_true", help="Skip Path B DPO")
     p.add_argument("--state", default="/tmp/pipeline_state.json", help="State file for resume")
