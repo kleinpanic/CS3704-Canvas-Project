@@ -256,7 +256,26 @@ def format_for_dpo(pairs: list[dict]) -> list[dict]:
             "Item B: " + serialize_item(p["item_b"])
         )
         chosen   = "Item " + winner + " is more urgent. " + p["reason"]
-        rejected = "Item " + loser + " is less urgent."
+        # Build a plausible-but-wrong rejected response from the loser item's attributes
+        loser_item = p["item_b"] if winner == "A" else p["item_a"]
+        winner_item = p["item_a"] if winner == "A" else p["item_b"]
+        alt = []
+        lp = loser_item.get("points_possible", 0)
+        wp = winner_item.get("points_possible", 0)
+        lt = loser_item.get("type", "")
+        if lp > wp:
+            alt.append(f"it is worth {lp} points versus {wp} points")
+        if lt in ("exam", "midterm", "final"):
+            alt.append("it is an exam requiring more preparation time")
+        elif lt == "quiz":
+            alt.append("it is a quiz with a strict time window")
+        lu = p.get("urgency_b" if winner == "A" else "urgency_a", 0)
+        wu = p.get("urgency_a" if winner == "A" else "urgency_b", 0)
+        if lu > 0 and wu > 0:
+            alt.append(f"its urgency score ({lu:.1f}) suggests it cannot be delayed")
+        if not alt:
+            alt = ["it has an earlier listed deadline and cannot be rescheduled"]
+        rejected = "Item " + loser + " is more urgent because " + " and ".join(alt) + "."
         formatted.append({
             "prompt": prompt, "chosen": chosen, "rejected": rejected,
             "id": p.get("id",""), "pair_type": p.get("pair_type","standard"),
