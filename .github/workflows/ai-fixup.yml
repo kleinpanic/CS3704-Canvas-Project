@@ -1,0 +1,12 @@
+name: AI Fixup
+
+on:
+  workflow_run:
+    workflow: CI
+    types: [completed]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hello
