@@ -1,0 +1,22 @@
+name: AI Fixup
+
+on:
+  workflow_run:
+    workflow: CI
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  ai-fixup:
+    if: github.event.workflow_run.conclusion == 'failure'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Diagnostic gate
+        run: |
+          echo "BRANCH=${{ github.event.workflow_run.head_branch }}"
+          echo "CONCLUSION=${{ github.event.workflow_run.conclusion }}"
+          echo "EVENT=${{ github.event.type }}"
