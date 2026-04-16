@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - name: Gate: skip on main/master or if CI passed
+      - name: "Gate: skip on main/master or if CI passed"
         id: gate
         run: |
           CONCLUSION="${{ github.event.workflow_run.conclusion }}"
