@@ -56,7 +56,8 @@ def main():
             print(content, end="")
     except Exception as e:
         print(f"# NEMOTRON_ERROR: {e}", file=sys.stderr)
-        sys.exit(1)
+        # Exit 0 so the workflow step can handle gracefully — do NOT fail the job
+        sys.exit(0)
 
 
 if __name__ == "__main__":

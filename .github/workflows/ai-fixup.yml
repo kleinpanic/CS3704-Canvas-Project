@@ -1,9 +1,8 @@
 name: AI Fixup
 
-# Only fires when CI fails on a PR branch — never on main.
-# Severity-gated: only attempts a fix for egregious failures
-# (syntax errors, import errors, crashes, >5 test errors).
-# Minor failures (1-2 flaky tests, coverage threshold) are logged and skipped.
+# Only fires when CI completes on a PR branch.
+# Gates internally: skips on main/master, skips if CI passed, severity-gates fix attempts.
+# Spark/unreachable failures exit gracefully (job succeeds, no crash).
 
 on:
   workflow_run:
@@ -16,11 +15,31 @@ permissions:
 
 jobs:
   ai-fixup:
-    if: github.event.workflow_run.conclusion == 'failure' && github.event.workflow_run.head_branch != 'main' && github.event.workflow_run.head_branch != 'master'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
+      - name: Gate: skip on main/master or if CI passed
+        id: gate
+        run: |
+          CONCLUSION="${{ github.event.workflow_run.conclusion }}"
+          HEAD_BRANCH="${{ github.event.workflow_run.head_branch }}"
+          echo "ci_conclusion=$CONCLUSION" >> $GITHUB_OUTPUT
+          echo "ci_branch=$HEAD_BRANCH" >> $GITHUB_OUTPUT
+          if [ "$HEAD_BRANCH" = "main" ] || [ "$HEAD_BRANCH" = "master" ]; then
+            echo "skip_reason=protected_branch" >> $GITHUB_OUTPUT
+            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "Skipping: main/master branch — review CI failures manually."
+          elif [ "$CONCLUSION" != "failure" ]; then
+            echo "skip_reason=ci_not_failed" >> $GITHUB_OUTPUT
+            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "Skipping: CI conclusion=$CONCLUSION (not a failure)."
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+            echo "Proceeding: CI failed on PR branch."
+          fi
+
       - name: Checkout PR branch
+        if: steps.gate.outputs.skip != 'true'
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.workflow_run.head_branch }}
@@ -28,34 +47,31 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Python
+        if: steps.gate.outputs.skip != 'true'
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
       - name: Install package
+        if: steps.gate.outputs.skip != 'true'
         run: pip install -e ".[dev]" --quiet
 
       - name: Fetch CI logs and triage severity
         id: triage
+        if: steps.gate.outputs.skip != 'true'
         env:
           RUN_ID: ${{ github.event.workflow_run.id }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Fetch logs (best-effort; may be unavailable for old runs)
           gh run view "$RUN_ID" --log 2>/dev/null | tail -200 > ci-log.txt \
             || echo "# Log unavailable" > ci-log.txt
-
-          # Count failure signals
           SYNTAX=$(grep -cE "SyntaxError|ImportError|ModuleNotFoundError|IndentationError|NameError.*not defined" ci-log.txt 2>/dev/null || true)
           ERRORS=$(grep -c "^E " ci-log.txt 2>/dev/null || true)
           CRASHES=$(grep -cE "error: command|FAILED sessions|fatal error|exit code [2-9][0-9]?" ci-log.txt 2>/dev/null || true)
           SYNTAX=${SYNTAX:-0}; ERRORS=${ERRORS:-0}; CRASHES=${CRASHES:-0}
-
           echo "syntax=$SYNTAX" >> $GITHUB_OUTPUT
           echo "errors=$ERRORS" >> $GITHUB_OUTPUT
           echo "crashes=$CRASHES" >> $GITHUB_OUTPUT
-
-          # Gate: egregious = syntax/import errors, crashes, or >5 pytest errors
           if [ "$SYNTAX" -gt 0 ] || [ "$CRASHES" -gt 3 ] || [ "$ERRORS" -gt 5 ]; then
             echo "egregious=true" >> $GITHUB_OUTPUT
             echo "EGREGIOUS failure (syntax=$SYNTAX crashes=$CRASHES errors=$ERRORS) — will attempt fix"
@@ -75,13 +91,21 @@ jobs:
           python3 scripts/nemotron-fixup.py \
             --log ci-log.txt \
             --host "$SPARK_HOST" --port "$SPARK_PORT" --key "$SPARK_API_KEY" \
-            > fixup_response.txt 2>nemotron_err.txt || true
-          if [ -s fixup_response.txt ] && ! grep -q "^# NEMOTRON_ERROR" fixup_response.txt; then
-            echo "got_fix=true" >> $GITHUB_OUTPUT
-          else
+            > fixup_response.txt 2>nemotron_err.txt
+          EXIT=$?
+          if [ $EXIT -ne 0 ] || grep -q "^# NEMOTRON_ERROR" fixup_response.txt 2>/dev/null; then
             echo "got_fix=false" >> $GITHUB_OUTPUT
-            echo "Nemotron unavailable or returned no fix:" && cat nemotron_err.txt || true
+            echo "Nemotron/Spark unreachable (exit $EXIT) — skipping auto-fix."
+            cat nemotron_err.txt 2>/dev/null || true
+            exit 0
           fi
+          if [ ! -s fixup_response.txt ]; then
+            echo "got_fix=false" >> $GITHUB_OUTPUT
+            echo "Nemotron returned empty response — skipping."
+            exit 0
+          fi
+          echo "got_fix=true" >> $GITHUB_OUTPUT
+          echo "Nemotron returned a fix."
 
       - name: Apply patch and open fixup PR
         if: steps.nemotron.outputs.got_fix == 'true'
@@ -93,7 +117,7 @@ jobs:
           git checkout -b "$BRANCH"
           git apply --3way fixup_response.txt 2>/dev/null || { echo "Patch did not apply cleanly"; exit 0; }
           if ! git diff --stat | grep -q .; then
-            echo "Patch applied but no changes — skipping"
+            echo "Patch applied but no changes — skipping."
             exit 0
           fi
           git config user.name "github-actions[bot]"
@@ -107,14 +131,15 @@ jobs:
             --body "$PR_BODY" \
             --base "$HEAD_BRANCH" --head "$BRANCH" || true
 
-      - name: Comment on PR (minor failure — manual fix needed)
+      - name: Done — minor CI failure (no auto-fix needed)
         if: steps.triage.outputs.egregious == 'false'
-        env:
-          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
         run: |
-          PR_NUM=$(gh pr list --head "$HEAD_BRANCH" --json number --jq '.[0].number' 2>/dev/null || true)
-          if [ -n "$PR_NUM" ] && [ "$PR_NUM" != "null" ]; then
-            gh pr comment "$PR_NUM" --body \
-              "CI failed with minor issues (no syntax errors, <5 test failures). Auto-fix skipped — fix manually." \
-              2>/dev/null || true
-          fi
+          echo "Auto-fixup complete. Branch: ${{ github.event.workflow_run.head_branch }}"
+          echo "CI had minor failures — fix manually at your convenience."
+
+      - name: Done — Spark unreachable or Nemotron error
+        if: steps.nemotron.outputs.got_fix == 'false'
+        run: |
+          echo "Auto-fixup complete (gracefully skipped). Branch: ${{ github.event.workflow_run.head_branch }}"
+          echo "CI had egregious failures BUT Spark/Nemotron was unreachable or returned no fix."
+          echo "Fix manually or push a retry when Spark is online."
