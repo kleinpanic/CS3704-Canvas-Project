@@ -109,7 +109,7 @@ def run_cmd(cmd: list[str], timeout: int = 300, capture: bool = True) -> subproc
         capture_output=capture,
         text=True,
         timeout=timeout,
-        cwd="/srv/spark-maker",
+        cwd="$SPARK_MOUNT",
     )
     if result.returncode != 0:
         raise RuntimeError(f"Command failed: {' '.join(cmd)}\nSTDOUT: {result.stdout[-500:]}\nSTDERR: {result.stderr[-500:]}")
@@ -191,7 +191,7 @@ def generate_preferences(
     result = subprocess.run(
         docker_cmd,
         capture_output=True, text=True, timeout=3600,
-        cwd="/srv/spark-maker",
+        cwd="$SPARK_MOUNT",
     )
     if result.returncode != 0:
         raise RuntimeError(f"Preference generation failed:\n{result.stderr[-1000:]}")
@@ -656,9 +656,9 @@ def parse_args():
     p = argparse.ArgumentParser(description="Path B DPO Distillation TUI")
     p.add_argument("--state", default="/tmp/path_b_state.json",
                    help="Path to state file (for resume support)")
-    p.add_argument("--output", default="/srv/spark-maker/output/gemma2b-reranker",
+    p.add_argument("--output", default="$SPARK_MOUNT/output/gemma2b-reranker",
                    help="Output directory for adapter and results")
-    p.add_argument("--dataset", default="/srv/spark-maker/datasets/rerank_clean.jsonl",
+    p.add_argument("--dataset", default="$SPARK_MOUNT/datasets/rerank_clean.jsonl",
                    help="Path to cleaned + merged pairwise dataset")
     p.add_argument("--teacher", default="nvidia/Gemma-4-31B-IT-NVFP4",
                    help="Teacher model ID")

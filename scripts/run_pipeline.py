@@ -6,11 +6,11 @@ Runs Path A (QLoRA × 2) and Path B (DPO distillation) sequentially,
 benchmarks all outputs, and picks the best performer.
 
 Usage:
-    python3 scripts/run_pipeline.py --data data/rerank_train.jsonl --output /srv/spark-maker/output/pipeline
+    python3 scripts/run_pipeline.py --data data/rerank_train.jsonl --output $SPARK_MOUNT/output/pipeline
 
 On Spark (via tmux):
     tmux new -s pipeline -d
-    tmux send-keys 'cd /srv/spark-maker/gemma2b-reranker && python3 scripts/run_pipeline.py --data data/rerank_train.jsonl --output output/pipeline' Enter
+    tmux send-keys 'cd $SPARK_MOUNT/gemma2b-reranker && python3 scripts/run_pipeline.py --data data/rerank_train.jsonl --output output/pipeline' Enter
 """
 
 import argparse
@@ -197,7 +197,7 @@ def main():
     p = argparse.ArgumentParser(description="Unified Canvas Reranker Training Pipeline")
     p.add_argument("--data", required=True, help="Path to rerank_train.jsonl")
     p.add_argument("--test-data", default=None, help="Path to rerank_test.jsonl (auto-find if omitted)")
-    p.add_argument("--output", default="/srv/spark-maker/output/pipeline", help="Output base dir")
+    p.add_argument("--output", default="$SPARK_MOUNT/output/pipeline", help="Output base dir")
     p.add_argument("--teacher", default="nvidia/Gemma-4-31B-IT-NVFP4", help="Teacher model")
     p.add_argument("--student", default="google/gemma-4-2b-it", help="Student model")
     p.add_argument("--skip-path-a", action="store_true", help="Skip Path A QLoRA")

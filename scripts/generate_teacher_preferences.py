@@ -19,8 +19,8 @@ Usage:
     ssh spark
     docker compose run --rm trainer \
         python3 /workspace/scripts/generate_teacher_preferences.py \
-            --input /srv/spark-maker/datasets/rerank_clean.jsonl \
-            --output /srv/spark-maker/datasets/rerank_dpo.jsonl \
+            --input $SPARK_MOUNT/datasets/rerank_clean.jsonl \
+            --output $SPARK_MOUNT/datasets/rerank_dpo.jsonl \
             --teacher-endpoint http://localhost:8000/v1 \
             --api-key "none"
 
