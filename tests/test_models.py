@@ -34,6 +34,25 @@ class TestCanvasItem:
         assert item.key == ""
         assert item.title == "(untitled)"
 
+    def test_due_iso_to_dict_roundtrip(self):
+        item = CanvasItem(
+            key="123:456:assignment",
+            ptype="assignment",
+            title="HW Due Soon",
+            course_code="CS3214",
+            points=100.0,
+            due_iso="2026-04-24T23:59:00Z",
+            status_flags=[],
+        )
+
+        d = item.to_dict()
+        restored = CanvasItem.from_dict(d)
+
+        assert restored.due_iso == item.due_iso
+        assert restored.title == item.title
+        assert restored.course_code == item.course_code
+        assert restored.ptype == item.ptype
+
 
 class TestCourseInfo:
     def test_defaults(self):
