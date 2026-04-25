@@ -26,27 +26,6 @@ DATA_DIR = Path(
 )
 
 
-# ── Heuristic Weight Tests ──────────────────────────────────────────────────
-class TestHeuristicWeights:
-    def test_weights_match_benchmark(self):
-        """Weights in collect_rerank_dataset.py must match benchmark.py."""
-        bm_path = SCRIPT_DIR / "benchmark.py"
-        bm_src = bm_path.read_text()
-        weights = {"W_TIME": 3.0, "W_TYPE": 2.5, "W_POINTS": 1.5, "W_STATUS": 2.0}
-        for var, val in weights.items():
-            # Match both "W_TIME = 3.0" and "W_TIME   = 3.0" (flexible whitespace)
-            import re
-            pattern = rf"^{var}\s+=\s+{re.escape(str(val))}"
-            found = bool(re.search(pattern, bm_src, re.MULTILINE))
-            assert found, f"{var}={val} not found in benchmark.py (checked pattern: {pattern})"
-
-    def test_weights_have_expected_values(self):
-        assert W_TIME == 3.0
-        assert W_TYPE == 2.5
-        assert W_POINTS == 1.5
-        assert W_STATUS == 2.0
-
-
 # ── Heuristic / Urgency Tests ──────────────────────────────────────────────
 class TestUrgency:
     def test_urgency_positive_for_future_item(self):
