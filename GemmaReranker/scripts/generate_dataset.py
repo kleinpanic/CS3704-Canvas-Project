@@ -77,11 +77,11 @@ class CanvasClient:
         return items
 
     def get_quiet(self, path: str, params: Optional[dict] = None) -> list[dict]:
-        """GET that swallows 404s (e.g. quizzes/discussions not enabled in a course)."""
+        """GET that swallows 403s/404s (e.g. test sites, disabled tools)."""
         try:
             return self.get(path, params)
         except requests.HTTPError as e:
-            if e.response.status_code == 404:
+            if e.response.status_code in (403, 404):
                 return []
             raise
 
@@ -140,20 +140,22 @@ def fetch_items(client: CanvasClient) -> list[Item]:
     """Fetch assignments, quizzes, and discussions from every active course."""
     items: list[Item] = []
 
-    print("Fetching active courses...")
+    print("Fetching enrolled courses...")
+    # Use 'all' to get the full 4-year history (not just active semester).
+    # 'active' returns only ~16 courses (current-semester noise). 'all' returns 59.
     courses = client.get(
         "/users/self/courses",
-        {"enrollment_state": "active", "include": ["total_scores"]},
+        {"enrollment_state": "all", "include": ["total_scores"]},
     )
-    print(f"  Found {len(courses)} active courses\n")
+    print(f"  {len(courses)} total enrollments across all years")
 
     for course in courses:
         cid = course["id"]
         code = course.get("course_code", f"COURSE{cid}")
 
-        # Assignment group weights
+        # Assignment group weights — may 403 on test/advising sites
         group_weights: dict[int, float] = {}
-        for grp in client.get(f"/courses/{cid}/assignment_groups"):
+        for grp in client.get_quiet(f"/courses/{cid}/assignment_groups"):
             w = grp.get("group_weight", 0.0)
             if w > 0:
                 group_weights[grp["id"]] = w
@@ -162,7 +164,8 @@ def fetch_items(client: CanvasClient) -> list[Item]:
 
         # Assignments
         count = 0
-        for a in client.get(f"/courses/{cid}/assignments", {"order_by": "due_at"}):
+        # Assignments — 403 possible on test/advising sites
+        for a in client.get_quiet(f"/courses/{cid}/assignments", {"order_by": "due_at"}):
             sub = a.get("submission", {}) or {}
             pts = a.get("points_possible")
             score = sub.get("score")
@@ -258,19 +261,19 @@ def _strip_html(text: str) -> str:
 
 def clean(items: list[Item]) -> list[Item]:
     """
-    Keep only items that are meaningful to rank.
+    Keep only items meaningful for ranking.
 
     Drop:
-      - Items with no due date
-      - Items that are past AND already submitted
-      - Workflow states that are hidden/deleted
+      - Items with no due date (unrankable noise)
+      - Items far in the past (>6 months) AND already submitted AND no grade signal
+        (e.g. a 2022 assignment fully submitted with no score — nothing to learn from)
 
     Keep:
-      - Upcoming (any state)
-      - Overdue (any state, even if submitted)
-      - Missing
-      - Unsubmitted
-      - Graded but not finalized
+      - ALL upcoming items (any semester)
+      - ALL overdue items
+      - ALL unsubmitted items (any time)
+      - ALL submitted-but-still-being-graded items
+      - Past items where the student performed poorly (grade_signal = urgency)
     """
     now = datetime.now(timezone.utc)
     valid_states = {"published", "graded", "submitted", "unsubmitted",
@@ -279,7 +282,7 @@ def clean(items: list[Item]) -> list[Item]:
 
     for item in items:
         if item.due_at is None:
-            continue
+            continue  # no due date = can't compute urgency
         if item.workflow_state not in valid_states:
             continue
 
@@ -287,14 +290,17 @@ def clean(items: list[Item]) -> list[Item]:
         if due.tzinfo is None:
             due = due.replace(tzinfo=timezone.utc)
 
-        # Past + submitted = done, don't rank it
-        if due < now and item.submitted:
+
+        # Deep past AND submitted AND no score = fully done, don't rank
+        age_months = (now - due).total_seconds() / (3600 * 24 * 30)
+        if age_months > 6 and item.submitted and item.score is None:
             continue
 
         cleaned.append(item)
 
     dropped = len(items) - len(cleaned)
-    print(f"Cleaned: {len(items)} → {len(cleaned)} (dropped {dropped})")
+    print(f"Cleaned: {len(items)} → {len(cleaned)} (dropped {dropped})  "
+          f"# items without due date or 6+ months old+submitted")
     return cleaned
 
 
