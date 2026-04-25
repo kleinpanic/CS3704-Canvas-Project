@@ -7,21 +7,26 @@
 ## One-Time Spark Setup
 
 ```bash
-# 1. Clone the repo (if not already on Spark)
-git clone https://github.com/kleinpanic/CS3704-Canvas-Project.git /srv/spark-maker/canvas-reranker
+# 1. Clone the repo (already done on Spark at /srv/spark-maker/canvas-reranker)
 cd /srv/spark-maker/canvas-reranker
 
-# 2. Check out the reranker subdir
-git checkout main
-ls GemmaReranker/
+# 2. Pull latest (do this before every run)
+git pull origin main
 
-# 3. Set up environment (one-time)
-cp GemmaReranker/configs/teammate.env.example GemmaReranker/.env
-# Edit GemmaReranker/.env with your HF_TOKEN (required for GemmaSuper)
+# 3. Verify environment
+python3 -c 'import os; print("HF_TOKEN:", "OK" if os.environ.get("HF_TOKEN") else "MISSING")'
+# Should print: HF_TOKEN: OK
 
-# 4. Verify
-python3 GemmaReranker/scripts/run_pipeline.py --help | head -20
+# 4. Verify pipeline scripts
+python3 GemmaReranker/scripts/run_pipeline.py --help | head -5
 ```
+
+## Existing Data on Spark
+
+728 training pairs already exist in the cloned repo at `GemmaReranker/data/rerank_train.jsonl`.
+Sample files are also present for reference.
+
+**Need more data?** Teammates contribute via the workflow in Dataset Guide.
 
 ---
 
