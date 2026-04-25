@@ -1570,6 +1570,22 @@ class CanvasTUI(App):
         self.push_screen(CourseManagerScreen(self), callback=_on_dismiss)
 
 
+def _console_size() -> tuple[int, int] | None:
+    """Return (columns, rows) of the real console, or None if unavailable.
+
+    shutil.get_terminal_size() reads COLUMNS/LINES env vars and falls back
+    to os.get_terminal_size() on the controlling tty, so it works on both
+    Windows and POSIX without any platform-specific calls.
+    """
+    try:
+        ts = shutil.get_terminal_size(fallback=(0, 0))
+        if ts.columns > 0 and ts.lines > 0:
+            return ts.columns, ts.lines
+    except Exception:
+        pass
+    return None
+
+
 def main() -> None:
     """Entry point for the Canvas TUI application."""
     from .cli import handle_non_tui_commands, parse_args
@@ -1595,7 +1611,7 @@ def main() -> None:
     else:
         app._theme = set_theme("dark")
 
-    app.run()
+    app.run(size=_console_size())
 
 
 if __name__ == "__main__":
