@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from rich.text import Text
 
+from ..compat import BLOCK_EMPTY, BLOCK_FULL, BLOCK_HALF, HEAT_CHARS, braille_char
 from ..theme import get_theme
 
 
@@ -59,7 +60,7 @@ def score_bar_chart(
         color = _grade_color(score)
         filled = int(score / 100.0 * bar_width)
         empty = bar_width - filled
-        bar = f"[{color}]{'█' * filled}[/{color}][dim]{'░' * empty}[/dim]"
+        bar = f"[{color}]{BLOCK_FULL * filled}[/{color}][dim]{BLOCK_EMPTY * empty}[/dim]"
         lines.append(f"  {label:<{max_label}}│{bar} {score:.1f}")
 
     # X-axis
@@ -135,9 +136,9 @@ def grade_histogram(
         parts = [f"[dim]{y_label:>{y_width}}│[/dim]"]
         for count in counts:
             if count >= threshold:
-                parts.append(f"[{t.info}]██[/{t.info}]")
+                parts.append(f"[{t.info}]{BLOCK_FULL * 2}[/{t.info}]")
             elif count >= threshold - (max_count / chart_height / 2):
-                parts.append(f"[{t.info}]▄▄[/{t.info}]")
+                parts.append(f"[{t.info}]{BLOCK_HALF * 2}[/{t.info}]")
             else:
                 parts.append("  ")
         lines.append("".join(parts))
@@ -164,7 +165,6 @@ def grade_histogram(
 
 # ─── Multi-Line Chart (Braille) ──────────────────────────────────────────
 
-_BRAILLE_BASE = 0x2800
 _DOT_MAP = [
     [0x01, 0x08],  # row 0
     [0x02, 0x10],  # row 1
@@ -269,7 +269,7 @@ def multi_line_chart(
         else:
             y_label = ""
 
-        chars = "".join(chr(_BRAILLE_BASE + cell) for cell in row)
+        chars = "".join(braille_char(cell) for cell in row)
         lines.append(f"[dim]{y_label:>{y_width}}│[/dim][{primary_color}]{chars}[/{primary_color}]")
 
     # X-axis
@@ -348,7 +348,7 @@ def scatter_scores(
             y_label = f"{y_min:.0f}"
         else:
             y_label = ""
-        chars = "".join(chr(_BRAILLE_BASE + cell) for cell in row)
+        chars = "".join(braille_char(cell) for cell in row)
         lines.append(f"[dim]{y_label:>{y_width}}│[/dim][{dot_color}]{chars}[/{dot_color}]")
 
     lines.append(f"[dim]{' ' * (y_width + 1)}{'─' * chart_w}[/dim]")
@@ -387,7 +387,7 @@ def submission_heatmap(
     bucket_size = max(1, n_hours // 6)
     n_buckets = (n_hours + bucket_size - 1) // bucket_size
 
-    heat_chars = " ░▒▓█"
+    heat_chars = HEAT_CHARS
 
     lines: list[str] = []
     if title:
@@ -468,7 +468,7 @@ def completion_bullet(
         color = _grade_color(act)
 
         # Build bar with target marker
-        bar_chars = list(f"{'█' * filled}{'░' * empty}")
+        bar_chars = list(f"{BLOCK_FULL * filled}{BLOCK_EMPTY * empty}")
         if 0 <= target_pos < len(bar_chars):
             bar_chars[target_pos] = "│"
 
@@ -537,9 +537,9 @@ def weekly_activity_chart(
         parts = [f"[dim]{y_label:>{y_width}}│[/dim]"]
         for count in counts:
             if count >= threshold:
-                parts.append(f"[{t.info}]{'█' * bar_w}[/{t.info}] ")
+                parts.append(f"[{t.info}]{BLOCK_FULL * bar_w}[/{t.info}] ")
             elif count >= threshold - (max_count / chart_h / 2):
-                parts.append(f"[{t.info}]{'▄' * bar_w}[/{t.info}] ")
+                parts.append(f"[{t.info}]{BLOCK_HALF * bar_w}[/{t.info}] ")
             else:
                 parts.append(" " * (bar_w + 1))
         lines.append("".join(parts))
@@ -611,7 +611,7 @@ def pie_chart(
         pct = val / total
         chars = max(1, int(pct * bar_width))
         color = palette[i % len(palette)]
-        bar_parts.append(f"[{color}]{'█' * chars}[/{color}]")
+        bar_parts.append(f"[{color}]{BLOCK_FULL * chars}[/{color}]")
         legend_parts.append(f"[{color}]■ {label} ({pct:.0%})[/{color}]")
 
     lines.append("  " + "".join(bar_parts))
