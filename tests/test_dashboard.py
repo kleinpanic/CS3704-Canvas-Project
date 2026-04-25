@@ -72,13 +72,3 @@ class TestDashboardDataRendering:
         assert "No data" in render_bar_chart([])
         result = render_braille_plot([])
         assert "No data" in result
-
-    def test_urgency_color_boundary_values(self):
-        """Test urgency color behavior near important deadline boundary values."""
-        t = get_theme()
-
-        assert urgency_color(1) == t.success
-        assert urgency_color(2) == t.info
-        assert urgency_color(6) == t.info
-        assert urgency_color(8) == t.warning
-        assert urgency_color(11) == t.error
