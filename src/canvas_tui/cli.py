@@ -106,6 +106,11 @@ examples:
         metavar="N",
         help="Override PAST_HOURS",
     )
+    p.add_argument(
+        "--ascii",
+        action="store_true",
+        help="Use ASCII-only charts (auto-enabled on Windows; same as CANVAS_ASCII=1)",
+    )
 
     return p.parse_args(argv)
 

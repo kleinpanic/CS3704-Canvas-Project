@@ -1596,6 +1596,19 @@ def main() -> None:
     if handle_non_tui_commands(args):
         return
 
+    # --ascii flag forces ASCII chart mode before the app object is created
+    if getattr(args, "ascii", False):
+        import os as _os
+        _os.environ["CANVAS_ASCII"] = "1"
+        # Re-apply so compat module picks it up (it was already imported)
+        from . import compat as _compat
+        _compat.USE_ASCII = True
+        _compat.BLOCK_FULL = "#"
+        _compat.BLOCK_EMPTY = "-"
+        _compat.BLOCK_HALF = "+"
+        _compat.HEAT_CHARS = " .:-=#"
+        _compat.SPARKLINE_CHARS = ".,:-=+|#"
+
     app = CanvasTUI()
 
     # Apply CLI overrides
