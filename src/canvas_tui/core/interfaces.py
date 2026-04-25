@@ -150,18 +150,23 @@ class CanvasClient(ABC):
 
     @abstractmethod
     def fetch_courses(self) -> list[Course]:
+        """Fetch all active courses."""
         ...
 
     @abstractmethod
     def fetch_assignments(self, course_id: int) -> list[Assignment]:
+        """Fetch assignments for a specific course."""
         ...
 
     @abstractmethod
     def fetch_grades(self, course_id: int) -> list[dict[str, Any]]:
+        """Fetch grades for a specific course."""
         ...
+
 
     @abstractmethod
     def fetch_announcements(self, course_ids: list[int], since: datetime) -> list[dict[str, Any]]:
+        """Fetch announcements for given courses since datetime."""
         ...
 
     @abstractmethod
@@ -169,6 +174,8 @@ class CanvasClient(ABC):
         """Fetch upcoming assignments across all enrolled courses."""
         ...
 
+
     @abstractmethod
     def fetch_course_info(self, course_id: int) -> dict[str, Any] | None:
+        """Fetch a single course's info."""
         ...
