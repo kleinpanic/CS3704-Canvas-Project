@@ -1,0 +1,14 @@
+# Canvas API Configuration
+# Copy this file to canvas.conf and fill in your credentials.
+# The script will auto-detect it in scripts/canvas.conf (relative to the script).
+# DO NOT commit canvas.conf — it contains your API token.
+# Add canvas.conf to .gitignore if your repo has one.
+
+# Your Canvas API token (from Canvas → Account → Settings → New Access Token)
+CANVAS_TOKEN=your_token_here
+
+# Base URL for your Canvas instance
+CANVAS_BASE_URL=https://canvas.vt.edu
+
+# Optional: path to a custom config file (default: ./scripts/canvas.conf)
+# CANVAS_CONF=/path/to/canvas.conf

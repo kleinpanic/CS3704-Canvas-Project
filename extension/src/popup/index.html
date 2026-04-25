@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Canvas Deadline Tracker</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1>Canvas Deadline Tracker</h1>
+      <span id="user-info"></span>
+      <span class="cache-badge hidden">cached</span>
+    </header>
+
+    <section id="filter-section" class="hidden">
+      <select id="course-filter">
+        <option value="">All Courses</option>
+      </select>
+    </section>
+
+    <main>
+      <section id="upcoming-section">
+        <h2>Upcoming Assignments</h2>
+        <ul id="upcoming-list" class="assignment-list"></ul>
+        <div id="loading" class="spinner">Loading...</div>
+        <div id="error" class="error hidden"></div>
+      </section>
+    </main>
+
+    <footer>
+      <button id="refresh-btn">Refresh</button>
+      <button id="settings-btn">Settings</button>
+    </footer>
+  </div>
+  <script src="app.js" type="module"></script>
+</body>
+</html>

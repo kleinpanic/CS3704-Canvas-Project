@@ -1,0 +1,292 @@
+/* Canvas Deadline Tracker — Popup Styles */
+
+:root {
+  --canvas-red: #d63e36;
+  --canvas-blue: #385898;
+  --bg: #f7f7f7;
+  --surface: #ffffff;
+  --text: #1a1a1a;
+  --text-muted: #6b6b6b;
+  --border: #e0e0e0;
+  --urgent: #e85d04;
+  --due-soon: #f48c06;
+  --ok: #2d6a4f;
+  --overdue: #c1121f;
+  --radius: 8px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-width: 400px;
+  max-width: 480px;
+}
+
+/* ── Header ──────────────────────────────────────────────── */
+
+header {
+  background: var(--canvas-red);
+  color: white;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  flex: 1;
+}
+
+#user-info {
+  font-size: 0.7rem;
+  opacity: 0.85;
+}
+
+.cache-badge {
+  font-size: 0.65rem;
+  background: rgba(255,255,255,0.25);
+  padding: 2px 6px;
+  border-radius: 10px;
+}
+
+/* ── Course Filter ──────────────────────────────────────── */
+
+#filter-section {
+  padding: 8px 12px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+#course-filter {
+  width: 100%;
+  padding: 6px 8px;
+  font-size: 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+}
+
+/* ── Main Content ────────────────────────────────────────── */
+
+main { padding: 10px 12px 0; }
+
+h2 {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin: 0 0 8px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* ── Assignment Items ────────────────────────────────────── */
+
+.assignment-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.assignment-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: border-color 0.15s;
+}
+
+.assignment-item:hover { border-color: var(--canvas-blue); }
+
+.assignment-item.overdue { border-left: 4px solid var(--overdue); }
+.assignment-item.urgent   { border-left: 4px solid var(--urgent); }
+.assignment-item.due-soon { border-left: 4px solid var(--due-soon); }
+
+.assignment-main { flex: 1; min-width: 0; }
+
+.course-name {
+  font-size: 0.68rem;
+  color: var(--canvas-blue);
+  font-weight: 600;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.assignment-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-bottom: 3px;
+  line-height: 1.3;
+}
+
+.due-date {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+.due-date.overdue { color: var(--overdue); font-weight: 600; }
+.due-date.urgent  { color: var(--urgent); font-weight: 600; }
+.due-date.due-soon { color: var(--due-soon); }
+
+/* ── Action Buttons ──────────────────────────────────────── */
+
+.assignment-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.dismiss-btn, .open-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  cursor: pointer;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  transition: all 0.15s;
+}
+
+.dismiss-btn:hover { background: var(--ok); color: white; border-color: var(--ok); }
+.open-btn:hover    { background: var(--canvas-blue); color: white; border-color: var(--canvas-blue); }
+
+/* ── Footer ──────────────────────────────────────────────── */
+
+footer {
+  border-top: 1px solid var(--border);
+  padding: 8px 12px;
+  display: flex;
+  gap: 8px;
+}
+
+button {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 7px 14px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  color: var(--text);
+  transition: background 0.15s;
+}
+
+button:hover { background: var(--bg); }
+
+/* ── Loading / Error ─────────────────────────────────────── */
+
+.spinner, .error {
+  text-align: center;
+  padding: 20px;
+  font-size: 0.875rem;
+}
+
+.error { color: var(--canvas-red); }
+
+/* ── Settings Panel ──────────────────────────────────────── */
+
+#settings-panel {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.settings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+
+.settings-header h2 { margin: 0; font-size: 1rem; }
+
+#close-settings {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 0;
+  width: auto;
+}
+
+.settings-body {
+  background: var(--surface);
+  padding: 20px;
+  border-radius: 0 0 var(--radius) var(--radius);
+  max-width: 360px;
+  width: 100%;
+}
+
+.settings-body label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--text);
+}
+
+.settings-body input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.875rem;
+  margin-bottom: 4px;
+}
+
+.settings-body small {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+
+.primary-btn {
+  background: var(--canvas-red);
+  color: white;
+  border: none;
+  width: 100%;
+  padding: 10px;
+  font-weight: 600;
+  border-radius: 6px;
+}
+
+.primary-btn:hover { background: #b83830; }
+
+#token-status {
+  margin-top: 10px;
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+/* ── Utilities ───────────────────────────────────────────── */
+
+.hidden { display: none !important; }
