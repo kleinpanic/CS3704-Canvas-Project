@@ -1,10 +1,11 @@
 """PM4 tests for Canvas API: token validation and planner fetch."""
-import json
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from canvas_tui.api import CanvasAPI
+from canvas_tui.api import CanvasAPI, _iso
+from canvas_tui.cache import ResponseCache, cache_key
+from canvas_tui.config import Config
 
 
 def _make_response(status=200, json_data=None, headers=None):
@@ -18,14 +19,16 @@ def _make_response(status=200, json_data=None, headers=None):
 
 class TestTokenValidation:
     def setup_method(self):
-        self.api = CanvasAPI(token="test-token", base_url="https://canvas.example.com")
+        cfg = Config(token="test-token", base_url="https://canvas.example.com")
+        self.api = CanvasAPI(cfg=cfg)
 
     @patch("canvas_tui.api.requests.Session")
     def test_valid_token_returns_true(self, mock_session_cls):
         session = MagicMock()
         session.get.return_value = _make_response(status=200, json_data={"id": 1})
         mock_session_cls.return_value = session
-        api = CanvasAPI(token="valid-token", base_url="https://canvas.example.com")
+        cfg = Config(token="valid-token", base_url="https://canvas.example.com")
+        api = CanvasAPI(cfg=cfg)
         assert api.validate_token() is True
 
     @patch("canvas_tui.api.requests.Session")
@@ -35,7 +38,8 @@ class TestTokenValidation:
         resp.raise_for_status.side_effect = Exception("401 Unauthorized")
         session.get.return_value = resp
         mock_session_cls.return_value = session
-        api = CanvasAPI(token="bad-token", base_url="https://canvas.example.com")
+        cfg = Config(token="bad-token", base_url="https://canvas.example.com")
+        api = CanvasAPI(cfg=cfg)
         assert api.validate_token() is False
 
     @patch("canvas_tui.api.requests.Session")
@@ -44,29 +48,27 @@ class TestTokenValidation:
         session = MagicMock()
         session.get.side_effect = requests.ConnectionError("unreachable")
         mock_session_cls.return_value = session
-        api = CanvasAPI(token="any-token", base_url="https://canvas.example.com")
+        cfg = Config(token="any-token", base_url="https://canvas.example.com")
+        api = CanvasAPI(cfg=cfg)
         assert api.validate_token() is False
 
     @patch("canvas_tui.api.requests.Session")
     def test_authorization_header_contains_bearer_token(self, mock_session_cls):
         session = MagicMock()
-        session.get.return_value = _make_response(status=200, json_data={"id": 1})
         mock_session_cls.return_value = session
-        api = CanvasAPI(token="my-secret-token", base_url="https://canvas.example.com")
-        api.validate_token()
-        call_kwargs = session.get.call_args
-        # Headers may be set at session level or per-request; check either
-        headers_used = (
-            call_kwargs[1].get("headers", {})
-            if call_kwargs and call_kwargs[1]
-            else {}
-        )
-        auth_header = (
-            headers_used.get("Authorization", "")
-            or session.headers.get("Authorization", "")
-        )
-        assert "Bearer" in auth_header
-        assert "my-secret-token" in auth_header
+        cfg = Config(token="my-secret-token", base_url="https://canvas.example.com")
+        api = CanvasAPI(cfg=cfg)
+        # Verify session was created and initialized with Bearer auth header
+        assert mock_session_cls.called
+        # The auth header is stored in api.cfg.token — verify it's correctly set
+        assert api.cfg.token == "my-secret-token"
+        # Verify the session.headers received the Authorization header
+        auth_calls = session.headers.update.call_args_list
+        assert len(auth_calls) >= 1
+        # Check the auth header value from the most recent update call
+        latest_update = auth_calls[-1]
+        headers_dict = latest_update[0][0]
+        assert headers_dict["Authorization"] == "Bearer my-secret-token"
 
 
 class TestPlannerFetch:
@@ -75,7 +77,8 @@ class TestPlannerFetch:
         session = MagicMock()
         session.get.return_value = _make_response(json_data=sample_planner_items)
         mock_session_cls.return_value = session
-        api = CanvasAPI(token="tok", base_url="https://canvas.example.com")
+        cfg = Config(token="tok", base_url="https://canvas.example.com")
+        api = CanvasAPI(cfg=cfg)
         result = api.fetch_planner_items()
         assert len(result) == len(sample_planner_items)
 
@@ -84,7 +87,8 @@ class TestPlannerFetch:
         session = MagicMock()
         session.get.return_value = _make_response(json_data=[])
         mock_session_cls.return_value = session
-        api = CanvasAPI(token="tok", base_url="https://canvas.example.com")
+        cfg = Config(token="tok", base_url="https://canvas.example.com")
+        api = CanvasAPI(cfg=cfg)
         result = api.fetch_planner_items()
         assert result == []
 
@@ -98,7 +102,8 @@ class TestPlannerFetch:
         session = MagicMock()
         session.get.side_effect = [page1, page2]
         mock_session_cls.return_value = session
-        api = CanvasAPI(token="tok", base_url="https://canvas.example.com")
+        cfg = Config(token="tok", base_url="https://canvas.example.com")
+        api = CanvasAPI(cfg=cfg)
         result = api.fetch_planner_items()
         assert len(result) == 2
         assert session.get.call_count == 2
@@ -110,10 +115,19 @@ class TestPlannerFetch:
         session.get.side_effect = requests.ConnectionError("offline")
         mock_session_cls.return_value = session
 
-        api = CanvasAPI(token="tok", base_url="https://canvas.example.com", cache_dir=tmp_dir)
-        # Pre-populate stale cache manually
-        cache_key = api._cache.cache_key("/api/v1/planner/items", {})
-        api._cache.put(cache_key, sample_planner_items)
+        cfg = Config(token="tok", base_url="https://canvas.example.com")
+        cache = ResponseCache(cache_dir=tmp_dir)
+        api = CanvasAPI(cfg=cfg, response_cache=cache)
+
+        # Pre-populate the cache with the exact key that fetch_planner_items will generate.
+        # fetch_planner_items uses cfg.past_hours=72 and cfg.days_ahead=7.
+        import datetime as dt
+        from canvas_tui.cache import cache_key
+        now = dt.datetime.now()
+        start = _iso(now - dt.timedelta(hours=72))
+        end = _iso((now + dt.timedelta(days=7)).replace(hour=23, minute=59, second=59))
+        ck = cache_key("planner_items", {"start_date": start, "end_date": end, "per_page": 100})
+        cache.put(ck, sample_planner_items)
 
         result = api.fetch_planner_items()
         assert result == sample_planner_items
@@ -123,9 +137,9 @@ class TestPlannerFetch:
         session = MagicMock()
         session.get.return_value = _make_response(json_data=[])
         mock_session_cls.return_value = session
-        api = CanvasAPI(token="tok", base_url="https://canvas.example.com")
-        api.fetch_planner_items(start_date="2026-04-01", end_date="2026-04-30")
-        call_url = session.get.call_args[0][0]
+        cfg = Config(token="tok", base_url="https://canvas.example.com")
+        api = CanvasAPI(cfg=cfg)
+        api.fetch_planner_items()
         params = session.get.call_args[1].get("params", {})
-        assert "start_date" in params or "start_date" in call_url
-        assert "end_date" in params or "end_date" in call_url
+        assert "start_date" in params
+        assert "end_date" in params
