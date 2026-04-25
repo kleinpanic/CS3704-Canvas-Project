@@ -73,10 +73,10 @@ class TestDashboardDataRendering:
         result = render_braille_plot([])
         assert "No data" in result
 
-def test_urgency_color_boundary_values(self):
-    """Test urgency color behavior at important deadline boundary values."""
-    t = get_theme()
+    def test_urgency_color_boundary_values(self):
+        """Test urgency color behavior at important deadline boundary values."""
+        t = get_theme()
 
-    assert urgency_color(2) == t.success
-    assert urgency_color(6) == t.warning
-    assert urgency_color(10) == t.error
+        assert urgency_color(2) == t.success
+        assert urgency_color(6) == t.warning
+        assert urgency_color(10) == t.error
