@@ -77,6 +77,7 @@ class TestDashboardDataRendering:
         """Test urgency color behavior at important deadline boundary values."""
         t = get_theme()
 
-        assert urgency_color(1) == t.info
+        assert urgency_color(1) == t.success
+        assert urgency_color(2) == t.info
         assert urgency_color(6) == t.warning
         assert urgency_color(11) == t.error
