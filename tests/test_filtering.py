@@ -141,7 +141,7 @@ class TestFilterItems:
         result = filter_items(items, q)
         assert len(result) == len(items)
 
-        def test_course_filter_no_matches(self):
+    def test_course_filter_no_matches(self):
         items = self._make_items()
         q = FilterQuery.parse("course:MATH9999")
 
