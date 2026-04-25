@@ -59,8 +59,8 @@ class RefreshCoursesCommand(Command):
 
     def execute(self) -> CommandResult:
         try:
-            courses = self._client.fetch_courses()
-            self._cache.set("courses", [c.__dict__ for c in courses])
+            courses, scores = self._client.fetch_course_snapshot()
+            self._cache.set("courses_snapshot", (courses, scores))
             return CommandResult(ok=True, data={"count": len(courses)})
         except Exception as e:
             return CommandResult(ok=False, error=str(e))
@@ -83,12 +83,11 @@ class FetchAssignmentsCommand(Command):
         if cached:
             return CommandResult(ok=True, data=cached, cached=True)
         try:
-            assignments = self._client.fetch_assignments(self._course_id)
-            self._cache.set(
-                f"assignments:{self._course_id}",
-                [a.__dict__ for a in assignments],
+            # CanvasAPI returns dicts, not Assignment objects
+            assignments = self._client.fetch_assignment_details(
+                self._course_id, 0
             )
-            return CommandResult(ok=True, data=[a.__dict__ for a in assignments])
+            return CommandResult(ok=True, data=assignments)
         except Exception as e:
             return CommandResult(ok=False, error=str(e))
 
@@ -109,9 +108,9 @@ class FetchUpcomingCommand(Command):
         if cached:
             return CommandResult(ok=True, data=cached, cached=True)
         try:
-            upcoming = self._client.fetch_upcoming()
-            self._cache.set("upcoming", upcoming, ttl=300)
-            return CommandResult(ok=True, data=upcoming)
+            items = self._client.fetch_planner_items()
+            self._cache.set("upcoming", items, ttl=300)
+            return CommandResult(ok=True, data=items)
         except Exception as e:
             return CommandResult(ok=False, error=str(e))
 

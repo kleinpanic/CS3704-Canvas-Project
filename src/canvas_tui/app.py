@@ -23,6 +23,8 @@ from textual.widgets import DataTable, Header, Static
 
 from .api import CanvasAPI
 from .cache import ResponseCache
+from .adapters.cache_adapter import CacheBackendAdapter
+from .commands import CommandRegistry, ValidateTokenCommand, RefreshCoursesCommand, FetchUpcomingCommand
 from .config import Config, ensure_dirs, load_config
 from .filtering import FilterQuery, filter_items, format_filter_summary
 from .logo import get_logo
@@ -386,6 +388,10 @@ class CanvasTUI(App):
             tz=self.cfg.user_tz,
             get_items=lambda: list(self.items),
         )
+        self.registry = CommandRegistry()
+        self.registry.register("validate_token", ValidateTokenCommand(self.api))
+        self.registry.register("refresh_courses", RefreshCoursesCommand(self.api, CacheBackendAdapter(self._response_cache)))
+        self.registry.register("fetch_upcoming", FetchUpcomingCommand(self.api, CacheBackendAdapter(self._response_cache)))
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -810,10 +816,11 @@ class CanvasTUI(App):
 
     def _initial_load(self, show_loading: bool = True) -> None:
         try:
-            # Validate token before first fetch
+            # Validate token before first fetch — use Command via registry
             token_ok = True
             with contextlib.suppress(Exception):
-                token_ok = self.api.validate_token()
+                result = self.registry.execute("validate_token")
+                token_ok = result.ok and result.data.get("valid") is True
 
             if not token_ok:
 
