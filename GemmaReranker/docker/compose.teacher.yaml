@@ -1,6 +1,8 @@
 # =============================================================================
-# Docker Compose — Gemma-4-31B-IT-NVFP4 Teacher Slot
+# Docker Compose — Gemma-4-31B-IT-NVFP4 Teacher Slot (GemmaSuper)
+# Source: /srv/spark-ai-v2/LLM/vLLM/GemmaSuper/slot.spec.yaml
 # Used by Path B: teacher model labels pairwise preferences for DPO training.
+# gpu_util=0.85 per Klein directive 2026-04-16 — solo-run at max ctx (256K)
 # Pre-warm this BEFORE running Path B (15min cold load).
 # =============================================================================
 # Usage:
@@ -10,45 +12,45 @@
 # Health check: curl http://127.0.0.1:8000/health
 # API base:     http://127.0.0.1:8000/v1
 
-x-vllm-common: &vllm-common
-  image: ${VLLM_IMAGE:-vllm/vllm-openai:gemma4-cu130}
-  restart: "no"
-  shm_size: 16g
-  environment:
-    HF_TOKEN: ${HF_TOKEN}
-    VLLM_WORKER_MULTIPROC_METHOD: spawn
-  volumes:
-    - hf-cache:/root/.cache/huggingface
-    - ../data:/app/data:ro
-  networks:
-    - gemma-reranker-net
-  deploy:
-    resources:
-      reservations:
-        devices:
-          - driver: nvidia
-            count: all
-            capabilities: [gpu]
-
 services:
   gemma-reranker-teacher:
-    <<: *vllm-common
+    image: ${VLLM_IMAGE:-vllm/vllm-openai:gemma4-cu130}
     container_name: gemma-reranker-teacher
     mem_limit: 72g
+    restart: "no"
+    shm_size: 16g
+    environment:
+      HF_TOKEN: ${HF_TOKEN}
+      VLLM_WORKER_MULTIPROC_METHOD: spawn
+    volumes:
+      - hf-cache:/root/.cache/huggingface
+      - ../data:/app/data:ro
+    networks:
+      - gemma-reranker-net
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
     oom_score_adj: 200
     env_file:
       - ../configs/teacher.slot.env
     command: >
-      sh -c "vllm serve ${MODEL:-nvidia/Gemma-4-31B-IT-NVFP4}
+      sh -c "vllm serve nvidia/Gemma-4-31B-IT-NVFP4
         --port 8000 --host 0.0.0.0
-        --max-model-len ${MAX_MODEL_LEN:-262144}
-        --max-num-seqs ${MAX_NUM_SEQS:-64}
-        --gpu-memory-utilization ${GPU_MEMORY_UTIL:-0.40}
+        --max-model-len 262144
+        --max-num-seqs 64
+        --gpu-memory-utilization 0.85
         --kv-cache-dtype fp8
         --quantization modelopt
         --enable-chunked-prefill
         --enable-prefix-caching
         --trust-remote-code
+        --enable-auto-tool-choice
+        --tool-call-parser gemma4
+        --reasoning-parser gemma4
         --tensor-parallel-size 1
         --pipeline-parallel-size 1"
     healthcheck:
