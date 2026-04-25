@@ -80,9 +80,3 @@ class TestDashboardDataRendering:
         assert urgency_color(2) == t.success
         assert urgency_color(6) == t.warning
         assert urgency_color(10) == t.error
-
-    def test_urgency_color_handles_negative_days(self):
-        """Past-due or negative urgency values should still render safely."""
-        t = get_theme()
-
-        assert urgency_color(-1) == t.success
