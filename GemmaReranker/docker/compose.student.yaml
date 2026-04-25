@@ -1,0 +1,55 @@
+# =============================================================================
+# Docker Compose — Gemma-4-2B-IT Student Inference Slot
+# Used by Path B step 2: student model gets scored by teacher for DPO.
+# Small model, fast load (~2min). Run alongside teacher slot.
+# =============================================================================
+# Usage:
+#   docker compose -f docker/compose.student.yaml up -d
+#   docker compose -f docker/compose.student.yaml down
+#
+# Health check: curl http://127.0.0.1:8001/health
+# API base:     http://127.0.0.1:8001/v1
+
+services:
+  gemma-reranker-student:
+    image: ${VLLM_IMAGE:-vllm/vllm-openai:latest}
+    container_name: gemma-reranker-student
+    mem_limit: 8g
+    restart: "no"
+    shm_size: 4g
+    environment:
+      HF_TOKEN: ${HF_TOKEN}
+      VLLM_WORKER_MULTIPROC_METHOD: spawn
+    volumes:
+      - hf-cache:/root/.cache/huggingface
+    networks:
+      - gemma-reranker-net
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    oom_score_adj: 250
+    env_file:
+      - ../configs/student.slot.env
+    command: >
+      sh -c "vllm serve ${MODEL:-google/Gemma-4-2B-IT}
+        --port 8001 --host 0.0.0.0
+        --max-model-len ${MAX_MODEL_LEN:-131072}
+        --max-num-seqs ${MAX_NUM_SEQS:-256}
+        --gpu-memory-utilization ${GPU_MEMORY_UTIL:-0.60}
+        --trust-remote-code
+        --tensor-parallel-size 1
+        --quantization fp8"
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 180s
+
+networks:
+  gemma-reranker-net:
+    external: true
