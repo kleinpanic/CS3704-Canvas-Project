@@ -141,6 +141,43 @@ class TestFilterItems:
         result = filter_items(items, q)
         assert len(result) == len(items)
 
+        def test_course_filter_no_matches(self):
+        items = self._make_items()
+        q = FilterQuery.parse("course:MATH9999")
+
+        result = filter_items(items, q)
+
+        assert result == []
+
+    def test_combined_filter_no_matches(self):
+        items = self._make_items()
+        q = FilterQuery.parse("course:CS3214 type:quiz")
+
+        result = filter_items(items, q)
+
+        assert result == []
+
+    def test_course_filter_is_case_insensitive(self):
+        items = self._make_items()
+        q = FilterQuery.parse("course:cs3214")
+
+        result = filter_items(items, q)
+
+        assert len(result) == 2
+        assert all(items[i].course_code == "CS3214" for i in result)
+
+    def test_integration_parse_filter_and_fuzzy_text(self):
+        items = self._make_items()
+        q = FilterQuery.parse("course:CS4104 type:assignment final")
+
+        result = filter_items(items, q)
+
+        assert len(result) == 1
+        matched = items[result[0]]
+        assert matched.title == "Final Exam"
+        assert matched.course_code == "CS4104"
+        assert matched.ptype == "assignment"
+
     def test_course_filter_no_matches(self):
         items = self._make_items()
         q = FilterQuery.parse("course:MATH9999")
