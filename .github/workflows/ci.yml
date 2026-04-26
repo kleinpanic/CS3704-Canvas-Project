@@ -22,12 +22,10 @@ jobs:
           python-version: "3.11"
 
       - name: Install package
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e ".[dev]" --quiet
+        run: pip install -e ".[dev]" --quiet
 
       - name: Run tests
-        run: pytest tests/ -q
+        run: pytest tests/ -q -p no:cacheprovider --tb=short 2>&1 | tail -20
 
   coverage-check:
     name: Coverage
