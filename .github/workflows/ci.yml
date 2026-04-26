@@ -81,3 +81,29 @@ jobs:
       - name: Syntax smoke test
         run: python -c "import canvas_tui; print('OK')"
         continue-on-error: true
+
+  dead-code:
+    name: Dead Code Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install vulture
+        run: pip install vulture --quiet
+
+      - name: Run vulture
+        run: |
+          # Ignore names used via reflection, dynamic getattr, etc.
+          # Exclude test files (they import everything, lots of false positives)
+          vulture src/canvas_tui --ignore-names "_,M,n,q,w,_,_,_,__" --min-confidence 80 2>&1 | tee vulture_report.txt
+          if [ -s vulture_report.txt ]; then
+            echo "Dead code detected:"
+            cat vulture_report.txt
+            exit 1
+          fi
+          echo "No dead code found — all clear"
