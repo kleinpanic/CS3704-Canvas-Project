@@ -1,0 +1,7 @@
+# Batch Dataset Manifest
+# Format: handle,canvas_token
+# Lines starting with # are comments and ignored.
+
+# ADD YOUR TOKEN BELOW — example:
+# alice,vt_your_token_here
+# bob,vt_bobs_token_here
