@@ -1,17 +1,15 @@
-# Data contributed by teammates — PRIVATELY SENSITIVE
-# These files contain Canvas assignment titles, course codes, and deadlines.
-# They are pseudonymized (course IDs → COURSE001) but still personal.
-# DO NOT commit these files.
+# Teammate-contributed data (private — pseudonymized but still personal)
 data/collab/*.jsonl
 data/collab/*.jsonl.bak
+data/collab/*_course_map.json
 
-# Merged datasets
+# Merged/derived datasets (regenerated from collab data)
 data/rerank_merged.jsonl
 data/rerank_train.jsonl
 data/rerank_test.jsonl
 
-# Course maps (contain course ID → pseudonym mappings)
-data/collab/*_course_map.json
+# Sample/reference data (safe to commit — small, synthetic)
+# data/rerank_*_sample.jsonl  <-- DO commit these
 
 # Environment files
 .env
@@ -35,3 +33,5 @@ hf-cache/
 # OS
 .DS_Store
 Thumbs.db
+data/collab/*.jsonl
+data/collab/*.jsonl.map
