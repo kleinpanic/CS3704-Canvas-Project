@@ -106,7 +106,7 @@ class CanvasAPI:
         """get_all with cache layer. On network failure, returns stale cache."""
         if self._cache and not self._no_cache:
             cached, stale = self._cache.get(ck, allow_stale=True)
-            if cached is not None and not stale:
+            if cached is not None:
                 self._offline = False
                 return cached
 
