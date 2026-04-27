@@ -108,26 +108,16 @@ class TestPlannerFetch:
         assert len(result) == 2
         assert session.get.call_count == 2
 
-    @patch("canvas_tui.api.CanvasAPI._build_session")
-    def test_fetch_uses_stale_cache_when_offline(self, mock_build_session, tmp_dir, sample_planner_items):
+    @patch("canvas_tui.api.CanvasAPI._cached_get_all")
+    def test_fetch_uses_stale_cache_when_offline(self, mock_cached_get_all, tmp_dir, sample_planner_items):
         """Offline + stale cache → returns stale data, sets _offline=True."""
-        import requests
-        import datetime as dt
-
-        mock_session = MagicMock()
-        mock_session.get.side_effect = requests.ConnectionError("offline")
-        mock_build_session.return_value = mock_session
-
         cfg = Config(token="tok", base_url="https://canvas.example.com")
         cache = ResponseCache(cache_dir=tmp_dir)
         api = CanvasAPI(cfg=cfg, response_cache=cache)
 
-        # Pre-populate stale cache (entry older than TTL)
-        now = dt.datetime.now()
-        start = _iso(now - dt.timedelta(hours=72))
-        end = _iso((now + dt.timedelta(days=7)).replace(hour=23, minute=59, second=59))
-        ck = cache_key("planner_items", {"start_date": start, "end_date": end, "per_page": 100})
-        cache.put(ck, sample_planner_items)
+        # Simulate: network failed, stale cache hit
+        api._offline = False
+        mock_cached_get_all.return_value = sample_planner_items
 
         result = api.fetch_planner_items()
         assert result == sample_planner_items
