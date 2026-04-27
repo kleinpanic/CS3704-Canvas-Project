@@ -316,6 +316,14 @@ class CanvasTUI(App):
     /* === DataTable global === */
     DataTable { scrollbar-size: 1 1; }
     DataTable > .datatable--cursor { background: #30363d; }
+    #main-table { border: none; }
+    #main-table .datatable--column-due_col { width: 16; }
+    #main-table .datatable--column-rel_col { width: 8; }
+    #main-table .datatable--column-type_col { width: 6; }
+    #main-table .datatable--column-course_col { width: 12; }
+    #main-table .datatable--column-title_col { width: 1fr; }
+    #main-table .datatable--column-pts_col { width: 5; }
+    #main-table .datatable--column-status_col { width: 12; }
     """
 
     BINDINGS = [
@@ -730,21 +738,22 @@ class CanvasTUI(App):
                 key=lambda x: -x[1][0],
             ):
                 gc = grade_color(avg)
-                bar_w = 12
+                bar_w = 10
                 filled = int(avg / 100.0 * bar_w)
                 full = "\u2588" * filled
                 empty = "\u2591" * (bar_w - filled)
                 bar = f"[{gc}]{full}[/{gc}][dim]{empty}[/dim]"
-                side_lines.append(f"{course_label(code, 6):<6} {bar} [{gc}]{avg:.0f}%[/{gc}]")
+                side_lines.append(f"{course_label(code, 8):<8} {bar} [{gc}]{avg:.0f}%[/{gc}]")
             # Add line sparklines per course
             side_lines.append("")
             side_lines.append("[bold]Recent Scores[/bold]")
+            side_lines.append(f"[dim]{'Course':<8} {'L1 L2 L3 L4 L5':<14} Avg[/{dim}]")
             for code, pcts in course_pcts.items():
                 last5 = pcts[-5:]
-                sparks = " ".join(f"{p:.0f}" for p in last5)
+                sparks = " ".join(f"{p:>3.0f}" for p in last5)
                 avg = sum(last5) / len(last5)
                 gc = grade_color(avg)
-                side_lines.append(f" [{gc}]{course_label(code, 6):<6}[/{gc}] {sparks}")
+                side_lines.append(f"[{gc}]{course_label(code, 8):<8}[/{gc}] {sparks} [{gc}]{avg:.0f}%[/{gc}]")
             self.side_charts.update("\n".join(side_lines))
 
     def _update_status_bar(self, extra: str = "") -> None:
@@ -858,7 +867,15 @@ class CanvasTUI(App):
     def _setup_table(self) -> None:
         assert self.table is not None
         self.table.clear(columns=True)
-        self.table.add_columns("Due", "Rel", "Type", "Course", "Title", "Pts", "Status")
+        self.table.add_columns(
+            ("Due", "due_col"),
+            ("Rel", "rel_col"),
+            ("Type", "type_col"),
+            ("Course", "course_col"),
+            ("Title", "title_col"),
+            ("Pts", "pts_col"),
+            ("Status", "status_col"),
+        )
         self.table.cursor_type = "row"
         self.table.zebra_stripes = True
 
