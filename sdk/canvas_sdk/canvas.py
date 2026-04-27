@@ -30,14 +30,15 @@ from canvas_sdk.util import combine_kwargs, get_institution_url, obj_or_id
 
 class Canvas(object):
     """
-    The main class to be instantiated to provide access to Canvas's API.
+    Entry point for the Canvas API. Instantiate with your instance URL and access token
+    to get access to all the other endpoint helpers (courses, users, enrollments, etc.).
     """
 
     def __init__(self, base_url, access_token):
         """
-        :param base_url: The base URL of the Canvas instance's API.
+        :param base_url: Canvas instance root URL (e.g. ``https://vt.instructure.com``). Do not include ``/api/v1``.
         :type base_url: str
-        :param access_token: The API key to authenticate requests with.
+        :param access_token: API key from the Canvas developer portal.
         :type access_token: str
         """
         if "api/v1" in base_url:
