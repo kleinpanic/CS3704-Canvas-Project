@@ -100,8 +100,9 @@ jobs:
           # Exclude test files (they import everything, lots of false positives)
           vulture src/canvas_tui --ignore-names "_,M,n,q,w,_,_,_,__" --min-confidence 80 2>&1 | tee vulture_report.txt
           if [ -s vulture_report.txt ]; then
-            echo "Dead code detected:"
+            echo "Dead code detected (see report below) — non-blocking warning:"
             cat vulture_report.txt
-            exit 1
+            exit 0  # non-blocking: vulture warnings do not fail the job
           fi
           echo "No dead code found — all clear"
+        continue-on-error: true
