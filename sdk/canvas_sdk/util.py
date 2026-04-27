@@ -1,22 +1,14 @@
-"""
-Utility functions for the Canvas SDK.
-"""
+"""Helpers for request building, parameter normalization, and file handling."""
 
 import os
 
 
 def is_multivalued(value):
     """
-    Determine whether the given value should be treated as a sequence
-    of multiple values when used as a request parameter.
+    Returns True if ``value`` should be treated as multiple separate values in a request param.
 
-    In general anything that is iterable is multivalued. For example,
-    `list` and `tuple` instances are multivalued. Generators are
-    multivalued, as are the iterable objects returned by `zip`,
-    `itertools.chain`, etc. However, a simple `int` is single-valued.
-    `str` and `bytes` are special cases: although these are iterable,
-    we treat each as a single value rather than as a sequence of
-    isolated characters or bytes.
+    Most iterables count (list, tuple, generator, etc.), but ``str`` and ``bytes`` are treated
+    as single values to avoid splitting them into individual characters.
     """
     # special cases: iterable, but not multivalued
     if isinstance(value, (str, bytes)):
@@ -32,18 +24,14 @@ def is_multivalued(value):
 
 def combine_kwargs(**kwargs):
     """
-    Flatten a series of keyword arguments from complex combinations of
-    dictionaries and lists into a list of tuples representing
-    properly-formatted parameters to pass to the Requester object.
+    Flatten a nested dict/list structure into a flat list of ``(key, value)`` tuples suitable
+    for passing to the Requester. Nested dicts become bracket-notation keys (e.g. ``course[id]``),
+    and lists become repeated keys (e.g. ``enrollment[1]``, ``enrollment[2]``).
 
-    :param kwargs: A dictionary containing keyword arguments to be
-        flattened into properly-formatted parameters.
+    :param kwargs: Nested keyword arguments to flatten.
     :type kwargs: dict
-
-    :returns: A list of tuples that represent flattened kwargs. The
-        first element is a string representing the key. The second
-        element is the value.
-    :rtype: `list` of `tuple`
+    :returns: Flat list of ``(key, value)`` tuples.
+    :rtype: list of tuple
     """
     combined_kwargs = []
 
@@ -65,21 +53,14 @@ def combine_kwargs(**kwargs):
 
 def flatten_kwarg(key, obj):
     """
-    Recursive call to flatten sections of a kwarg to be combined
+    Recursively flatten a kwarg node — dicts get ``[key]`` suffixes, lists get empty ``[]``
+    brackets appended repeatedly. Returns a list of ``(key_fragment, value)`` tuples.
 
-    :param key: The partial keyword to add to the full keyword
+    :param key: The key prefix to prepend to each generated param name.
     :type key: str
-    :param obj: The object to translate into a kwarg. If the type is
-        `dict`, the key parameter will be added to the keyword between
-        square brackets and recursively call this function. If the type
-        is `list`, or `tuple`, a set of empty brackets will be appended
-        to the keyword and recursively call this function. Otherwise,
-        the function returns with the final keyword and value.
-
-    :returns: A list of tuples that represent flattened kwargs. The
-        first element is a string representing the key. The second
-        element is the value.
-    :rtype: `list` of `tuple`
+    :param obj: The value to flatten — dict, list, or scalar.
+    :returns: List of ``(key, value)`` tuples.
+    :rtype: list of tuple
     """
     if isinstance(obj, dict):
         # Add the word (e.g. "[key]")
@@ -180,12 +161,11 @@ def get_institution_url(base_url):
 
 def file_or_path(file):
     """
-    Open a file and return the handler if a path is given.
-    If a file handler is given, return it directly.
+    Accept a file path or an already-open file handle. If given a path, open it in binary mode.
+    Returns ``(file_handle, was_path)`` so callers know whether to close the handle.
 
-    :param file: A file handler or path to a file.
-
-    :returns: A tuple with the open file handler and whether it was a path.
+    :param file: A file path (str) or an open file-like object.
+    :returns: ``(open_file, is_path)`` — the file object and whether we opened it.
     :rtype: (file, bool)
     """
 
@@ -227,11 +207,12 @@ def normalize_bool(val, param_name):
 
 def clean_headers(headers):
     """
-    Sanitize a dictionary containing HTTP headers of sensitive values.
+    Return a copy of the headers dict with the Authorization header masked,
+    showing only the last 4 characters (for safe logging).
 
-    :param headers: The headers to sanitize.
+    :param headers: Raw headers dict.
     :type headers: dict
-    :returns: A list of headers without sensitive information stripped out.
+    :returns: Sanitized copy of headers.
     :rtype: dict
     """
     cleaned_headers = headers.copy()

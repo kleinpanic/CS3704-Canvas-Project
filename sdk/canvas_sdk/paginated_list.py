@@ -1,6 +1,4 @@
-"""
-Abstraction for paginated Canvas API endpoints.
-"""
+"""Lazy iterator over paginated Canvas API endpoints — handles all the cursor following for you."""
 
 from __future__ import annotations
 
@@ -12,8 +10,14 @@ T = TypeVar("T")
 
 class PaginatedList(Iterable[T]):
     """
-    Abstracts `pagination of Canvas API \
-    <https://canvas.instructure.com/doc/api/file.pagination.html>`_.
+    Lazy list-like wrapper around paginated Canvas API endpoints.
+
+    Iterating this object automatically fetches subsequent pages as needed, so you can
+    simply ``for item in PaginatedList(...)`` without worrying about cursors or page limits.
+
+    Supports normal list operations: indexing, slicing, ``len()``.
+
+    See `Canvas pagination docs <https://canvas.instructure.com/doc/api/file.pagination.html>`_.
     """
 
     def __getitem__(self, index):
@@ -38,21 +42,19 @@ class PaginatedList(Iterable[T]):
         **kwargs,
     ):
         """
-        :param content_class: The expected type to return in the list.
+        :param content_class: Type of objects this list should return.
         :type content_class: class
-        :param requester: The requester to pass HTTP requests through.
+        :param requester: Requester instance for API calls.
         :type requester: :class:`canvas_sdk.requester.Requester`
-        :param request_method: HTTP request method
+        :param request_method: HTTP method (GET, POST, etc.).
         :type request_method: str
-        :param first_url: Canvas endpoint for the initial request
+        :param first_url: Canvas API endpoint for the first page.
         :type first_url: str
-        :param extra_attribs: Extra data to include in the request
+        :param extra_attribs: Extra key-value pairs merged into every item (e.g. course_id).
         :type extra_attribs: dict
-        :param _root: Specify a nested property from Canvas to use for the resulting list.
+        :param _root: If the response nests data under a key (e.g. ``"courses"``), pass that key here.
         :type _root: str
-        :param _url_override: "new_quizzes" or "graphql" for specific Canvas endpoints.
-
-        Other URLs may be specified for third-party requests.
+        :param _url_override: "new_quizzes" or "graphql" to route to non-standard endpoints.
         :type _url_override: str
         :rtype: :class:`canvas_sdk.paginated_list.PaginatedList` of type content_class
         """

@@ -1,6 +1,4 @@
-"""
-Base class for all classes representing objects returned by the Canvas API.
-"""
+"""Base class for all Canvas API entity objects. Provides attribute hydration and datetime parsing."""
 
 import arrow
 import pytz
@@ -8,10 +6,8 @@ import pytz
 
 class CanvasObject:
     """
-    Base class for all classes representing objects returned by the API.
-
-    This makes a call to :func:`canvas_sdk.canvas_object.CanvasObject.set_attributes`
-    to dynamically construct this object's attributes with a JSON object.
+    Base class for every Canvas API entity. Pass in a JSON dict from the API and this class
+    will hydrate its attributes, including parsing ISO8601 timestamps into aware datetime objects.
     """
 
     def __getattribute__(self, name):
@@ -19,9 +15,9 @@ class CanvasObject:
 
     def __init__(self, requester, attributes: dict):
         """
-        :param requester: The requester to pass HTTP requests through.
+        :param requester: Requester instance for making follow-up API calls.
         :type requester: :class:`canvas_sdk.requester.Requester`
-        :param attributes: The JSON object to build this object with.
+        :param attributes: Raw JSON dict from the Canvas API.
         :type attributes: dict
         """
         self._requester = requester
@@ -40,26 +36,13 @@ class CanvasObject:
 
     def set_attributes(self, attributes: dict):
         """
-        Load this object with attributes.
+        Hydrate this object from a JSON dict. Also detects ISO8601 date strings and creates
+        a corresponding ``_date`` attribute with a timezone-aware datetime.
 
-        This method attempts to detect special types based on the field's content
-        and will create an additional attribute of that type.
+        For example, a response containing ``start_at: "2012-05-05T00:00:00Z"`` will also
+        get a ``start_at_date`` attribute parsed into a proper UTC datetime.
 
-        Consider a JSON response with the following fields::
-
-            {
-                "name": "New course name",
-                "course_code": "COURSE-001",
-                "start_at": "2012-05-05T00:00:00Z",
-                "end_at": "2012-08-05T23:59:59Z",
-                "sis_course_id": "12345"
-            }
-
-        The `start_at` and `end_at` fields match a date in ISO8601 format,
-        so two additional datetime attributes are created, `start_at_date`
-        and `end_at_date`.
-
-        :param attributes: The JSON object to build this object with.
+        :param attributes: Raw JSON dict from the Canvas API.
         :type attributes: dict
         """
         for attribute, value in attributes.items():

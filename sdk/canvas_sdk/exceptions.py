@@ -1,14 +1,10 @@
-"""
-Custom exceptions raised by the Canvas API.
-"""
+"""Custom exceptions raised by the Canvas API client."""
 
 from typing import Any
 
 
 class CanvasException(Exception):
-    """
-    Base class for all errors returned by the Canvas API.
-    """
+    """Base exception for all Canvas API errors."""
 
     def __init__(self, message: str) -> None:
         super().__init__(message)
@@ -72,16 +68,12 @@ class UnprocessableEntity(CanvasException):
 
 
 class InvalidAccessToken(CanvasException):
-    """
-    Raised when the API returns an invalid access token error.
-    """
+    """Raised when the access token is invalid or expired (WWW-Authenticate header present)."""
 
     pass
 
 
 class RequiredFieldMissing(CanvasException):
-    """
-    Raised when a required parameter is missing from the request.
-    """
+    """Raised when a required parameter is missing from a request body."""
 
     pass
