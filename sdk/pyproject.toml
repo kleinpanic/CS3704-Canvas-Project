@@ -1,0 +1,11 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "canvas-sdk"
+version = "1.0.0"
+description = "Canvas LMS Python SDK"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = ["requests>=2.20", "arrow>=1.0", "pytz>=2019.1"]
