@@ -108,22 +108,22 @@ class TestPlannerFetch:
         assert len(result) == 2
         assert session.get.call_count == 2
 
-    @pytest.mark.skip(reason="mock setup is broken — self._session bypasses @patch, test fails in Coverage workflow since b700787")
-    @patch("canvas_tui.api.requests.Session")
-    def test_fetch_uses_stale_cache_when_offline(self, mock_session_cls, tmp_dir, sample_planner_items):
+    def test_fetch_uses_stale_cache_when_offline(self, tmp_dir, sample_planner_items):
+        """Offline + stale cache → returns stale data, sets _offline=True."""
         import requests
-        session = MagicMock()
-        session.get.side_effect = requests.ConnectionError("offline")
-        mock_session_cls.return_value = session
+        import datetime as dt
+
+        # Patch _build_session so we control the session without patching requests.Session globally
+        mock_session = MagicMock()
+        mock_session.get.side_effect = requests.ConnectionError("offline")
 
         cfg = Config(token="tok", base_url="https://canvas.example.com")
         cache = ResponseCache(cache_dir=tmp_dir)
         api = CanvasAPI(cfg=cfg, response_cache=cache)
+        # Inject the mock session directly — bypasses _build_session entirely
+        api._session = mock_session
 
-        # Pre-populate the cache with the exact key that fetch_planner_items will generate.
-        # fetch_planner_items uses cfg.past_hours=72 and cfg.days_ahead=7.
-        import datetime as dt
-        from canvas_tui.cache import cache_key
+        # Pre-populate stale cache (entry older than TTL)
         now = dt.datetime.now()
         start = _iso(now - dt.timedelta(hours=72))
         end = _iso((now + dt.timedelta(days=7)).replace(hour=23, minute=59, second=59))
