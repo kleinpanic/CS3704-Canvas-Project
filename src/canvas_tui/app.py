@@ -109,8 +109,8 @@ class CanvasTUI(App):
     }
     #sidebar {
         width: 1fr;
-        min-width: 34;
-        max-width: 46;
+        min-width: 38;
+        max-width: 44;
         border-left: solid #30363d;
         layout: vertical;
         padding: 0 1;
@@ -150,6 +150,7 @@ class CanvasTUI(App):
     }
     .stat-cell {
         width: 1fr;
+        min-width: 22;
         padding: 0 1;
         height: auto;
         border-left: solid #30363d;
@@ -729,12 +730,12 @@ class CanvasTUI(App):
                 key=lambda x: -x[1][0],
             ):
                 gc = grade_color(avg)
-                bar_w = 16
+                bar_w = 12
                 filled = int(avg / 100.0 * bar_w)
                 full = "\u2588" * filled
                 empty = "\u2591" * (bar_w - filled)
                 bar = f"[{gc}]{full}[/{gc}][dim]{empty}[/dim]"
-                side_lines.append(f"{course_label(code, 8):<8} {bar} [{gc}]{avg:.0f}%[/{gc}]")
+                side_lines.append(f"{course_label(code, 6):<6} {bar} [{gc}]{avg:.0f}%[/{gc}]")
             # Add line sparklines per course
             side_lines.append("")
             side_lines.append("[bold]Recent Scores[/bold]")
@@ -743,7 +744,7 @@ class CanvasTUI(App):
                 sparks = " ".join(f"{p:.0f}" for p in last5)
                 avg = sum(last5) / len(last5)
                 gc = grade_color(avg)
-                side_lines.append(f" [{gc}]{course_label(code, 8):<8}[/{gc}] {sparks}")
+                side_lines.append(f" [{gc}]{course_label(code, 6):<6}[/{gc}] {sparks}")
             self.side_charts.update("\n".join(side_lines))
 
     def _update_status_bar(self, extra: str = "") -> None:
