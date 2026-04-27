@@ -102,7 +102,9 @@ class CanvasAPI:
         """Whether last fetch fell back to stale cache."""
         return self._offline
 
-    def _cached_get_all(self, ck: str, url: str, params: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    def _cached_get_all(
+        self, ck: str, url: str, params: dict[str, Any] | None = None
+    ) -> list[dict[str, Any]]:
         """get_all with cache layer. On network failure, returns stale cache."""
         if self._cache and not self._no_cache:
             cached, stale = self._cache.get(ck, allow_stale=True)
@@ -125,10 +127,12 @@ class CanvasAPI:
                     return cached
             raise
 
-    def get_all(self, url: str, params: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    def get_all(
+        self, url: str, params: dict[str, Any] | None = None
+    ) -> list[dict[str, Any]]:
         """Walk paginated Canvas API endpoint."""
-        items: list[dict[str, Any]] = []
         params = dict(params or {})
+        items: list[dict[str, Any]] = []
         while True:
             r = self._session.get(url, params=params, timeout=self.cfg.http_timeout)
             self._update_rate_limit(r)
@@ -150,7 +154,9 @@ class CanvasAPI:
                 break
         return items
 
-    def get_json(self, url: str, params: dict[str, Any] | None = None) -> dict[str, Any] | None:
+    def get_json(
+        self, url: str, params: dict[str, Any] | None = None
+    ) -> dict[str, Any] | None:
         """Single GET returning JSON or None on error."""
         try:
             r = self._session.get(url, params=params or {}, timeout=self.cfg.http_timeout)
@@ -168,12 +174,18 @@ class CanvasAPI:
         tz = ZoneInfo(self.cfg.user_tz)
         now = dt.datetime.now(tz)
         start = _iso(now - dt.timedelta(hours=self.cfg.past_hours))
-        end = _iso((now + dt.timedelta(days=self.cfg.days_ahead)).replace(hour=23, minute=59, second=59, microsecond=0))
+        end = _iso(
+            (now + dt.timedelta(days=self.cfg.days_ahead)).replace(
+                hour=23, minute=59, second=59, microsecond=0
+            )
+        )
         params = {"start_date": start, "end_date": end, "per_page": 100}
         ck = cache_key("planner_items", params)
         return self._cached_get_all(ck, self._url("/api/v1/planner/items"), params)
 
-    def fetch_course_snapshot(self) -> tuple[dict[int, tuple[str, str]], dict[int, float]]:
+    def fetch_course_snapshot(
+        self,
+    ) -> tuple[dict[int, tuple[str, str]], dict[int, float]]:
         """Fetch active courses and Canvas-computed scores in one API pass (cached).
 
         Returns:
@@ -199,7 +211,9 @@ class CanvasAPI:
             cid_i = int(cid)
             courses[cid_i] = (c.get("course_code") or str(cid), c.get("name") or "")
 
-            enrollments = c.get("enrollments") if isinstance(c.get("enrollments"), list) else []
+            enrollments = (
+                c.get("enrollments") if isinstance(c.get("enrollments"), list) else []
+            )
             score: float | None = None
             for e in enrollments:
                 if not isinstance(e, dict):
@@ -241,7 +255,9 @@ class CanvasAPI:
             return data.get("course_code") or "", data.get("name") or ""
         return "", ""
 
-    def fetch_assignment_details(self, course_id: int, assignment_id: int) -> dict[str, Any]:
+    def fetch_assignment_details(
+        self, course_id: int, assignment_id: int
+    ) -> dict[str, Any]:
         """Fetch full assignment details."""
         r = self._session.get(
             self._url(f"/api/v1/courses/{course_id}/assignments/{assignment_id}"),
@@ -251,11 +267,19 @@ class CanvasAPI:
         r.raise_for_status()
         return r.json()
 
-    def fetch_submission(self, course_id: int, assignment_id: int) -> dict[str, Any] | None:
+    def fetch_submission(
+        self, course_id: int, assignment_id: int
+    ) -> dict[str, Any] | None:
         """Fetch user's submission for an assignment."""
-        return self.get_json(self._url(f"/api/v1/courses/{course_id}/assignments/{assignment_id}/submissions/self"))
+        return self.get_json(
+            self._url(
+                f"/api/v1/courses/{course_id}/assignments/{assignment_id}/submissions/self"
+            )
+        )
 
-    def fetch_discussion(self, course_id: int, topic_id: int) -> dict[str, Any] | None:
+    def fetch_discussion(
+        self, course_id: int, topic_id: int
+    ) -> dict[str, Any] | None:
         """Fetch a discussion topic or announcement."""
         return self.get_json(
             self._url(f"/api/v1/courses/{course_id}/discussion_topics/{topic_id}"),
@@ -290,7 +314,9 @@ class CanvasAPI:
         now = dt.datetime.now(tz)
         start = _iso(now - dt.timedelta(days=self.cfg.ann_past_days))
         end = _iso(
-            (now + dt.timedelta(days=self.cfg.ann_future_days)).replace(hour=23, minute=59, second=59, microsecond=0)
+            (now + dt.timedelta(days=self.cfg.ann_future_days)).replace(
+                hour=23, minute=59, second=59, microsecond=0
+            )
         )
         params: dict[str, Any] = {
             "start_date": start,
