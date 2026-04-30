@@ -1,88 +1,93 @@
 # Architecture
 
-The Canvas TUI follows a **Model-View-Controller (MVC)** architecture with a **shared domain core** designed for future parity with a browser extension.
+This project now has two active product surfaces:
+- a Python/Textual TUI
+- a browser extension with its own shared JS client/runtime layer
 
-## Design Philosophy
+## Design Principles
 
-- **Offline-first**: SQLite cache enables reliable offline operation
-- **Shared logic**: Business rules in reusable domain layer
-- **Platform adapters**: UI and storage specific to each platform
-- **Observable**: Structured logging and metrics for maintenance
+- **Offline-first** where practical, using persistent cache layers
+- **Shared contracts** instead of scattered UI-to-service coupling
+- **Platform-specific adapters** for storage, notifications, and runtime details
+- **Governed delivery** through CI/CD and protected `main`
 
-## Architecture Diagrams
+## High-Level Layout
 
-### High-level System Design
+```text
+TUI (Python)
+  -> src/canvas_tui/
+  -> Canvas API + SQLite-backed local state
 
-![Complex Architecture](assets/architecture/complex-architecture.svg)
+Extension (JS)
+  -> extension/src/popup/
+  -> extension/src/background.js
+  -> extension/src/lib/canvas-client.js
+  -> extension/src/lib/cache.js
+  -> Canvas API + IndexedDB-backed local state
+```
 
-*Component relationships and data flow*
-
-### Sync Sequence
-
-![Sync Flow](assets/architecture/sync-flow.svg)
-
-*Data refresh and synchronization flow*
-
-## Core Patterns
-
-### MVC Pattern
+## TUI Architecture
 
 | Layer | Components | Files |
 |-------|------------|-------|
-| **Model** | API client, state management, cache | `api.py`, `state.py`, `cache.py`, `models.py` |
-| **View** | Textual screens and widgets | `screens/`, `widgets/` |
-| **Controller** | App orchestration, routing | `app.py`, `cli.py` |
+| **Application** | App orchestration, routing, screens | `app.py`, `cli.py`, `screens/`, `widgets/` |
+| **Domain/Data** | API, models, state, caching | `api.py`, `models.py`, `state.py`, `cache.py` |
+| **Infrastructure** | Config, sync helpers, adapters | `config.py`, `prefetch.py`, `adapters/` |
 
-### Command Pattern
+## Browser Extension Architecture
 
-User actions are encapsulated as commands:
-- `RefreshDataCommand` — sync with Canvas API
-- `SwitchScreenCommand` — navigate between views
-- `ApplyFilterCommand` — filter displayed data
+The extension is no longer just an aspirational diagram. It now has a real layered structure.
 
-This decouples UI widgets from application logic.
+| Layer | Role | Files |
+|------|------|------|
+| **UI** | Popup rendering and interaction | `extension/src/popup/*` |
+| **Runtime bridge** | Message helpers and shared contract | `extension/src/lib/extension-api.js`, `extension/src/lib/extension-contract.js` |
+| **Service orchestration** | Background handlers, badge updates, notifications | `extension/src/background.js` |
+| **Canvas access** | Shared browser-side client methods | `extension/src/lib/canvas-client.js` |
+| **Persistence** | IndexedDB stale-while-revalidate cache | `extension/src/lib/cache.js` |
 
-### Repository Pattern
+## Why the Extension Refactor Matters
 
-Data access is abstracted through the API gateway and cache:
-- Transparent offline/online operation
-- Consistent error handling
-- Rate limiting and retry logic
+Recent work moved the extension away from:
+- raw endpoint strings spread across multiple files
+- popup code depending on raw Chrome runtime message names
+- background logic acting as both transport and domain layer
 
-## Component Overview
+The new structure centralizes:
+- Canvas auth and endpoint access in `canvas-client.js`
+- runtime message names in `extension-contract.js`
+- popup/background calls in `extension-api.js`
 
-### Canvas API Gateway
+That makes the extension easier to reason about and safer to extend.
 
-- Authentication and session management
-- Request normalization
-- Rate limiting (429 handling)
-- Retry with exponential backoff
+## Cache Strategy
 
-### Offline Cache
+| Surface | Cache |
+|---------|-------|
+| **TUI** | SQLite / local Python-side persistence |
+| **Extension** | IndexedDB with stale-while-revalidate helpers |
 
-- SQLite persistence layer
-- Full + incremental sync strategies
-- Cache invalidation policies
-- Conflict resolution
+The two surfaces do **not** share a runtime cache implementation today, but they follow similar separation principles.
 
-### Textual TUI
+## Documentation Assets
 
-- Dashboard with course overview
-- Assignment detail screens
-- Grades with trend visualization
-- File browser and downloads
-- Calendar with ICS export
+### Static diagrams
+- [Full Architecture SVG](https://github.com/kleinpanic/CS3704-Canvas-Project/blob/main/docs/architecture/complex-architecture.svg)
+- [Sync Flow SVG](https://github.com/kleinpanic/CS3704-Canvas-Project/blob/main/docs/architecture/sync-flow.svg)
 
-## Source Files
+### Source diagrams
+- `docs/architecture/complex-architecture.mmd`
+- `docs/architecture/sync-sequence.mmd`
 
-- Architecture diagrams: `docs/architecture/*.mmd`
-- SVG exports: `docs/assets/architecture/*.svg`
-- Wiki documentation: [Architecture Overview](https://github.com/kleinpanic/CS3704-Canvas-Project/wiki/Architecture-Overview)
+## Current Reality vs Future Goal
 
-## Future: Browser Extension
+### Current reality
+- strong TUI codebase
+- working extension foundation
+- shared browser-side client layer
+- repo governance cleaned up around `main`
 
-The shared domain core enables:
-- Same business logic for TUI and extension
-- Platform-specific UI adapters
-- Shared test suite for core logic
-- Feature parity without duplication
+### Future goal
+- deeper shared-core parity where business logic can be reused more directly across surfaces
+- stronger tests around the extension runtime bridge and client methods
+- broader extension feature coverage for files, announcements, and richer Canvas context
