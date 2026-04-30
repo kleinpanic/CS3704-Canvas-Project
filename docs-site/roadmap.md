@@ -1,85 +1,69 @@
 # Project Roadmap
 
-This page tracks major milestones and upcoming work for the CS3704 Canvas project.
+This roadmap reflects the current post-cleanup state of the repository.
 
-## Current Milestone: PM3
+## Current State
 
-**Focus**: Design documentation and architecture visualization
+Recently completed:
+- repo governance cleanup around `main`
+- removal of AI auto-fix and auto-doc workflows from the main merge path
+- browser extension popup visual polish pass
+- browser extension shared client/runtime contract refactor
+- cleanup of stale remote branches
 
-### Deliverables
+## Near-Term Priorities
 
-- [x] Repository setup and governance
-- [x] CI/CD pipeline (lint, test, build, security)
-- [x] Architecture diagrams (Mermaid + SVG)
-- [x] Documentation portal (Pages)
-- [x] Team workflow documentation
-- [ ] Design pattern rationale (in progress)
-- [ ] Wireframes/storyboards
+### 1. Browser extension hardening
+- add tests around the shared client and runtime contract
+- expand course-context features that use modules, files, and announcements
+- reduce any remaining direct background/runtime coupling
 
-**Due**: April 4, 2026
+### 2. Docs and site maintenance
+- keep MkDocs pages aligned with current architecture
+- update screenshots/diagrams when UI or structure changes
+- keep workflow/governance pages consistent with real repo settings
 
-## Upcoming: PM4
+### 3. Repo architecture cleanup
+- decide how to isolate `GemmaReranker` and related data from core app concerns
+- clarify what is core product code versus experimental/support tooling
 
-**Focus**: Core implementation
+## Delivery Model
 
-### Planned Work
-
-- [ ] Canvas API integration
-- [ ] Offline cache implementation
-- [ ] Dashboard screen
-- [ ] Assignment detail view
-- [ ] Basic test coverage
-
-**Due**: TBD
-
-## Sprint Backlog
-
-Check the [Project Board](https://github.com/users/kleinpanic/projects/5) for current sprint tasks.
-
-### Active Issues
-
-| Issue | Title | Status |
-|-------|-------|--------|
-| [#15](https://github.com/kleinpanic/CS3704-Canvas-Project/issues/15) | Dashboard landing screen | Open |
-| [#16](https://github.com/kleinpanic/CS3704-Canvas-Project/issues/16) | Assignment detail view | Open |
-| [#17](https://github.com/kleinpanic/CS3704-Canvas-Project/issues/17) | Grades overview | Open |
-| [#18](https://github.com/kleinpanic/CS3704-Canvas-Project/issues/18) | Canvas API authentication | Open |
-| [#19](https://github.com/kleinpanic/CS3704-Canvas-Project/issues/19) | Offline cache with SQLite | Open |
-
-## Technical Debt
-
-| Item | Priority | Status |
-|------|----------|--------|
-| Mypy stabilization (75 errors) | Medium | Advisory |
-| Test coverage expansion | Medium | Ongoing |
-| Documentation completeness | Low | In progress |
-
-## Future Milestones
-
-### PM5: Testing & Quality
-- Comprehensive test suite
-- Code coverage >80%
-- Performance benchmarks
-- Security audit
-
-### PM6: Delivery
-- Final integration
-- Documentation polish
-- Release preparation
-- Course submission
-
-## Milestones Timeline
-
-```
-PM3 ─── Apr 4 ─── Design docs
-PM4 ─── TBD ───── Core implementation
-PM5 ─── TBD ───── Testing & quality
-PM6 ─── TBD ───── Final delivery
+```text
+small scoped branch
+  -> PR to main
+  -> CI checks
+  -> maintainer review
+  -> squash merge
+  -> docs site auto-deploys from main
 ```
 
----
+## Extension Roadmap Snapshot
 
-**See also**:
-- [Architecture](architecture.md) — system design
-- [Workflow](workflow.md) — team process
-- [GitHub Issues](https://github.com/kleinpanic/CS3704-Canvas-Project/issues) — task tracker
+The extension is no longer just a future placeholder.
+
+Implemented now:
+- popup UI
+- background worker
+- IndexedDB cache
+- shared Canvas client layer
+- shared runtime contract
+
+Still needed:
+- broader feature coverage
+- deeper tests
+- clearer auth strategy if OAuth replaces token entry
+
+## Medium-Term Follow-Ups
+
+- richer extension parity with the TUI
+- improved architecture diagrams reflecting the browser-side layers
+- possible isolation of optional tooling/data into better-scoped directories or repos
+
+## Success Criteria
+
+The project is in a good state when:
+- `main` stays the only durable branch
+- docs site reflects actual architecture, not stale plans
+- extension changes land through a predictable contract layer
+- maintainers do not need ad hoc branch-protection surgery for normal work

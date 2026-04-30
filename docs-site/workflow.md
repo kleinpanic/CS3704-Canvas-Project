@@ -1,124 +1,97 @@
-# Team Workflow
+# Workflow & Governance
 
-This page documents how the team coordinates on the CS3704 Canvas project.
+This page documents how the team should work in the repository after the branch and protection cleanup.
 
-## Quick Reference
+## Canonical Branch Policy
 
-| Action | How |
-|--------|-----|
-| **Report a bug** | [Open an Issue](https://github.com/kleinpanic/CS3704-Canvas-Project/issues/new/choose) |
-| **Request a feature** | [Open an Issue](https://github.com/kleinpanic/CS3704-Canvas-Project/issues/new/choose) |
-| **Ask a question** | [Start a Discussion](https://github.com/kleinpanic/CS3704-Canvas-Project/discussions) |
-| **Check sprint tasks** | [Project Board](https://github.com/users/kleinpanic/projects/5) |
-| **Read documentation** | [Wiki](https://github.com/kleinpanic/CS3704-Canvas-Project/wiki) |
+- `main` is the only long-term branch
+- feature branches are temporary and should exist only long enough to support a PR
+- merged PR branches should be deleted automatically
+- maintainers should avoid leaving stale remote branches around
 
 ## Contribution Flow
 
-### 1. Find Work
-
-- Check the [Project Board](https://github.com/users/kleinpanic/projects/5) for ready tasks
-- Browse [Open Issues](https://github.com/kleinpanic/CS3704-Canvas-Project/issues)
-- Comment on an issue to claim it
-
-### 2. Create Branch
+### 1. Create a short-lived branch
 
 ```bash
 git checkout main
-git pull
-git checkout -b feature/your-feature-name
+git pull --ff-only
+git checkout -b feature/your-change
 ```
 
-**Branch naming**:
+Accepted prefixes:
+- `feature/*`
+- `fix/*`
+- `chore/*`
+- `docs/*`
+- `refactor/*`
+- `test/*`
+- `hotfix/*`
 
-| Prefix | Purpose | Example |
-|--------|---------|---------|
-| `feature/` | New functionality | `feature/grades-chart` |
-| `fix/` | Bug fixes | `fix/api-timeout` |
-| `chore/` | Maintenance | `chore/update-deps` |
-| `docs/` | Documentation | `docs/improve-readme` |
+### 2. Make changes
 
-### 3. Make Changes
+- keep commits focused
+- test locally when relevant
+- avoid landing generated AI artifacts without human review
+- keep docs in sync when architecture or workflow changes
 
-- Write clean, tested code
-- Follow the [Development Guide](https://github.com/kleinpanic/CS3704-Canvas-Project/wiki/Development-Guide)
-- Commit with descriptive messages
-
-### 4. Open Pull Request
+### 3. Open a PR to `main`
 
 ```bash
-git push origin feature/your-feature-name
+git push origin feature/your-change
 ```
 
-Then:
-1. Go to GitHub and open a PR
-2. Fill in the PR template
-3. Link to related issues
-4. Request review from a maintainer
+Then open a PR and let GitHub run checks.
 
-### 5. Pass Checks
+## Required Merge Shape
 
-CI will automatically run:
-- **Lint** (ruff) — code style
-- **Tests** (pytest) — unit tests on Python 3.11/3.12/3.13
-- **Package build** — verify build succeeds
-- **Security** (CodeQL) — vulnerability scan
+The repository is configured for:
+- **squash merge only**
+- **linear history**
+- **conversation resolution before merge**
+- **branch auto-delete after merge**
 
-Fix any failures before review.
+Merge commits and rebase merges are disabled.
 
-### 6. Address Review
+## Required Checks
 
-- Respond to all comments
-- Make requested changes
-- Mark conversations as resolved
-- Push new commits
+Current protected-branch checks are:
+- `Branch Name Policy`
+- `Test`
+- `Python Compat (3.11)`
+- `Python Compat (3.12)`
+- `Python Compat (3.13)`
 
-### 7. Merge
+## Important Maintainer Notes
 
-A maintainer will merge when:
-- All checks pass
-- Review is approved
-- Conversations are resolved
+- admins are enforced on `main`
+- protections should match real workflow job names, not guessed names
+- if branch protection is blocking valid maintainer work, fix the policy instead of piling on bypasses
+- if a repo-owned PR must be merged urgently, document why
 
-## Branch Protection
+## AI and Automation Policy
 
-The `main` branch is protected with:
+The repo no longer uses AI auto-fix or AI auto-doc workflows in the normal merge path.
 
-- ✅ PR required (no direct push for team)
-- ✅ Passing CI checks required
-- ✅ Code owner review required
-- ✅ Signed commits required
-- ✅ Linear history enforced
-- ✅ Conversations must be resolved
+That means:
+- CI failures should be fixed intentionally
+- documentation updates should be reviewed by a maintainer
+- generated output should never be merged blindly
 
-**Maintainers** can bypass these for emergency fixes.
+## Docs Site Workflow
 
-## Automation
+The public docs site is built with MkDocs from `docs-site/` and deployed from pushes to `main`.
 
-| Bot | Purpose | Frequency |
-|-----|---------|-----------|
-| **CI** | Lint, test, build | Every push |
-| **Dependabot** | Dependency updates | Weekly |
-| **Stale** | Close inactive issues | Daily |
-| **Labeler** | Label PRs by files | Every PR |
-| **Auto-assign** | Assign new issues | Every issue |
-| **Release** | Create snapshots | Every main push |
+When updating docs:
+- update `docs-site/` for site-facing pages
+- update `README.md` for repo-facing overview changes
+- keep roadmap/workflow/architecture pages consistent with actual repo behavior
 
-## Issue Templates
+## Quick Reference
 
-Use the appropriate template when opening issues:
-
-- **Bug Report** — Report something broken
-- **Feature Request** — Propose new functionality
-- **Task** — General work item
-
-[Create an Issue →](https://github.com/kleinpanic/CS3704-Canvas-Project/issues/new/choose)
-
-## Questions?
-
-- **Quick questions**: [Discussions](https://github.com/kleinpanic/CS3704-Canvas-Project/discussions)
-- **Bugs/Features**: [Issues](https://github.com/kleinpanic/CS3704-Canvas-Project/issues)
-- **Urgent**: Contact [@kleinpanic](https://github.com/kleinpanic)
-
----
-
-**See also**: [Team Workflow (Wiki)](https://github.com/kleinpanic/CS3704-Canvas-Project/wiki/Team-Workflow)
+| Action | Expected path |
+|--------|----------------|
+| Feature work | short-lived branch -> PR -> squash merge |
+| Docs update | `docs-site/` + README when needed |
+| Governance change | update GitHub protections and document it |
+| Extension architecture change | update code + `docs-site/extension.md` |
