@@ -3,49 +3,39 @@
  * Handles API calls, caching, badge updates, and notifications.
  *
  * Architecture:
+ * - Shared Canvas client layer for auth + endpoint access
  * - IndexedDB cache with stale-while-revalidate (instant popup loads)
  * - Badge shows count of non-dismissed upcoming assignments
  * - Notifications at 24h and 1h before deadline
  * - Message passing to popup for data + cache operations
  */
 
-import { getUpcomingAssignments, getCourses, getCourseAssignments, dismissAssignment, getDismissed, clearCache, getSetting, setSetting } from './lib/cache.js';
+import {
+  getUpcomingAssignments,
+  getCourses,
+  getCourseAssignments,
+  dismissAssignment,
+  getDismissed,
+  clearCache,
+} from './lib/cache.js';
+import { createCanvasClient } from './lib/canvas-client.js';
+import { MESSAGE_TYPES } from './lib/extension-contract.js';
 
-const API_BASE = "https://canvas.vt.edu/api/v1";
 const NOTIFY_BEFORE = [24 * 3600, 3600]; // 24h and 1h before deadline
-
-// ── Canvas API ────────────────────────────────────────────────────────────────
-
-async function canvasGet(path) {
-  const token = await getSetting("canvas_token", "settings");
-  if (!token) throw new Error("Not authenticated");
-  const url = `${API_BASE}${path}`;
-  const res = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: "application/json",
-    },
-  });
-  if (res.status === 401) {
-    await setSetting(null, "canvas_token", "settings");
-    throw new Error("Token expired");
-  }
-  if (!res.ok) throw new Error(`Canvas API error: ${res.status}`);
-  return res.json();
-}
+const canvasClient = createCanvasClient();
 
 // ── Badge Update ─────────────────────────────────────────────────────────────
 
 async function updateBadge() {
   try {
-    const { data: events } = await getUpcomingAssignments(canvasGet);
+    const { data: events } = await getUpcomingAssignments(() => canvasClient.getUpcomingAssignments());
     const dismissed = await getDismissed();
-    const count = events.filter(e => e.type === "assignment" && !dismissed.has(String(e.assignment?.id))).length;
-    chrome.action.setBadgeText({ text: count > 0 ? String(count) : "" });
-    chrome.action.setBadgeBackgroundColor({ color: "#d63e36" });
+    const count = events.filter((e) => e.type === 'assignment' && !dismissed.has(String(e.assignment?.id))).length;
+    chrome.action.setBadgeText({ text: count > 0 ? String(count) : '' });
+    chrome.action.setBadgeBackgroundColor({ color: '#d63e36' });
   } catch {
-    chrome.action.setBadgeText({ text: "?" });
-    chrome.action.setBadgeBackgroundColor({ color: "#f48c06" });
+    chrome.action.setBadgeText({ text: '?' });
+    chrome.action.setBadgeBackgroundColor({ color: '#f48c06' });
   }
 }
 
@@ -53,12 +43,12 @@ async function updateBadge() {
 
 async function checkDeadlines() {
   try {
-    const { data: events } = await getUpcomingAssignments(canvasGet);
+    const { data: events } = await getUpcomingAssignments(() => canvasClient.getUpcomingAssignments());
     const dismissed = await getDismissed();
     const now = Date.now();
 
     for (const event of events) {
-      if (event.type !== "assignment") continue;
+      if (event.type !== 'assignment') continue;
       const id = String(event.assignment?.id || event.id);
       if (dismissed.has(id)) continue;
 
@@ -68,16 +58,16 @@ async function checkDeadlines() {
       for (const seconds of NOTIFY_BEFORE) {
         if (diff > 0 && diff <= seconds) {
           const notifiedKey = `notified:${id}:${seconds}`;
-          const already = await getSetting(notifiedKey, "settings");
-          if (!already) {
-            const title = seconds >= 86400 ? "24h Reminder" : "1h Reminder";
+          const already = await canvasClient.tokenStore(notifiedKey, 'settings');
+          if (!already?.value) {
+            const title = seconds >= 86400 ? '24h Reminder' : '1h Reminder';
             await chrome.notifications.create({
               title: `Canvas — ${title}`,
               message: event.title,
-              iconUrl: "assets/icon-48.png",
+              iconUrl: 'assets/icon-48.png',
               tag: id,
             });
-            await setSetting("true", notifiedKey, "settings");
+            await canvasClient.tokenWriter('true', notifiedKey, 'settings');
           }
         }
       }
@@ -87,54 +77,70 @@ async function checkDeadlines() {
   }
 }
 
+function sendOk(sendResponse, payload = {}) {
+  sendResponse({ ok: true, ...payload });
+}
+
+function sendError(sendResponse, error) {
+  sendResponse({ ok: false, error: error?.message || String(error) });
+}
+
 // ── Message Handlers ──────────────────────────────────────────────────────────
 
+const messageHandlers = {
+  [MESSAGE_TYPES.getUpcoming]: () =>
+    getUpcomingAssignments(() => canvasClient.getUpcomingAssignments()),
+
+  [MESSAGE_TYPES.getCourses]: () =>
+    getCourses(() => canvasClient.getCourses()),
+
+  [MESSAGE_TYPES.getCourseAssignments]: (msg) =>
+    getCourseAssignments((courseId) => canvasClient.getCourseAssignments(courseId), msg.courseId),
+
+  [MESSAGE_TYPES.validateToken]: async () => {
+    const { user } = await canvasClient.validateToken();
+    return { user };
+  },
+
+  [MESSAGE_TYPES.dismiss]: async (msg) => {
+    await dismissAssignment(msg.assignmentId);
+    await updateBadge();
+    return {};
+  },
+
+  [MESSAGE_TYPES.clearCache]: async () => {
+    await clearCache();
+    return {};
+  },
+
+  [MESSAGE_TYPES.getToken]: async () => {
+    const token = await canvasClient.getToken().catch(() => null);
+    return { token };
+  },
+
+  [MESSAGE_TYPES.setToken]: async (msg) => {
+    await canvasClient.setToken(msg.token);
+    const { user } = await canvasClient.validateToken();
+    clearCache().catch(() => {});
+    updateBadge();
+    return { user };
+  },
+
+  [MESSAGE_TYPES.refreshBadge]: async () => {
+    await clearCache().catch(() => {});
+    await updateBadge().catch(() => {});
+    return {};
+  },
+};
+
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-  if (msg.type === "GET_UPCOMING") {
-    getUpcomingAssignments(canvasGet)
-      .then(({ data, cached }) => sendResponse({ ok: true, data, cached }))
-      .catch(err => sendResponse({ ok: false, error: err.message }));
-    return true;
-  }
+  const handler = messageHandlers[msg.type];
+  if (!handler) return false;
 
-  if (msg.type === "GET_COURSES") {
-    getCourses(canvasGet)
-      .then(({ data, cached }) => sendResponse({ ok: true, data, cached }))
-      .catch(err => sendResponse({ ok: false, error: err.message }));
-    return true;
-  }
-
-  if (msg.type === "DISMISS") {
-    dismissAssignment(msg.assignmentId)
-      .then(() => {
-        updateBadge();
-        sendResponse({ ok: true });
-      })
-      .catch(err => sendResponse({ ok: false, error: err.message }));
-    return true;
-  }
-
-  if (msg.type === "CLEAR_CACHE") {
-    clearCache().then(() => sendResponse({ ok: true })).catch(err => sendResponse({ ok: false, error: err.message }));
-    return true;
-  }
-
-  if (msg.type === "GET_TOKEN") {
-    getSetting("canvas_token", "settings").then(t => sendResponse({ token: t })).catch(() => sendResponse({ token: null }));
-    return true;
-  }
-
-  if (msg.type === "SET_TOKEN") {
-    setSetting(msg.token, "canvas_token", "settings")
-      .then(() => { updateBadge(); sendResponse({ ok: true }); })
-      .catch(err => sendResponse({ ok: false, error: err.message }));
-    return true;
-  }
-
-  if (msg.type === "REFRESH_BADGE") {
-    clearCache().then(() => { updateBadge(); sendResponse({ ok: true }); }).catch(() => sendResponse({ ok: true }));
-    return true;
-  }
+  Promise.resolve(handler(msg))
+    .then((payload) => sendOk(sendResponse, payload))
+    .catch((err) => sendError(sendResponse, err));
+  return true;
 });
 
 // ── Startup ──────────────────────────────────────────────────────────────────
@@ -142,15 +148,12 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 chrome.runtime.onInstalled.addListener(() => {
   chrome.storage.session.clear();
   chrome.notifications.create({
-    title: "Canvas Deadline Tracker",
-    message: "Extension installed. Enter your Canvas API token in the popup settings to get started.",
-    iconUrl: "assets/icon-48.png",
+    title: 'Canvas Deadline Tracker',
+    message: 'Extension installed. Enter your Canvas API token in the popup settings to get started.',
+    iconUrl: 'assets/icon-48.png',
   });
 });
 
-// Periodically check for deadline notifications
 setInterval(checkDeadlines, 10 * 60 * 1000); // every 10 min
-
-// Badge and notification check on startup
 updateBadge().then(checkDeadlines);
 setInterval(updateBadge, 5 * 60 * 1000); // refresh badge every 5 min
