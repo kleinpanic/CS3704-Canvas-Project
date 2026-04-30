@@ -45,8 +45,9 @@ import datetime as dt
 import json
 import os
 import random
-import subprocess
 import sys
+import urllib.error
+import urllib.request
 from pathlib import Path
 from typing import Any
 
@@ -69,90 +70,170 @@ _STATUS_SCORES = {"missing": 15, "late": 7, "none": 0, "submitted": -60, "excuse
 # ── Hard negative ─────────────────────────────────────────────────────────────
 HARD_NEGATIVE_THRESHOLD = 5.0  # urgency pts apart → hard
 
-# ── Canvas hook ───────────────────────────────────────────────────────────────
-CANVAS_API = os.path.expanduser("~/.openclaw/hooks/canvas-api.sh")
-
-# ── Current semester courses (Spring 2026) ────────────────────────────────────
-SPRING_2026_COURSE_IDS = [
-    224083,  # CS 2505 - Intro Computer Organization I
-    224154,  # CS 3704 - Intermediate Software Design and Engineering
-    224198,  # CS 3724 - Human-Computer Interaction
-    225576,  # HD 3114 - Issues in Aging
-    226986,  # NEUR 2464 - Neuroscience and Society
-    223306,  # BMES 2004 - Concussion Perspectives
-]
-
 # ══════════════════════════════════════════════════════════════════════════════
-# CANVAS DATA FETCHING
+# CANVAS REST API — no external dependencies required
 # ══════════════════════════════════════════════════════════════════════════════
 
-def canvas_cmd(subcmd: str, *args, timeout: int = 30) -> list[dict] | None:
-    cmd = [CANVAS_API, subcmd] + list(args)
-    try:
-        out = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
-        if out.returncode != 0:
-            return None
-        return json.loads(out.stdout)
-    except Exception:
-        return None
+def _canvas_get(path: str, token: str, base_url: str) -> list[dict]:
+    """Paginated Canvas REST GET. Returns all pages concatenated."""
+    results: list[dict] = []
+    url: str | None = f"{base_url.rstrip('/')}/api/v1/{path.lstrip('/')}"
+    while url:
+        req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                data = json.loads(resp.read())
+                if isinstance(data, list):
+                    results.extend(data)
+                elif isinstance(data, dict):
+                    return [data]
+                link = resp.headers.get("Link", "")
+                url = next(
+                    (p.strip().split(";")[0].strip("< >")
+                     for p in link.split(",") if 'rel="next"' in p),
+                    None,
+                )
+        except urllib.error.HTTPError as e:
+            print(f"[WARN] Canvas API {e.code}: {path}", file=sys.stderr)
+            break
+        except Exception as e:
+            print(f"[WARN] Canvas API error ({path}): {e}", file=sys.stderr)
+            break
+    return results
 
 
-def fetch_live_items() -> list[dict[str, Any]]:
-    items = []
-    seen = set()
-    for cid in SPRING_2026_COURSE_IDS:
-        raw_list = canvas_cmd("upcoming", str(cid))
-        if not raw_list:
-            continue
-        for raw in raw_list:
+def _get_token_and_base() -> tuple[str, str]:
+    token = (
+        os.environ.get("CANVAS_TOKEN")
+        or os.environ.get("CANVAS_API_TOKEN")
+        or (Path.home() / ".canvas_token").read_text().strip()
+        if (Path.home() / ".canvas_token").exists() else ""
+    )
+    if not token:
+        sys.exit(
+            "ERROR: Canvas token not found.\n"
+            "  Set CANVAS_TOKEN env var, or save token to ~/.canvas_token\n"
+            "  Example: export CANVAS_TOKEN=your_token_here"
+        )
+    base_url = os.environ.get("CANVAS_BASE_URL", "https://canvas.vt.edu")
+    return token, base_url
+
+
+def _infer_ptype(name: str, sub_types: list[str]) -> str:
+    nl = name.lower()
+    if any(k in nl for k in ("midterm", " exam", "final exam")):
+        return "exam"
+    if "online_quiz" in sub_types:
+        return "quiz"
+    if "discussion_topic" in sub_types:
+        return "discussion"
+    return "assignment"
+
+
+def fetch_live_items(token: str, base_url: str) -> list[dict[str, Any]]:
+    courses = _canvas_get(
+        "courses?enrollment_type=student&enrollment_state=active&per_page=50",
+        token, base_url,
+    )
+    if not courses:
+        print("[WARN] No active courses found. Check your token and Canvas URL.", file=sys.stderr)
+        return []
+
+    items: list[dict[str, Any]] = []
+    seen: set[str] = set()
+
+    for course in courses:
+        cid = course["id"]
+        ccode = course.get("course_code") or f"COURSE{cid}"
+        cname = course.get("name", "")
+
+        # Assignments (includes submission status)
+        assignments = _canvas_get(
+            f"courses/{cid}/assignments"
+            "?per_page=100&include[]=submission&include[]=all_dates"
+            "&order_by=due_at&bucket=upcoming",
+            token, base_url,
+        )
+        for raw in assignments:
             item_id = str(raw.get("id", ""))
             if item_id in seen:
                 continue
             seen.add(item_id)
-            assignment = raw.get("assignment", {})
-            course_name = raw.get("context_name", "")
+            sub = raw.get("submission") or {}
+            sub_state = sub.get("workflow_state", "unsubmitted")
+            has_submitted = sub_state in ("submitted", "graded")
+            status_flags: list[str] = []
+            if has_submitted:
+                status_flags.append("submitted")
+            elif sub.get("missing") or sub_state == "missing":
+                status_flags.append("missing")
+            elif sub.get("late"):
+                status_flags.append("late")
+
+            sub_types = raw.get("submission_types") or []
             items.append({
-                "id": item_id,
-                "key": item_id,
-                "title": raw.get("title", "(untitled)"),
-                "ptype": raw.get("type", "assignment"),
-                "course_id": assignment.get("course_id", cid),
-                "course_name": course_name,
-                "course_code": _course_code(course_name),
-                "due_iso": assignment.get("due_at", "") or "",
-                "points": assignment.get("points_possible", 0) or 0,
-                "submission_types": assignment.get("submission_types", []),
-                "workflow_state": assignment.get("workflow_state", "published"),
-                "status_flags": _derive_status_flags(assignment),
-                "has_submitted": assignment.get("has_submitted_submissions", False),
-                "weight": _estimate_weight(cid, assignment),
+                "id": item_id, "key": item_id,
+                "title": raw.get("name", "(untitled)"),
+                "ptype": _infer_ptype(raw.get("name", ""), sub_types),
+                "course_id": cid, "course_name": cname, "course_code": ccode,
+                "due_iso": raw.get("due_at") or "",
+                "points": float(raw.get("points_possible") or 0),
+                "submission_types": sub_types,
+                "workflow_state": raw.get("workflow_state", "published"),
+                "status_flags": status_flags,
+                "has_submitted": has_submitted,
+                "weight": _estimate_weight(cid, raw),
             })
+
+        # Classic quizzes (separate endpoint in Canvas)
+        quizzes = _canvas_get(
+            f"courses/{cid}/quizzes?per_page=100&quiz_type=practice_quiz,assignment",
+            token, base_url,
+        )
+        for raw in quizzes:
+            item_id = f"quiz_{raw.get('id', '')}"
+            if item_id in seen:
+                continue
+            seen.add(item_id)
+            items.append({
+                "id": item_id, "key": item_id,
+                "title": raw.get("title", "(untitled quiz)"),
+                "ptype": "quiz",
+                "course_id": cid, "course_name": cname, "course_code": ccode,
+                "due_iso": raw.get("due_at") or "",
+                "points": float(raw.get("points_possible") or 0),
+                "submission_types": ["online_quiz"],
+                "workflow_state": raw.get("workflow_state", "published"),
+                "status_flags": [],
+                "has_submitted": False,
+                "weight": _estimate_weight(cid, {"points_possible": raw.get("points_possible", 0)}),
+            })
+
+    print(f"[INFO] Fetched {len(items)} items from {len(courses)} active courses", file=sys.stderr)
     return items
 
 
-def fetch_live_grades() -> dict[int, dict[str, float]]:
-    grades = {}
-    for cid in SPRING_2026_COURSE_IDS:
-        data = canvas_cmd("grades", str(cid))
-        if isinstance(data, dict):
+def fetch_live_grades(token: str, base_url: str) -> dict[int, dict[str, float]]:
+    courses = _canvas_get(
+        "courses?enrollment_type=student&enrollment_state=active&per_page=50",
+        token, base_url,
+    )
+    grades: dict[int, dict[str, float]] = {}
+    for course in courses:
+        cid = course["id"]
+        enrollments = _canvas_get(
+            f"courses/{cid}/enrollments?user_id=self&type[]=StudentEnrollment&per_page=1",
+            token, base_url,
+        )
+        if enrollments:
+            g = enrollments[0].get("grades", {})
             grades[cid] = {
-                "current_score": data.get("current_score") or 0.0,
-                "final_score": data.get("final_score") or 0.0,
+                "current_score": float(g.get("current_score") or 0),
+                "final_score": float(g.get("final_score") or 0),
             }
         else:
             grades[cid] = {"current_score": 0.0, "final_score": 0.0}
     return grades
-
-
-def fetch_live_submissions() -> set[str]:
-    submitted = set()
-    for cid in SPRING_2026_COURSE_IDS:
-        data = canvas_cmd("submissions", str(cid))
-        if isinstance(data, list):
-            for sub in data:
-                if sub.get("workflow_state") == "submitted":
-                    submitted.add(str(sub.get("assignment_id", "")))
-    return submitted
 
 
 def _course_code(course_name: str) -> str:
@@ -704,12 +785,20 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Generate Canvas reranker training data")
     parser.add_argument("--output", "-o", default="data/rerank_train.jsonl")
     parser.add_argument("--limit", "-n", type=int, default=1500)
-    parser.add_argument("--sample", action="store_true", help="Use hardcoded sample items")
-    parser.add_argument("--live", action="store_true", help="Fetch live Canvas data")
+    parser.add_argument("--sample", action="store_true", help="Use hardcoded sample items (no Canvas needed)")
+    parser.add_argument("--live", action="store_true", help="Fetch live Canvas data via API")
+    parser.add_argument("--token", help="Canvas API token (overrides CANVAS_TOKEN env var)")
+    parser.add_argument("--base-url", default=None, help="Canvas base URL (default: https://canvas.vt.edu)")
+    parser.add_argument("--handle", default=None, help="Your handle/identifier for source tagging")
     parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
 
     random.seed(args.seed)
+
+    if args.token:
+        os.environ["CANVAS_TOKEN"] = args.token
+    if args.base_url:
+        os.environ["CANVAS_BASE_URL"] = args.base_url
 
     # Load items + grades
     if args.sample:
@@ -717,10 +806,11 @@ def main() -> None:
         items = _make_sample_items()
         grades = SAMPLE_GRADES
     elif args.live:
-        print("[INFO] --live mode: fetching Canvas data...")
-        items = fetch_live_items()
-        grades = fetch_live_grades()
-        print(f"[INFO] Fetched {len(items)} items, {len(grades)} course grades")
+        print("[INFO] --live mode: fetching Canvas data via API...")
+        token, base_url = _get_token_and_base()
+        items = fetch_live_items(token, base_url)
+        grades = fetch_live_grades(token, base_url)
+        print(f"[INFO] Fetched {len(items)} items from {len(grades)} courses")
         if not items:
             print("[WARN] No items fetched. Use --sample for offline testing.")
             sys.exit(1)
