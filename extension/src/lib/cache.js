@@ -92,26 +92,26 @@ async function refreshInBackground(key, fetchFn, ttlSeconds) {
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
-export async function getUpcomingAssignments(canvasGet) {
+export async function getUpcomingAssignments(fetcher) {
   return swrGet(
     "upcoming",
-    () => canvasGet("/users/self/upcoming_events?per_page=20"),
+    () => fetcher(),
     300 // 5 min TTL
   );
 }
 
-export async function getCourses(canvasGet) {
+export async function getCourses(fetcher) {
   return swrGet(
     "courses",
-    () => canvasGet("/courses?per_page=100&enrollment_state=active"),
+    () => fetcher(),
     3600 // 1 hour TTL
   );
 }
 
-export async function getCourseAssignments(canvasGet, courseId) {
+export async function getCourseAssignments(fetcher, courseId) {
   return swrGet(
     `assignments:${courseId}`,
-    () => canvasGet(`/courses/${courseId}/assignments?per_page=50`),
+    () => fetcher(courseId),
     300
   );
 }
