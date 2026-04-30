@@ -23,8 +23,9 @@ This is the **CS3704 team project repository** for a Canvas LMS productivity too
 
 ### Architecture goals
 - **Current**: Feature-complete TUI application
-- **Shared core**: Reusable domain logic and orchestration
-- **Future**: Browser extension parity with same business logic
+- **Current**: Browser extension with popup, background worker, IndexedDB cache, and shared JS client/runtime layer
+- **Shared core direction**: Reusable domain logic and orchestration where practical across surfaces
+- **Future**: Deeper parity between TUI and browser-facing features
 
 ---
 
@@ -138,6 +139,8 @@ docs/architecture/        Mermaid diagrams and SVG exports
 docs/assets/              Static images and captures
 docs/project/             Planning artifacts and legacy docs
 docs-site/                GitHub Pages documentation
+extension/                Browser extension source
+sdk/                      Python SDK experiments and support code
 ```
 
 ---
@@ -145,16 +148,17 @@ docs-site/                GitHub Pages documentation
 ## Team Workflow
 
 ### For maintainers
-1. Push directly to `main` (protected, but admin bypass enabled)
-2. Ensure CI passes before merging others' PRs
-3. Review team PRs promptly
+1. Treat `main` as the only long-term branch
+2. Use short-lived feature branches for scoped work when possible
+3. Ensure CI passes before merging others' PRs
+4. Prefer squash merges and let GitHub auto-delete merged branches
 
 ### For team members
 1. **Never push directly to `main`**
-2. Create a feature branch: `feature/your-feature-name`
-3. Open a Pull Request
+2. Create a short-lived feature branch: `feature/your-feature-name`
+3. Open a Pull Request into `main`
 4. Wait for CI to pass and a maintainer to review
-5. Merge when approved
+5. Merge with squash when approved
 
 ### Branch naming convention
 - `feature/*` — new features
@@ -177,13 +181,16 @@ This repository has extensive automation:
 | **Stale** | Close inactive issues/PRs after 30 days |
 | **Labeler** | Auto-label PRs by changed files |
 
+The repository is configured for squash-only merges into protected `main`, linear history, and branch auto-delete after merge.
 All commits to protected branches must be **GPG signed**.
 
 ---
 
 ## Documentation
 
+- **[Docs site](https://kleinpanic.github.io/CS3704-Canvas-Project/)** — live project docs
 - **[Architecture docs](docs-site/architecture.md)** — system design decisions
+- **[Browser extension docs](docs-site/extension.md)** — shared client/runtime architecture
 - **[Workflow guide](docs-site/workflow.md)** — how the team works
 - **[Contributing](CONTRIBUTING.md)** — contribution guidelines
 - **[Maintainers](MAINTAINERS.md)** — maintainer responsibilities
