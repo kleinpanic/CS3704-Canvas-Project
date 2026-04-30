@@ -53,7 +53,7 @@ def score_bar_chart(
         lines.append(f"[bold {t.text}]{title}[/bold {t.text}]")
 
     max_label = max(len(l) for l in labels)
-    bar_width = max(20, width - max_label - 12)
+    bar_width = max(4, width - max_label - 12)
 
     for label, score in zip(labels, scores, strict=False):
         score = max(0.0, min(100.0, score))
@@ -61,7 +61,7 @@ def score_bar_chart(
         filled = int(score / 100.0 * bar_width)
         empty = bar_width - filled
         bar = f"[{color}]{BLOCK_FULL * filled}[/{color}][dim]{BLOCK_EMPTY * empty}[/dim]"
-        lines.append(f"  {label:<{max_label}}│{bar} {score:.1f}")
+        lines.append(f"  {label:<{max_label}}│{bar} {score:.1f}%")
 
     # X-axis
     axis_pad = max_label + 3
@@ -457,14 +457,15 @@ def completion_bullet(
         lines.append(f"[bold {t.text}]{title}[/bold {t.text}]")
 
     max_label = max(len(l) for l in labels)
-    bar_width = max(20, width - max_label - 12)
+    bar_width = max(4, width - max_label - 12)
 
     for label, act, tgt in zip(labels, actual, targets, strict=False):
         act = max(0.0, min(100.0, act))
         tgt = max(0.0, min(100.0, tgt))
 
         filled = int(act / 100.0 * bar_width)
-        target_pos = int(tgt / 100.0 * bar_width)
+        # Clamp to last valid index so the 100% target marker is always visible
+        target_pos = min(bar_width - 1, int(tgt / 100.0 * bar_width))
         empty = bar_width - filled
 
         color = _grade_color(act)
@@ -480,22 +481,25 @@ def completion_bullet(
 
         lines.append(f"  {label:<{max_label}}│{bar} {act:.0f}%")
 
-    # X-axis
+    # X-axis — same ┼ tick style as score_bar_chart
     axis_pad = max_label + 3
-    lines.append(f"[dim]{' ' * axis_pad}{'─' * bar_width}[/dim]")
-    tick_line = (
-        " " * axis_pad
-        + "0"
-        + " " * (bar_width // 4 - 1)
-        + "25"
-        + " " * (bar_width // 4 - 2)
-        + "50"
-        + " " * (bar_width // 4 - 2)
-        + "75"
-        + " " * (bar_width // 4 - 3)
-        + "100"
-    )
-    lines.append(f"[dim]{tick_line}[/dim]")
+    tick_positions = [0, 25, 50, 75, 100]
+    axis_line = " " * axis_pad
+    for tick in tick_positions:
+        pos = int(tick / 100.0 * bar_width)
+        while len(axis_line) < axis_pad + pos:
+            axis_line += "─"
+        axis_line = axis_line[: axis_pad + pos] + "┼" + axis_line[axis_pad + pos + 1 :]
+    lines.append(f"[dim]{axis_line}[/dim]")
+    tick_labels = " " * axis_pad
+    for tick in tick_positions:
+        pos = int(tick / 100.0 * bar_width)
+        lbl = str(tick)
+        target = axis_pad + pos - len(lbl) // 2
+        while len(tick_labels) < target:
+            tick_labels += " "
+        tick_labels += lbl
+    lines.append(f"[dim]{tick_labels}[/dim]")
 
     return Text.from_markup("\n".join(lines))
 

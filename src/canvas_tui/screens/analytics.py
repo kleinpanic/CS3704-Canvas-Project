@@ -61,8 +61,9 @@ class AnalyticsScreen(Screen):
         """Get the actual rendered size of a chart pane."""
         try:
             pane = self.query_one(f"#{pane_id}", Static)
-            w, h = pane.size
-            return max(20, w - 2), max(6, h - 2)
+            # content_size excludes border and padding — use it directly
+            w, h = pane.content_size
+            return max(20, w), max(6, h)
         except Exception:
             try:
                 tw, th = self.app.size
