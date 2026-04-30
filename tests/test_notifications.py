@@ -73,6 +73,46 @@ class TestDueNotifier:
             # Key should only appear once in notified set
             assert sum(1 for k in n._notified if k.startswith("d1:")) <= len(n._thresholds)
 
+    def test_item_without_due_date_is_skipped(self):
+        items = [
+            CanvasItem(
+                key="no-due",
+                title="No Due Date",
+                status_flags=[],
+            )
+        ]
+
+        n = DueNotifier(get_items=lambda: items)
+
+        with patch("canvas_tui.notifications.notify") as mock_notify:
+            n._check()
+            mock_notify.assert_not_called()
+
+        assert len(n._notified) == 0
+
+    def test_item_outside_threshold_does_not_notify(self):
+        tz = "America/New_York"
+        now = dt.datetime.now(ZoneInfo(tz))
+        due_later = (now + dt.timedelta(hours=5)).astimezone(dt.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+        items = [
+            CanvasItem(
+                key="later1",
+                title="Due Later",
+                course_code="CS101",
+                due_iso=due_later,
+                status_flags=[],
+            )
+        ]
+
+        n = DueNotifier(tz=tz, thresholds_min=[60, 30, 15], get_items=lambda: items)
+
+        with patch("canvas_tui.notifications.notify") as mock_notify:
+            n._check()
+            mock_notify.assert_not_called()
+
+        assert len(n._notified) == 0
+
 
 class TestSendNotification:
     @patch("canvas_tui.notifications.notify")
