@@ -1,4 +1,4 @@
-from .sqlite_cache import SQLiteCache
 from .cache_adapter import CacheBackendAdapter
+from .sqlite_cache import SQLiteCache
 
-__all__ = ["SQLiteCache", "CacheBackendAdapter"]
+__all__ = ["CacheBackendAdapter", "SQLiteCache"]

@@ -21,10 +21,10 @@ from textual.containers import Horizontal, Vertical
 from textual.events import Key, Resize
 from textual.widgets import DataTable, Header, Static
 
+from .adapters.cache_adapter import CacheBackendAdapter
 from .api import CanvasAPI
 from .cache import ResponseCache
-from .adapters.cache_adapter import CacheBackendAdapter
-from .commands import CommandRegistry, ValidateTokenCommand, RefreshCoursesCommand, FetchUpcomingCommand
+from .commands import CommandRegistry, FetchUpcomingCommand, RefreshCoursesCommand, ValidateTokenCommand
 from .config import Config, ensure_dirs, load_config
 from .filtering import FilterQuery, filter_items, format_filter_summary
 from .logo import get_logo

@@ -350,7 +350,7 @@ class GradesScreen(Screen):
         # What-if projected grade line
         if not summary.has_whatif:
             summary_lines.append(
-                f"[dim]Press [w] on an ungraded row to try what-if scores[/dim]"
+                "[dim]Press [w] on an ungraded row to try what-if scores[/dim]"
             )
         else:
             proj_color = grade_color(summary.projected_avg)

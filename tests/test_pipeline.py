@@ -3,21 +3,27 @@
 pytest suite for Canvas Reranker training pipeline.
 Run with: pytest tests/ -v
 """
-import json, os, sys, tempfile
+import json
+import os
+import sys
+import tempfile
 from pathlib import Path
 
 import pytest
 
-# Add scripts dir to path
+# Add scripts dir to path before importing pipeline modules
 SCRIPT_DIR = Path(__file__).parent.parent / "scripts"
 sys.path.insert(0, str(SCRIPT_DIR))
 
-from collect_rerank_dataset import (
-    W_TIME, W_TYPE, W_POINTS, W_STATUS,
-    _urgency, serialize_item, format_for_sft, format_for_dpo,
-    anonymize_pairs, _anon_course, _anon_title
+from collect_rerank_dataset import (  # noqa: E402
+    _anon_course,
+    _anon_title,
+    _urgency,
+    anonymize_pairs,
+    format_for_dpo,
+    format_for_sft,
 )
-from run_pipeline import PipelineState
+from run_pipeline import PipelineState  # noqa: E402
 
 # Data directory: env var > project-relative reranker/data > legacy Gemma2B-Reranker path
 DATA_DIR = Path(
@@ -101,7 +107,8 @@ class TestAnonymization:
             "source_user": "test_user"
         }
         with tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False, mode="w") as f:
-            json.dump(pair, f); f.write("\n")
+            json.dump(pair, f)
+            f.write("\n")
             inp = f.name
         with tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False) as out:
             o = out.name
@@ -117,7 +124,8 @@ class TestAnonymization:
             assert "99999" not in dump
         finally:
             os.unlink(inp)
-            if os.path.exists(o): os.unlink(o)
+            if os.path.exists(o):
+                os.unlink(o)
 
 
 # ── DPO Export Tests ────────────────────────────────────────────────────────
@@ -206,7 +214,7 @@ class TestPipelineState:
             s.save(tmp)
             loaded = PipelineState.load(tmp)
             assert loaded.phase == "path_a_1"
-            assert loaded.path_a1_done == True
+            assert loaded.path_a1_done
             assert loaded.best_score == 0.82
         finally:
             os.unlink(tmp)
@@ -237,7 +245,8 @@ class TestDataFiles:
     def test_train_pairs_have_required_fields(self):
         p = DATA_DIR / "rerank_train.jsonl"
         for line in open(p):
-            if not line.strip(): continue
+            if not line.strip():
+                continue
             d = json.loads(line)
             for k in ["query", "item_a", "item_b", "preference", "pair_type"]:
                 assert k in d, f"Missing {k} in {d.get('id', 'unknown')}"
@@ -245,7 +254,8 @@ class TestDataFiles:
     def test_item_a_has_required_fields(self):
         p = DATA_DIR / "rerank_train.jsonl"
         for line in open(p):
-            if not line.strip(): continue
+            if not line.strip():
+                continue
             d = json.loads(line)
             ia = d["item_a"]
             for k in ["name", "type", "due_at", "points_possible",
