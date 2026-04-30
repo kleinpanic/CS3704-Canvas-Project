@@ -18,13 +18,13 @@ from zoneinfo import ZoneInfo
 
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical
-from textual.events import Key
+from textual.events import Key, Resize
 from textual.widgets import DataTable, Header, Static
 
+from .adapters.cache_adapter import CacheBackendAdapter
 from .api import CanvasAPI
 from .cache import ResponseCache
-from .adapters.cache_adapter import CacheBackendAdapter
-from .commands import CommandRegistry, ValidateTokenCommand, RefreshCoursesCommand, FetchUpcomingCommand
+from .commands import CommandRegistry, FetchUpcomingCommand, RefreshCoursesCommand, ValidateTokenCommand
 from .config import Config, ensure_dirs, load_config
 from .filtering import FilterQuery, filter_items, format_filter_summary
 from .logo import get_logo
@@ -239,7 +239,7 @@ class CanvasTUI(App):
     #grades-split { layout: horizontal; height: 1fr; }
     #grades-courses { width: 1fr; min-width: 24; max-width: 40; border-right: solid #30363d; }
     #grades-detail { width: 3fr; }
-    #grades-summary { padding: 1 2; height: auto; max-height: 14; border-bottom: solid #30363d; }
+    #grades-summary { padding: 1 2; height: auto; max-height: 20; border-bottom: solid #30363d; }
     #grades-table { height: 1fr; }
 
     /* === Files === */
@@ -275,7 +275,7 @@ class CanvasTUI(App):
     #dash-mid { layout: horizontal; height: 1fr; border-bottom: solid #30363d; }
     #dash-due { width: 1fr; padding: 1 2; border-right: solid #30363d; overflow-y: auto; }
     #dash-completion { width: 1fr; padding: 1 2; overflow-y: auto; }
-    #dash-trends { height: auto; max-height: 14; padding: 1 2; }
+    #dash-trends { height: auto; max-height: 20; padding: 1 2; }
 
     /* === Course Overview === */
     #co-root { height: 1fr; width: 1fr; }
@@ -539,11 +539,20 @@ class CanvasTUI(App):
             f" {len(self.announcements)} announcements"
         )
 
-    def _render_graphs(self) -> None:
-        """Render charts in banner and bottom panels.
+    def _widget_content_size(self, widget_id: str, fallback_w: int = 50, fallback_h: int = 12) -> tuple[int, int]:
+        """Return (width, height) of a widget's inner content area, minus padding."""
+        try:
+            w = self.query_one(f"#{widget_id}")
+            return max(20, w.size.width - 2), max(4, w.size.height - 1)
+        except Exception:
+            return fallback_w, fallback_h
 
-        Chart sizes are dynamic based on terminal dimensions.
-        """
+    def on_resize(self, event: Resize) -> None:
+        """Re-render charts after layout settles with new terminal dimensions."""
+        self.call_after_refresh(self._render_graphs)
+
+    def _render_graphs(self) -> None:
+        """Render charts in banner and bottom panels."""
         from .widgets.charts import (
             completion_bullet,
             grade_histogram,
@@ -553,17 +562,12 @@ class CanvasTUI(App):
         )
         from .widgets.plots import grade_color, urgency_color
 
-        # Dynamic sizing from terminal
-        try:
-            tw, th = self.size
-        except Exception:
-            tw, th = 120, 40
-        # Panel widths: 3 bottom panels split the left area (~75% of terminal)
-        panel_w = max(35, (tw * 3 // 4) // 3 - 2)
-        # Panel height: charts get 3/5 of content area, which is ~60% of terminal
-        panel_h = max(14, th * 3 // 7)
-        banner_w = max(45, tw * 3 // 4 - 4)
-        banner_h = max(5, min(8, len(self._active_courses()) + 3))
+        # Query actual widget sizes so charts never overflow their containers
+        banner_w, banner_h = self._widget_content_size("banner-scores", fallback_w=60, fallback_h=8)
+        banner_h = max(5, min(banner_h, len(self._active_courses()) + 3))
+        panel_w_t, panel_h_t = self._widget_content_size("bottom-trends", fallback_w=40, fallback_h=14)
+        panel_w_s, panel_h_s = self._widget_content_size("bottom-stats", fallback_w=40, fallback_h=14)
+        panel_w_d, panel_h_d = self._widget_content_size("bottom-due", fallback_w=40, fallback_h=14)
 
         # --- Collect course data (filtered by hidden courses) ---
         active = self._active_courses()
@@ -613,8 +617,8 @@ class CanvasTUI(App):
             if course_pcts:
                 trend_chart = multi_line_chart(
                     {k: v[-20:] for k, v in course_pcts.items()},
-                    width=panel_w,
-                    height=panel_h,
+                    width=panel_w_t,
+                    height=panel_h_t,
                     title="Grade Trends",
                 )
                 self.bottom_trends.update(trend_chart)
@@ -623,8 +627,8 @@ class CanvasTUI(App):
                 sc = scatter_scores(
                     all_x,
                     all_scores,
-                    width=panel_w,
-                    height=panel_h,
+                    width=panel_w_t,
+                    height=panel_h_t,
                     title="All Scores",
                 )
                 self.bottom_trends.update(sc)
@@ -634,20 +638,23 @@ class CanvasTUI(App):
         # --- Bottom center: histogram + bullet stacked ---
         with contextlib.suppress(Exception):
             if all_scores:
+                # Give histogram most of the panel; bullet chart gets the rest.
+                # panel is scrollable so combined content may exceed visible height.
+                hist_h = max(8, panel_h_s * 2 // 3)
+                bullet_h = max(6, panel_h_s - hist_h)
                 hist = grade_histogram(
                     all_scores,
-                    width=panel_w,
-                    height=panel_h // 2,
+                    width=panel_w_s,
+                    height=hist_h,
                     title="Grade Distribution",
                     bins=min(12, len(all_scores)),
                 )
-                # Stack histogram + bullet chart
                 if labels and scores:
                     bullet = completion_bullet(
                         labels,
                         scores,
-                        width=panel_w,
-                        height=panel_h // 2,
+                        width=panel_w_s,
+                        height=bullet_h,
                         title="Score vs 100%",
                     )
                     from rich.text import Text
@@ -715,8 +722,8 @@ class CanvasTUI(App):
                 wk = weekly_activity_chart(
                     day_names,
                     day_counts,
-                    width=panel_w,
-                    height=max(6, panel_h // 2),
+                    width=panel_w_d,
+                    height=max(6, panel_h_d // 2),
                     title="Due by Day",
                 )
                 from rich.text import Text
@@ -796,7 +803,8 @@ class CanvasTUI(App):
                 self._render_info()
                 self._render_table()
                 self._render_stats()
-                self._render_graphs()
+                # Defer graph render so widget sizes are settled after first layout pass
+                self.call_after_refresh(self._render_graphs)
                 self.details.update("[dim]Showing cached data… syncing live in background[/dim]")
         except Exception:
             has_cached_view = False
@@ -1570,6 +1578,22 @@ class CanvasTUI(App):
         self.push_screen(CourseManagerScreen(self), callback=_on_dismiss)
 
 
+def _console_size() -> tuple[int, int] | None:
+    """Return (columns, rows) of the real console, or None if unavailable.
+
+    shutil.get_terminal_size() reads COLUMNS/LINES env vars and falls back
+    to os.get_terminal_size() on the controlling tty, so it works on both
+    Windows and POSIX without any platform-specific calls.
+    """
+    try:
+        ts = shutil.get_terminal_size(fallback=(0, 0))
+        if ts.columns > 0 and ts.lines > 0:
+            return ts.columns, ts.lines
+    except Exception:
+        pass
+    return None
+
+
 def main() -> None:
     """Entry point for the Canvas TUI application."""
     from .cli import handle_non_tui_commands, parse_args
@@ -1579,6 +1603,19 @@ def main() -> None:
     # Handle non-TUI commands first
     if handle_non_tui_commands(args):
         return
+
+    # --ascii flag forces ASCII chart mode before the app object is created
+    if getattr(args, "ascii", False):
+        import os as _os
+        _os.environ["CANVAS_ASCII"] = "1"
+        # Re-apply so compat module picks it up (it was already imported)
+        from . import compat as _compat
+        _compat.USE_ASCII = True
+        _compat.BLOCK_FULL = "#"
+        _compat.BLOCK_EMPTY = "-"
+        _compat.BLOCK_HALF = "+"
+        _compat.HEAT_CHARS = " .:-=#"
+        _compat.SPARKLINE_CHARS = ".,:-=+|#"
 
     app = CanvasTUI()
 
@@ -1595,7 +1632,7 @@ def main() -> None:
     else:
         app._theme = set_theme("dark")
 
-    app.run()
+    app.run(size=_console_size())
 
 
 if __name__ == "__main__":

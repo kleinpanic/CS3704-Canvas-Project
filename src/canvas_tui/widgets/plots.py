@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from ..compat import BLOCK_EMPTY, BLOCK_FULL, SPARKLINE_CHARS, braille_char
 from ..theme import get_theme
 
 
@@ -74,7 +75,7 @@ def render_bar_chart(
         filled = int(pct / 100.0 * bar_width)
         empty = bar_width - filled
         color = grade_color(pct)
-        bar = f"[{color}]{'█' * filled}[/{color}][dim]{'░' * empty}[/dim]"
+        bar = f"[{color}]{BLOCK_FULL * filled}[/{color}][dim]{BLOCK_EMPTY * empty}[/dim]"
         suffix = e.suffix or f"{pct:.1f}%"
         lines.append(f"  {e.label:<{max_label}}  {bar}  {suffix}")
 
@@ -97,7 +98,7 @@ def render_gauge(
     empty = width - filled
     color = grade_color(pct)
 
-    bar = f"[{color}]{'█' * filled}[/{color}][dim]{'░' * empty}[/dim]"
+    bar = f"[{color}]{BLOCK_FULL * filled}[/{color}][dim]{BLOCK_EMPTY * empty}[/dim]"
     text = f"{completed}/{total} ({pct:.0f}%)"
     if label:
         return f"  {label}  {bar}  {text}"
@@ -148,7 +149,7 @@ def render_weight_bar(
     legend_parts: list[str] = []
     for seg in segments:
         chars = max(1, int(seg.weight / total_w * width))
-        bar_parts.append(f"[{seg.color}]{'█' * chars}[/{seg.color}]")
+        bar_parts.append(f"[{seg.color}]{BLOCK_FULL * chars}[/{seg.color}]")
         legend_parts.append(f"[{seg.color}]{seg.label} {seg.weight:.0f}%[/{seg.color}]")
 
     lines.append("  " + "".join(bar_parts))
@@ -157,8 +158,6 @@ def render_weight_bar(
 
 
 # ─── Braille Line Plot (FIXED — overlaid series on shared grid) ──────────
-# Unicode braille characters: 2x4 dot matrix per character
-_BRAILLE_BASE = 0x2800
 _DOT_MAP = [
     [0x01, 0x08],  # row 0
     [0x02, 0x10],  # row 1
@@ -240,7 +239,7 @@ def render_braille_plot(
     # Y axis labels
     lines.append(f"  [dim]{hi:.0f}[/dim]")
     for row in grid:
-        chars = "".join(chr(_BRAILLE_BASE + cell) for cell in row)
+        chars = "".join(braille_char(cell) for cell in row)
         lines.append(f"  [{primary_color}]{chars}[/{primary_color}]")
     lines.append(f"  [dim]{lo:.0f}[/dim]")
 
@@ -262,7 +261,7 @@ def sparkline(values: list[float], color: str = "") -> str:
         return ""
     if not color:
         color = get_theme().info
-    chars = "▁▂▃▄▅▆▇█"
+    chars = SPARKLINE_CHARS
     lo = min(values)
     hi = max(values)
     rng = hi - lo if hi > lo else 1.0

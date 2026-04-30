@@ -1,19 +1,19 @@
 from .registry import (
     Command,
-    CommandResult,
     CommandRegistry,
-    RefreshCoursesCommand,
+    CommandResult,
     FetchAssignmentsCommand,
     FetchUpcomingCommand,
+    RefreshCoursesCommand,
     ValidateTokenCommand,
 )
 
 __all__ = [
     "Command",
-    "CommandResult",
     "CommandRegistry",
-    "RefreshCoursesCommand",
+    "CommandResult",
     "FetchAssignmentsCommand",
     "FetchUpcomingCommand",
+    "RefreshCoursesCommand",
     "ValidateTokenCommand",
 ]

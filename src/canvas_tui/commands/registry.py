@@ -13,7 +13,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ..core.interfaces import CanvasClient, CacheBackend
+    from ..core.interfaces import CacheBackend, CanvasClient
 
 
 # ── Command Interface ──────────────────────────────────────────────────────────

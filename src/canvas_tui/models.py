@@ -10,9 +10,10 @@ The top-level models.py remains as a compatibility shim.
 """
 from __future__ import annotations
 
+from .course import CourseInfo
+
 # Re-export from new package layout
 from .item import CanvasItem
-from .course import CourseInfo
 from .modal import ModalContext
 
 __all__ = ["CanvasItem", "CourseInfo", "ModalContext"]

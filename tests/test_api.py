@@ -1,10 +1,8 @@
 """PM4 tests for Canvas API: token validation and planner fetch."""
 from unittest.mock import MagicMock, patch
 
-import pytest
-
-from canvas_tui.api import CanvasAPI, _iso
-from canvas_tui.cache import ResponseCache, cache_key
+from canvas_tui.api import CanvasAPI
+from canvas_tui.cache import ResponseCache
 from canvas_tui.config import Config
 
 
