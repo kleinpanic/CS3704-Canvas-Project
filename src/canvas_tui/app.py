@@ -548,8 +548,8 @@ class CanvasTUI(App):
             return fallback_w, fallback_h
 
     def on_resize(self, event: Resize) -> None:
-        """Re-render charts when the terminal is resized."""
-        self._render_graphs()
+        """Re-render charts after layout settles with new terminal dimensions."""
+        self.call_after_refresh(self._render_graphs)
 
     def _render_graphs(self) -> None:
         """Render charts in banner and bottom panels."""
@@ -638,20 +638,23 @@ class CanvasTUI(App):
         # --- Bottom center: histogram + bullet stacked ---
         with contextlib.suppress(Exception):
             if all_scores:
+                # Give histogram most of the panel; bullet chart gets the rest.
+                # panel is scrollable so combined content may exceed visible height.
+                hist_h = max(8, panel_h_s * 2 // 3)
+                bullet_h = max(6, panel_h_s - hist_h)
                 hist = grade_histogram(
                     all_scores,
                     width=panel_w_s,
-                    height=panel_h_s // 2,
+                    height=hist_h,
                     title="Grade Distribution",
                     bins=min(12, len(all_scores)),
                 )
-                # Stack histogram + bullet chart
                 if labels and scores:
                     bullet = completion_bullet(
                         labels,
                         scores,
                         width=panel_w_s,
-                        height=panel_h_s // 2,
+                        height=bullet_h,
                         title="Score vs 100%",
                     )
                     from rich.text import Text
@@ -800,7 +803,8 @@ class CanvasTUI(App):
                 self._render_info()
                 self._render_table()
                 self._render_stats()
-                self._render_graphs()
+                # Defer graph render so widget sizes are settled after first layout pass
+                self.call_after_refresh(self._render_graphs)
                 self.details.update("[dim]Showing cached data… syncing live in background[/dim]")
         except Exception:
             has_cached_view = False

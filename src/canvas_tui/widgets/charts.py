@@ -113,14 +113,16 @@ def grade_histogram(
         counts[idx] += 1
 
     max_count = max(counts) if counts else 1
-    chart_height = max(6, min(height - 4, 20))
+    chart_height = max(4, height - 4)
+
+    # Scale each bin's bar width to fill available width
+    y_width = len(str(max_count)) + 1
+    available_w = max(bins, width - y_width - 2)
+    bin_chars = max(2, available_w // bins)
 
     lines: list[str] = []
     if title:
         lines.append(f"[bold {t.text}]{title}[/bold {t.text}]")
-
-    # Y-axis label width
-    y_width = len(str(max_count)) + 1
 
     # Render rows top to bottom
     for row in range(chart_height, 0, -1):
@@ -136,15 +138,15 @@ def grade_histogram(
         parts = [f"[dim]{y_label:>{y_width}}│[/dim]"]
         for count in counts:
             if count >= threshold:
-                parts.append(f"[{t.info}]{BLOCK_FULL * 2}[/{t.info}]")
+                parts.append(f"[{t.info}]{BLOCK_FULL * bin_chars}[/{t.info}]")
             elif count >= threshold - (max_count / chart_height / 2):
-                parts.append(f"[{t.info}]{BLOCK_HALF * 2}[/{t.info}]")
+                parts.append(f"[{t.info}]{BLOCK_HALF * bin_chars}[/{t.info}]")
             else:
-                parts.append("  ")
+                parts.append(" " * bin_chars)
         lines.append("".join(parts))
 
     # X-axis
-    axis = f"[dim]{' ' * (y_width + 1)}{'──' * bins}[/dim]"
+    axis = f"[dim]{' ' * (y_width + 1)}{('─' * bin_chars) * bins}[/dim]"
     lines.append(axis)
 
     # X-axis labels (bin edges)
@@ -152,7 +154,7 @@ def grade_histogram(
     step = max(1, bins // 5)
     for i in range(0, bins + 1, step):
         edge = int(i * bin_width)
-        pos = i * 2
+        pos = i * bin_chars
         lbl = str(edge)
         target = y_width + 1 + pos
         while len(label_line) < target:

@@ -219,9 +219,12 @@ class GradesScreen(Screen):
             self.app.pop_screen()
 
     def on_resize(self, event: Resize) -> None:
-        cid = self._selected_course()
-        if cid is not None and cid in self._course_grades:
-            self._render_grades(cid, self._course_grades[cid])
+        def _deferred() -> None:
+            cid = self._selected_course()
+            if cid is not None and cid in self._course_grades:
+                self._render_grades(cid, self._course_grades[cid])
+
+        self.call_after_refresh(_deferred)
 
     # ── Helpers ──────────────────────────────────────────────────────────────
 
