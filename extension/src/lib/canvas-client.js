@@ -79,8 +79,12 @@ export class CanvasClient {
     return response.text();
   }
 
+  async getCurrentUser() {
+    return this.request('/users/self');
+  }
+
   async validateToken() {
-    const profile = await this.request('/users/self');
+    const profile = await this.getCurrentUser();
     return {
       ok: true,
       user: profile,
@@ -91,6 +95,10 @@ export class CanvasClient {
     return this.request('/users/self/upcoming_events', {
       params: { per_page: perPage },
     });
+  }
+
+  async getDashboardCards() {
+    return this.request('/dashboard/dashboard_cards');
   }
 
   async getCourses({ perPage = 100, enrollmentState = 'active' } = {}) {
@@ -105,6 +113,27 @@ export class CanvasClient {
   async getCourseAssignments(courseId, { perPage = 50 } = {}) {
     return this.request(`/courses/${courseId}/assignments`, {
       params: { per_page: perPage },
+    });
+  }
+
+  async getCourseModules(courseId, { perPage = 100 } = {}) {
+    return this.request(`/courses/${courseId}/modules`, {
+      params: { per_page: perPage },
+    });
+  }
+
+  async getCourseFiles(courseId, { perPage = 100 } = {}) {
+    return this.request(`/courses/${courseId}/files`, {
+      params: { per_page: perPage },
+    });
+  }
+
+  async getCourseAnnouncements(courseId, { perPage = 25 } = {}) {
+    return this.request('/announcements', {
+      params: {
+        'context_codes[]': `course_${courseId}`,
+        per_page: perPage,
+      },
     });
   }
 }

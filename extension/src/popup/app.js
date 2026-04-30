@@ -10,6 +10,13 @@
  */
 
 import { getDismissed, dismissAssignment } from '../lib/cache.js';
+import {
+  getCourses,
+  getUpcomingAssignments,
+  setToken,
+  clearCache,
+  refreshBadge,
+} from '../lib/extension-api.js';
 
 // ── DOM Refs ──────────────────────────────────────────────────────────────────
 
@@ -151,7 +158,7 @@ function attachHandlers() {
       await dismissAssignment(id);
       dismissedIds.add(id);
       render(allAssignments);
-      chrome.runtime.sendMessage({ type: "REFRESH_BADGE" });
+      refreshBadge();
     });
   });
 
@@ -194,7 +201,7 @@ async function fetchAll() {
   try {
     dismissedIds = await getDismissed();
 
-    const coursesRes = await chrome.runtime.sendMessage({ type: "GET_COURSES" });
+    const coursesRes = await getCourses();
     if (coursesRes.ok && coursesRes.data?.length) {
       courses = coursesRes.data;
       $userInfo.textContent = `${courses.length} course${courses.length === 1 ? "" : "s"}`;
@@ -202,7 +209,7 @@ async function fetchAll() {
       $userInfo.textContent = "Canvas";
     }
 
-    const res = await chrome.runtime.sendMessage({ type: "GET_UPCOMING" });
+    const res = await getUpcomingAssignments();
     if (!res.ok) throw new Error(res.error || "Failed to fetch assignments");
 
     allAssignments = res.data.filter((entry) => entry.type === "assignment");
@@ -263,7 +270,7 @@ function openSettings() {
     }
 
     status.textContent = "Saving and validating...";
-    const res = await chrome.runtime.sendMessage({ type: "SET_TOKEN", token });
+    const res = await setToken(token);
     status.textContent = res.ok
       ? `Connected as ${res.user?.name || res.user?.short_name || 'Canvas user'}.`
       : `Error: ${res.error}`;
@@ -283,8 +290,9 @@ function closeSettings() {
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 
-$refreshBtn.addEventListener("click", () => {
-  chrome.runtime.sendMessage({ type: "CLEAR_CACHE" }, () => fetchAll());
+$refreshBtn.addEventListener("click", async () => {
+  await clearCache();
+  fetchAll();
 });
 
 $settingsBtn.addEventListener("click", () => {

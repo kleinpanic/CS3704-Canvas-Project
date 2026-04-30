@@ -19,6 +19,7 @@ import {
   clearCache,
 } from './lib/cache.js';
 import { createCanvasClient } from './lib/canvas-client.js';
+import { MESSAGE_TYPES } from './lib/extension-contract.js';
 
 const NOTIFY_BEFORE = [24 * 3600, 3600]; // 24h and 1h before deadline
 const canvasClient = createCanvasClient();
@@ -86,81 +87,60 @@ function sendError(sendResponse, error) {
 
 // ── Message Handlers ──────────────────────────────────────────────────────────
 
+const messageHandlers = {
+  [MESSAGE_TYPES.getUpcoming]: () =>
+    getUpcomingAssignments(() => canvasClient.getUpcomingAssignments()),
+
+  [MESSAGE_TYPES.getCourses]: () =>
+    getCourses(() => canvasClient.getCourses()),
+
+  [MESSAGE_TYPES.getCourseAssignments]: (msg) =>
+    getCourseAssignments((courseId) => canvasClient.getCourseAssignments(courseId), msg.courseId),
+
+  [MESSAGE_TYPES.validateToken]: async () => {
+    const { user } = await canvasClient.validateToken();
+    return { user };
+  },
+
+  [MESSAGE_TYPES.dismiss]: async (msg) => {
+    await dismissAssignment(msg.assignmentId);
+    await updateBadge();
+    return {};
+  },
+
+  [MESSAGE_TYPES.clearCache]: async () => {
+    await clearCache();
+    return {};
+  },
+
+  [MESSAGE_TYPES.getToken]: async () => {
+    const token = await canvasClient.getToken().catch(() => null);
+    return { token };
+  },
+
+  [MESSAGE_TYPES.setToken]: async (msg) => {
+    await canvasClient.setToken(msg.token);
+    const { user } = await canvasClient.validateToken();
+    clearCache().catch(() => {});
+    updateBadge();
+    return { user };
+  },
+
+  [MESSAGE_TYPES.refreshBadge]: async () => {
+    await clearCache().catch(() => {});
+    await updateBadge().catch(() => {});
+    return {};
+  },
+};
+
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-  if (msg.type === 'GET_UPCOMING') {
-    getUpcomingAssignments(() => canvasClient.getUpcomingAssignments())
-      .then(({ data, cached, stale }) => sendOk(sendResponse, { data, cached, stale }))
-      .catch((err) => sendError(sendResponse, err));
-    return true;
-  }
+  const handler = messageHandlers[msg.type];
+  if (!handler) return false;
 
-  if (msg.type === 'GET_COURSES') {
-    getCourses(() => canvasClient.getCourses())
-      .then(({ data, cached, stale }) => sendOk(sendResponse, { data, cached, stale }))
-      .catch((err) => sendError(sendResponse, err));
-    return true;
-  }
-
-  if (msg.type === 'GET_COURSE_ASSIGNMENTS') {
-    getCourseAssignments(() => canvasClient.getCourseAssignments(msg.courseId), msg.courseId)
-      .then(({ data, cached, stale }) => sendOk(sendResponse, { data, cached, stale }))
-      .catch((err) => sendError(sendResponse, err));
-    return true;
-  }
-
-  if (msg.type === 'VALIDATE_TOKEN') {
-    canvasClient
-      .validateToken()
-      .then(({ user }) => sendOk(sendResponse, { user }))
-      .catch((err) => sendError(sendResponse, err));
-    return true;
-  }
-
-  if (msg.type === 'DISMISS') {
-    dismissAssignment(msg.assignmentId)
-      .then(() => {
-        updateBadge();
-        sendOk(sendResponse);
-      })
-      .catch((err) => sendError(sendResponse, err));
-    return true;
-  }
-
-  if (msg.type === 'CLEAR_CACHE') {
-    clearCache()
-      .then(() => sendOk(sendResponse))
-      .catch((err) => sendError(sendResponse, err));
-    return true;
-  }
-
-  if (msg.type === 'GET_TOKEN') {
-    canvasClient
-      .getToken()
-      .then((token) => sendOk(sendResponse, { token }))
-      .catch(() => sendOk(sendResponse, { token: null }));
-    return true;
-  }
-
-  if (msg.type === 'SET_TOKEN') {
-    canvasClient
-      .setToken(msg.token)
-      .then(() => canvasClient.validateToken())
-      .then(({ user }) => {
-        clearCache().catch(() => {});
-        updateBadge();
-        sendOk(sendResponse, { user });
-      })
-      .catch((err) => sendError(sendResponse, err));
-    return true;
-  }
-
-  if (msg.type === 'REFRESH_BADGE') {
-    clearCache()
-      .then(() => updateBadge())
-      .then(() => sendOk(sendResponse))
-      .catch(() => sendOk(sendResponse));
-    return true;
-  }
+  Promise.resolve(handler(msg))
+    .then((payload) => sendOk(sendResponse, payload))
+    .catch((err) => sendError(sendResponse, err));
+  return true;
 });
 
 // ── Startup ──────────────────────────────────────────────────────────────────

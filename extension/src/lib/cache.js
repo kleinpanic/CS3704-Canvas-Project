@@ -92,14 +92,10 @@ async function refreshInBackground(key, fetchFn, ttlSeconds) {
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
-function callFetcher(fetcher, path) {
-  return fetcher.length === 0 ? fetcher() : fetcher(path);
-}
-
 export async function getUpcomingAssignments(fetcher) {
   return swrGet(
     "upcoming",
-    () => callFetcher(fetcher, "/users/self/upcoming_events?per_page=20"),
+    () => fetcher(),
     300 // 5 min TTL
   );
 }
@@ -107,7 +103,7 @@ export async function getUpcomingAssignments(fetcher) {
 export async function getCourses(fetcher) {
   return swrGet(
     "courses",
-    () => callFetcher(fetcher, "/courses?per_page=100&enrollment_state=active"),
+    () => fetcher(),
     3600 // 1 hour TTL
   );
 }
@@ -115,7 +111,7 @@ export async function getCourses(fetcher) {
 export async function getCourseAssignments(fetcher, courseId) {
   return swrGet(
     `assignments:${courseId}`,
-    () => callFetcher(fetcher, `/courses/${courseId}/assignments?per_page=50`),
+    () => fetcher(courseId),
     300
   );
 }
