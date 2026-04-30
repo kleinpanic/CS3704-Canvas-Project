@@ -8,30 +8,44 @@
 </head>
 <body>
   <div id="app">
-    <header>
-      <h1>Canvas Deadline Tracker</h1>
-      <span id="user-info"></span>
-      <span class="cache-badge hidden">cached</span>
+    <header class="app-header">
+      <div class="header-copy">
+        <p class="eyebrow">Canvas companion</p>
+        <h1>Deadlines</h1>
+        <p class="header-subtitle">Stay on top of what needs attention next.</p>
+      </div>
+      <div class="header-meta">
+        <span id="user-info" class="meta-pill">0 courses</span>
+        <span id="cache-badge" class="cache-badge hidden">Cached</span>
+      </div>
     </header>
 
-    <section id="filter-section" class="hidden">
+    <section id="filter-section" class="toolbar hidden">
+      <label class="field-label" for="course-filter">Course</label>
       <select id="course-filter">
         <option value="">All Courses</option>
       </select>
     </section>
 
     <main>
-      <section id="upcoming-section">
-        <h2>Upcoming Assignments</h2>
+      <section id="upcoming-section" class="panel">
+        <div class="section-heading">
+          <div>
+            <p class="section-kicker">Assignments</p>
+            <h2>Upcoming work</h2>
+          </div>
+          <span id="assignment-count" class="count-pill hidden">0 items</span>
+        </div>
+
         <ul id="upcoming-list" class="assignment-list"></ul>
-        <div id="loading" class="spinner">Loading...</div>
-        <div id="error" class="error hidden"></div>
+        <div id="loading" class="status-card spinner">Loading your assignments...</div>
+        <div id="error" class="status-card error hidden"></div>
       </section>
     </main>
 
-    <footer>
-      <button id="refresh-btn">Refresh</button>
-      <button id="settings-btn">Settings</button>
+    <footer class="app-footer">
+      <button id="refresh-btn" class="btn btn-secondary">Refresh</button>
+      <button id="settings-btn" class="btn btn-primary">Settings</button>
     </footer>
   </div>
   <script src="app.js" type="module"></script>

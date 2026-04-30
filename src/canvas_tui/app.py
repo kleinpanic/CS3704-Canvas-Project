@@ -1012,6 +1012,7 @@ class CanvasTUI(App):
         return f"{pts:.0f}" if isinstance(pts, (int, float)) else "-"
 
     def _render_table(self) -> None:
+        # TODO: Fix title truncation - show more meaningful preview
         assert self.table is not None
         self.table.clear()
         visible = self._visible_items()
