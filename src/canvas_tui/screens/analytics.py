@@ -51,18 +51,19 @@ class AnalyticsScreen(Screen):
             yield Footer()
 
     def on_mount(self) -> None:
-        self._render_all()
+        self.call_after_refresh(self._render_all)
 
     def on_resize(self, event: Resize) -> None:
-        """Re-render charts when terminal is resized."""
-        self._render_all()
+        """Re-render charts after layout settles with new terminal dimensions."""
+        self.call_after_refresh(self._render_all)
 
     def _get_pane_size(self, pane_id: str) -> tuple[int, int]:
         """Get the actual rendered size of a chart pane."""
         try:
             pane = self.query_one(f"#{pane_id}", Static)
-            w, h = pane.size
-            return max(20, w - 2), max(6, h - 2)
+            # content_size excludes border and padding — use it directly
+            w, h = pane.content_size
+            return max(20, w), max(6, h)
         except Exception:
             try:
                 tw, th = self.app.size

@@ -22,6 +22,7 @@ environment variables:
   DAYS_AHEAD          Days to look ahead (default: 7)
   PAST_HOURS          Hours to look back (default: 72)
   HTTP_TIMEOUT        HTTP timeout in seconds (default: 20)
+  CANVAS_ASCII        Set to 1 to use ASCII-only charts (auto-enabled on Windows)
 
 examples:
   canvas-tui                              Launch TUI
@@ -104,6 +105,11 @@ examples:
         type=int,
         metavar="N",
         help="Override PAST_HOURS",
+    )
+    p.add_argument(
+        "--ascii",
+        action="store_true",
+        help="Use ASCII-only charts (auto-enabled on Windows; same as CANVAS_ASCII=1)",
     )
 
     return p.parse_args(argv)

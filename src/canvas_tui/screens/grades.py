@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any
 
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
-from textual.events import Key
+from textual.events import Key, Resize
 from textual.screen import Screen
 from textual.widgets import DataTable, Footer, Static
 
@@ -218,6 +218,14 @@ class GradesScreen(Screen):
             event.stop()
             self.app.pop_screen()
 
+    def on_resize(self, event: Resize) -> None:
+        def _deferred() -> None:
+            cid = self._selected_course()
+            if cid is not None and cid in self._course_grades:
+                self._render_grades(cid, self._course_grades[cid])
+
+        self.call_after_refresh(_deferred)
+
     # ── Helpers ──────────────────────────────────────────────────────────────
 
     def _selected_course(self) -> int | None:
@@ -267,6 +275,13 @@ class GradesScreen(Screen):
         threading.Thread(target=worker, daemon=True).start()
 
     # ── Rendering ────────────────────────────────────────────────────────────
+
+    def _summary_content_width(self) -> int:
+        """Return usable character width of the grades summary panel."""
+        try:
+            return max(24, self.summary.size.width - 4)
+        except Exception:
+            return 40
 
     def _render_grades(self, cid: int, assignments: list[dict[str, Any]]) -> None:
         code, name = self.courses.get(cid, ("?", "?"))
@@ -318,20 +333,24 @@ class GradesScreen(Screen):
 
             self.grade_table.add_row(aname[:50], score_str, pts_str, pct_str, ", ".join(status_parts) or "-")
 
-        # Build summary panel text
+        # Build summary panel text — widths adapt to the actual panel size
+        panel_w = self._summary_content_width()
+        gauge_w = max(12, min(panel_w - 22, 40))
+        weight_bar_w = max(20, min(panel_w - 4, 60))
+
         avg_color = grade_color(summary.avg)
         summary_lines: list[str] = [
             f"[b]{code} — {name}[/b]",
             f"Average: [{avg_color}]{summary.avg:.1f}%[/{avg_color}]  "
             f"({len(summary.graded)} graded, {len(summary.ungraded)} pending)",
             f"Total: {summary.total_score:.1f} / {summary.total_possible:.1f}",
-            f"Progress: {render_gauge(len(summary.graded), len(summary.graded) + len(summary.ungraded), width=20)}",
+            f"Progress: {render_gauge(len(summary.graded), len(summary.graded) + len(summary.ungraded), width=gauge_w)}",
         ]
 
         # What-if projected grade line
         if not summary.has_whatif:
             summary_lines.append(
-                f"[dim]Press [w] on an ungraded row to try what-if scores[/dim]"
+                "[dim]Press [w] on an ungraded row to try what-if scores[/dim]"
             )
         else:
             proj_color = grade_color(summary.projected_avg)
@@ -362,7 +381,7 @@ class GradesScreen(Screen):
                 if g.get("group_weight", 0) > 0
             ]
             if segments:
-                summary_lines.append("\n" + render_weight_bar(segments, width=28, title="Grade Weights"))
+                summary_lines.append("\n" + render_weight_bar(segments, width=weight_bar_w, title="Grade Weights"))
 
         self.summary.update("\n".join(summary_lines))
 

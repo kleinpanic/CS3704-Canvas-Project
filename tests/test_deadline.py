@@ -1,5 +1,4 @@
 """PM4 tests for deadline-specific filtering behavior (Issue #24)."""
-import pytest
 
 from canvas_tui.filtering import FilterQuery, filter_items
 from canvas_tui.models.item import CanvasItem

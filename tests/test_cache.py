@@ -2,15 +2,10 @@
 
 from __future__ import annotations
 
-import datetime as dt
 import json
 import os
 import shutil
 import tempfile
-import time
-from zoneinfo import ZoneInfo
-
-import pytest
 
 from canvas_tui.cache import ResponseCache, cache_key
 
@@ -51,7 +46,7 @@ class TestResponseCache:
         with open(path, "w", encoding="utf-8") as f:
             json.dump(entry, f)
 
-        result, is_stale = self.cache.get("expired-key", allow_stale=False)
+        result, _is_stale = self.cache.get("expired-key", allow_stale=False)
         assert result is None
 
     def test_stale_returned_when_allowed(self) -> None:

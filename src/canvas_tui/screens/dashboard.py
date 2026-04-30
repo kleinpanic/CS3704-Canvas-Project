@@ -18,7 +18,7 @@ from zoneinfo import ZoneInfo
 
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
-from textual.events import Key
+from textual.events import Key, Resize
 from textual.screen import Screen
 from textual.widgets import Footer, Static
 
@@ -84,6 +84,9 @@ class DashboardScreen(Screen):
         super().__init__()
         self._owner = owner_app
         self._loading = False
+        self._cached_courses: dict | None = None
+        self._cached_items: list | None = None
+        self._cached_grades: dict | None = None
 
     def compose(self) -> ComposeResult:
         with Vertical(id="dash-root"):
@@ -115,6 +118,17 @@ class DashboardScreen(Screen):
             event.stop()
             self.app.pop_screen()
 
+    def on_resize(self, event: Resize) -> None:
+        if self._cached_courses is not None and self._cached_grades is not None:
+            self._render_dashboard(self._cached_courses, self._cached_items or [], self._cached_grades)
+
+    def _panel_content_size(self, widget_id: str, fallback_w: int = 40, fallback_h: int = 10) -> tuple[int, int]:
+        try:
+            w = self.query_one(f"#{widget_id}")
+            return max(20, w.size.width - 4), max(4, w.size.height - 2)
+        except Exception:
+            return fallback_w, fallback_h
+
     def _load_dashboard(self) -> None:
         if self._loading:
             return
@@ -128,6 +142,10 @@ class DashboardScreen(Screen):
                 for cid in courses:
                     with contextlib.suppress(Exception):
                         course_grades[cid] = self._owner.api.fetch_grades(cid)
+
+                self._cached_courses = courses
+                self._cached_items = items
+                self._cached_grades = course_grades
                 self.app.call_from_thread(self._render_dashboard, courses, items, course_grades)
             except Exception as exc:
                 err = str(exc)
@@ -176,8 +194,10 @@ class DashboardScreen(Screen):
                 course_sparklines[code] = pcts
             course_completion.append((code, graded_count, total_count))
 
+        scores_pw, _scores_ph = self._panel_content_size("dash-scores", fallback_w=40)
+        scores_bar_w = max(20, scores_pw - max((len(e.label) for e in bar_entries), default=8) - 12)
         if bar_entries:
-            scores_text = render_bar_chart(bar_entries, bar_width=25, title="Course Scores")
+            scores_text = render_bar_chart(bar_entries, bar_width=scores_bar_w, title="Course Scores")
         else:
             scores_text = "[bold]Course Scores[/bold]\n[dim]No active course score data yet[/dim]"
         self.scores_panel.update(scores_text)
@@ -215,19 +235,16 @@ class DashboardScreen(Screen):
 
         self.due_panel.update("\n".join(due_lines))
 
-        # ── Completion gauges ───────────────────────────────────────────
-        gauge_lines = [
-            "[bold]┌───────────────────────────┐[/bold]",
-            "[bold]│  Assignment Completion   │[/bold]",
-            "[bold]└───────────────────────────┘[/bold]",
-            "",
-        ]
+        # ── Completion gauges (middle-right) ──
+        comp_pw, _comp_ph = self._panel_content_size("dash-completion", fallback_w=30)
+        max_code_len = max((len(code) for code, _, _ in course_completion), default=6)
+        gauge_w = max(12, comp_pw - max_code_len - 14)
+        gauge_lines = ["[bold]Assignment Completion[/bold]"]
         if not course_completion:
             gauge_lines.append("[dim]  No course grade data yet[/dim]")
         else:
             for code, done, total in course_completion:
-                gauge_lines.append(render_gauge(done, total, width=22, label=code))
-
+                gauge_lines.append(render_gauge(done, total, width=gauge_w, label=code))
         self.completion_panel.update("\n".join(gauge_lines))
 
         # ── Grade trends ────────────────────────────────────────────────
@@ -244,11 +261,12 @@ class DashboardScreen(Screen):
                 )
 
         if series_list:
+            trends_pw, trends_ph = self._panel_content_size("dash-trends", fallback_w=60, fallback_h=8)
             plot_text = render_braille_plot(
                 series_list,
-                width=50,
-                height=6,
-                title="Grade Trends",
+                width=trends_pw,
+                height=max(5, trends_ph),
+                title="Grade Trends (recent assignments)",
                 y_min=0,
                 y_max=100,
             )
