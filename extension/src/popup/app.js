@@ -262,10 +262,17 @@ function openSettings() {
       return;
     }
 
-    status.textContent = "Saving...";
+    status.textContent = "Saving and validating...";
     const res = await chrome.runtime.sendMessage({ type: "SET_TOKEN", token });
-    status.textContent = res.ok ? "Token saved." : `Error: ${res.error}`;
-    if (res.ok) setTimeout(closeSettings, 900);
+    status.textContent = res.ok
+      ? `Connected as ${res.user?.name || res.user?.short_name || 'Canvas user'}.`
+      : `Error: ${res.error}`;
+    if (res.ok) {
+      setTimeout(() => {
+        closeSettings();
+        fetchAll();
+      }, 900);
+    }
   };
 }
 
