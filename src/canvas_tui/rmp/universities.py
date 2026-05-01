@@ -124,14 +124,15 @@ class UniversityRegistry:
             self._load_user_overrides(user_path)
 
     def _load_user_overrides(self, path: Path) -> None:
-        with open(path) as f:
+        with open(path, encoding="utf-8") as f:
             user_data = json.load(f)
         if isinstance(user_data, list):
             for entry in user_data:
                 if "name" in entry and ("canvas_url" in entry or "rmp_school_id" in entry):
                     # Replace if name matches, otherwise append
                     idx = next(
-                        (i for i, u in enumerate(self._universities) if u["name"] == entry["name"]),
+                        (i for i, u in enumerate(self._universities)
+                         if u["name"].casefold() == entry["name"].casefold()),
                         None,
                     )
                     if idx is not None:

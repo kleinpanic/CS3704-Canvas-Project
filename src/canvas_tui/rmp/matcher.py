@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import re
 import unicodedata
-from typing import Optional, Sequence
+from typing import Optional
 
 from .models import ProfessorRating, MatchResult
 
@@ -64,11 +64,12 @@ def parse_first_last(name: str) -> tuple[str, str]:
 
     # If comma-separated in the original, assume "Last, First"
     if "," in name:
-        # Split on original comma, then normalize each part
         raw_parts = name.split(",", 1)
-        last = normalize_name(raw_parts[0])
-        first_raw = normalize_name(raw_parts[1]) if len(raw_parts) > 1 else ""
-        first = first_raw.split()[0] if first_raw else ""
+        # Take only the first token of each part for consistency with the non-comma path
+        last_raw = normalize_name(raw_parts[0]).split()
+        first_raw = normalize_name(raw_parts[1]).split() if len(raw_parts) > 1 else []
+        first = first_raw[0] if first_raw else ""
+        last = last_raw[-1] if last_raw else ""
         return (first, last)
 
     tokens = normalized.split()
@@ -132,12 +133,17 @@ def match_professor(
             scored.append((0, prof, "exact"))
             continue
 
-        # Exact last name + fuzzy first
-        if canvas_last == prof_last:
-            dist = levenshtein_distance(canvas_first, prof_first) if canvas_first and prof_first else 0
+        # Exact last name + fuzzy first (only if both have first names)
+        if canvas_last == prof_last and canvas_first and prof_first:
+            dist = levenshtein_distance(canvas_first, prof_first)
             if dist <= fuzzy_threshold:
                 scored.append((dist + 1, prof, "fuzzy"))
                 continue
+
+        # Last-name-only match when first name is missing: low confidence, skip unless exact last
+        if canvas_last == prof_last and (not canvas_first or not prof_first):
+            scored.append((fuzzy_threshold + 3, prof, "fuzzy"))
+            continue
 
         # Fuzzy last name
         last_dist = levenshtein_distance(canvas_last, prof_last)

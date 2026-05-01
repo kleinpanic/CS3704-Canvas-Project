@@ -14,10 +14,11 @@ from __future__ import annotations
 
 import json
 import logging
-import re
+import os
+import tempfile
 import time
 from pathlib import Path
-from typing import Optional, Sequence
+from typing import Optional
 
 import requests
 
@@ -84,7 +85,7 @@ class RMPClient:
         """
         reg = registry or UniversityRegistry()
         uni = reg.find_by_canvas_url(canvas_url)
-        if uni is None:
+        if uni is None or "rmp_school_id" not in uni:
             return None
         return cls(
             rmp_school_id=uni["rmp_school_id"],
@@ -109,7 +110,7 @@ class RMPClient:
             return None
 
         try:
-            data = json.loads(cache_file.read_text())
+            data = json.loads(cache_file.read_text(encoding="utf-8"))
             age = time.time() - data.get("timestamp", 0)
             if age > CACHE_TTL:
                 logger.info("RMP cache expired for school %d", self.rmp_school_id)
@@ -158,7 +159,18 @@ class RMPClient:
                 for p in professors
             ],
         }
-        cache_file.write_text(json.dumps(data, indent=2))
+        # Atomic write: write to temp file then replace
+        tmp_fd, tmp_path = tempfile.mkstemp(dir=str(cache_file.parent), suffix=".tmp")
+        try:
+            with os.fdopen(tmp_fd, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2)
+            os.replace(tmp_path, str(cache_file))
+        except Exception:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+            raise
 
     def fetch_professors(self, force_refresh: bool = False) -> list[ProfessorRating]:
         """Fetch all professors for the configured school.
@@ -212,8 +224,7 @@ class RMPClient:
                 logger.error("RMP response was not JSON (page %d): %s", page, e)
                 raise RMPClientError(f"RMP returned non-JSON response") from e
 
-            # Parse pagination
-            remaining = data.get("remaining", 0)
+            # Pagination uses total count; remaining is unused
             total_professors = data.get("searchResultsTotal", 0)
             professors_per_page = 20  # RMP default
             if page == 1 and total_professors > 0:

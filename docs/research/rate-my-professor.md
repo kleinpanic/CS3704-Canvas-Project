@@ -112,26 +112,8 @@ Given the scope, we might start with TUI-only for the spike and note that extens
 5. Document caching strategy and implementation details.
 
 ## Open Questions
-- What is the exact Virginia Tech university ID for the tisuela scraper?
 - How often should we refresh the professor list? (Once per semester seems reasonable.)
 - Should we allow users to manually correct a mismatch?
-- How to handle professors with titles (Dr., Professor) in the Canvas name?
 
 ## Recommendation
-Proceed with vendoring the tisuela ratemyprof-api, adapting it for our needs, and integrating it into the TUI as a service. For the extension, we can replicate the logic in JavaScript later or decide to expose the data via a shared backend if we ever build one.
-
-We should also add a note about respecting RateMyProfessors.com's terms of service and using reasonable request rates.
-
-## Appendix: Determining Virginia Tech University ID
-We can find the ID by:
-1. Visiting https://www.ratemyprofessors.com/search.jsp?queryoption=TEACHER&queryBy=schoolId&query=Virginia+Texas&sid=...
-   Actually, we need to search for the school and extract the ID from the URL.
-2. Alternatively, inspect the network request when loading the school page.
-
-Let's do a quick check now.
-
-We'll attempt to fetch the search suggestions for "Virginia Tech" to get the schoolId.
-
-We'll write a small script.
-
-Let's do that in the next command block.
+Proceed with the implementation as described above. The VT school ID (1346) is configured in the seeded university registry. Caching uses atomic writes with UTF-8 encoding. Matching handles titles, suffixes, accents, and comma-formatted names.
