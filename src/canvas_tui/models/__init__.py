@@ -5,7 +5,7 @@ Re-exports all model classes for convenience.
 from __future__ import annotations
 
 from .course import CourseInfo
-from .item import CanvasItem
+from .item import CanvasItem, serialize_item
 from .modal import ModalContext
 
-__all__ = ["CanvasItem", "CourseInfo", "ModalContext"]
+__all__ = ["CanvasItem", "CourseInfo", "ModalContext", "serialize_item"]
