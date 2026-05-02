@@ -2,8 +2,65 @@
 
 from __future__ import annotations
 
+import datetime as _dt
+import hashlib
 from dataclasses import dataclass, field
 from typing import Any
+
+# Match scripts/generate_rerank_data.py:352-353 exactly so the SHA over
+# RANK_PROMPT_TEMPLATE in canvas_tui.reranker stays equal to the
+# TRAINING_PROMPT_FORMAT_SHA the GemmaReranker pipeline computed.
+_BADGE_MAP: dict[str, str] = {
+    "assignment": "ASGN",
+    "quiz": "QUIZ",
+    "exam": "EXAM",
+    "discussion": "DISC",
+    "event": "EVNT",
+    "announcement": "NOTE",
+}
+
+
+def _anonymize_course(course_code: str) -> str:
+    """Map a real course code (e.g. 'CS 3704') to the anonymized
+    'COURSE\\d{4}' format the model was trained on.
+
+    Deterministic SHA-256 → 4-digit modulo. Matches the v2 anonymization
+    scheme used by the data-prep pipeline so consumers get the same
+    `@COURSE####` strings that appeared at training time.
+    """
+    h = int(hashlib.sha256(course_code.strip().encode("utf-8")).hexdigest()[:8], 16)
+    return f"COURSE{(h % 9000) + 1000}"
+
+
+def _due_label(due_iso: str) -> str | None:
+    """Convert an ISO8601 due timestamp to one of the four trained
+    status tokens: OVERDUE / Today / Tomorrow / 'Due MM/DD HH:MM'.
+    Returns None if `due_iso` is empty or unparseable (caller should
+    omit the status field in that case).
+
+    Date-format normalization: this function emits the absolute date
+    in UTC (`dt.astimezone(UTC).strftime(...)`) so the JS port's
+    `getUTCMonth/Date/Hours/Minutes` produces identical output. This
+    is a deliberate divergence from the training-time serializer which
+    used the source datetime's own timezone — see the docstring on
+    `serialize_item` for the rationale.
+    """
+    if not due_iso:
+        return None
+    try:
+        dt = _dt.datetime.fromisoformat(due_iso.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    now = _dt.datetime.now(_dt.timezone.utc)
+    dt_utc = dt.astimezone(_dt.timezone.utc)
+    delta_h = (dt_utc - now).total_seconds() / 3600.0
+    if delta_h < -1:
+        return "OVERDUE"
+    if delta_h < 24:
+        return "Today"
+    if delta_h < 48:
+        return "Tomorrow"
+    return f"Due {dt_utc.strftime('%m/%d %H:%M')}"
 
 
 @dataclass
@@ -83,3 +140,45 @@ class CanvasItem:
             status_flags=d.get("status_flags", []),
             raw_plannable=d.get("raw_plannable", {}),
         )
+
+
+def serialize_item(item: CanvasItem) -> str:
+    """Serialize a CanvasItem to the trained format the published
+    `kleinpanic93/gemma4-canvas-reranker` model expects.
+
+    Format: ``[BADGE] Title @COURSE#### <due-label> NNNpts``
+
+    Mirrors `GemmaReranker/scripts/generate_rerank_data.py:349-372`
+    byte-for-byte. **Note:** the training-side serializer does not
+    consume `status_flags` — it emits only badge / title / course /
+    due-label / points. We do the same here. Submitted/missing items
+    should be filtered out by the consumer **before** calling
+    serialize_item; otherwise they get serialized identically to open
+    items and the model treats them as candidates for prioritization.
+
+    The course code is anonymized via SHA-256 → 4-digit modulo so that
+    the consumer never sends a real institution-level course identifier
+    to the model — matches the training-time anonymization scheme.
+
+    Due-date timezone caveat: `_due_label` formats `Due MM/DD HH:MM`
+    in UTC. Training-time data was emitted in the data-collection
+    machine's local timezone (typically EDT). Consumers in other
+    timezones may see a small drift in the `Due ...` token relative to
+    training. The relative tokens (`OVERDUE / Today / Tomorrow`) are
+    timezone-agnostic and unaffected.
+
+    Returns a single-line string suitable for embedding in
+    RANK_PROMPT_TEMPLATE (see canvas_tui.reranker).
+    """
+    parts: list[str] = []
+    ptype = (item.ptype or "?").lower()
+    parts.append(f"[{_BADGE_MAP.get(ptype, ptype[:4].upper())}]")
+    parts.append((item.title or "(untitled)")[:45])
+    if item.course_code:
+        parts.append(f"@{_anonymize_course(item.course_code)}")
+    label = _due_label(item.due_iso)
+    if label:
+        parts.append(label)
+    if item.points:
+        parts.append(f"{float(item.points):.0f}pts")
+    return " ".join(parts)
