@@ -7,6 +7,25 @@ A maintainable, team-ready **Canvas LMS productivity client** with a Textual TUI
 [![Pages](https://img.shields.io/github/actions/workflow/status/kleinpanic/CS3704-Canvas-Project/pages.yml?branch=main&label=Pages)](https://github.com/kleinpanic/CS3704-Canvas-Project/actions/workflows/pages.yml)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![HF Model](https://img.shields.io/badge/🤗_HF-gemma4--canvas--reranker-yellow)](https://huggingface.co/kleinpanic93/gemma4-canvas-reranker)
+[![HF Dataset](https://img.shields.io/badge/🤗_HF-canvas--preference--2k-yellow)](https://huggingface.co/datasets/kleinpanic93/canvas-preference-2k)
+[![HF Collection](https://img.shields.io/badge/🤗_Collection-Canvas_Reranker_v1.0-yellow)](https://huggingface.co/collections/kleinpanic93/canvas-reranker-gemma-4-e2b-it-v10-69f5799662d65c8f39be0a94)
+<!-- Zenodo DOI badge appears here once paper is deposited via source/deposit_zenodo.py -->
+
+## ML/AI components
+
+The reranker subsystem (`GemmaReranker/`) trains and evaluates 9 fine-tuning
+methods (SFT, LoRA, QLoRA, DPO, IPO, APO-zero, SPPO, NCA, KTO) on a
+Canvas preference dataset. v1 ships as a fast preference-hint model
+([`kleinpanic93/gemma4-canvas-reranker`](https://huggingface.co/kleinpanic93/gemma4-canvas-reranker))
+in 4 GGUF quants (Q4_K_M / Q5_K_M / Q8_0 / f16) plus the BF16 transformers
+weights. v2 (in design) builds a **specialized calendar+study agent** that
+uses the v1 model as one tool alongside Canvas API + calendar (Google Cal /
+Outlook / calcurses) tool calls and neuroscience-grounded study planning
+heuristics (spaced repetition, deep-work block sizing, exam bracketing). See
+[GemmaReranker/README.md](GemmaReranker/README.md) for the full ML pipeline
+and [`src/canvas_tui/agent/`](src/canvas_tui/agent/) for the consumer-side
+agent code.
 
 ---
 
