@@ -19,9 +19,16 @@
  *
  * Per the v3 held-out validation in the upstream paper §6.6, DPO and
  * the QLoRA-merged BF16 reference produce identical predictions.
- * Recommend Ollama-pull `kleinpanic93/gemma4-canvas-reranker:Q4_K_M`
- * (3.18 GiB) for the extension — smallest quant that preserves the
- * 98% pairwise accuracy on standard pairs.
+ *
+ * Quant choice (per source/benchmark_quants.py on n=148 held-out):
+ *   - Q5_K_M (3.4 GiB) — 98.0% accuracy, recommended default
+ *   - Q4_K_M (3.18 GiB) — 93.2% accuracy, ~5pp lower than Q5; use only
+ *     if you need the smaller binary and accept the accuracy hit
+ *
+ * Default backend below pulls Q4_K_M to favor the small-binary
+ * extension footprint, but consumers should consider switching to
+ * Q5_K_M (`gemma4-canvas-reranker:Q5_K_M`) if accuracy on standard
+ * pairs matters more than ~200 MiB of disk.
  */
 
 export const RANK_PROMPT_TEMPLATE =
@@ -82,12 +89,13 @@ export async function serializeItem(item) {
   if (item.course_code) {
     parts.push(`@${await _anonymizeCourse(item.course_code)}`);
   }
-  if (item.status_flags && item.status_flags.includes("submitted")) {
-    parts.push("DONE");
-  } else {
-    const label = _dueLabel(item.due_iso);
-    if (label) parts.push(label);
-  }
+  // Mirror src/canvas_tui/models/item.py:serialize_item exactly: the
+  // training-side serializer does NOT consume status_flags. Submitted/
+  // missing items must be filtered out by the consumer before calling
+  // serializeItem; otherwise they get serialized identically to open
+  // items.
+  const label = _dueLabel(item.due_iso);
+  if (label) parts.push(label);
   if (item.points && Number(item.points) > 0) {
     parts.push(`${Math.round(Number(item.points))}pts`);
   }

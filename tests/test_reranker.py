@@ -145,14 +145,44 @@ class TestSerializeItemBridge:
         assert "@COURSE" in out
         assert "CS 3704" not in out and "@CS" not in out
 
-    def test_serialize_uses_done_for_submitted(self):
+    def test_serialize_does_not_consume_status_flags(self):
+        # Mirrors generate_rerank_data.py:349-372 — the training-side
+        # serializer ignores status_flags. Submitted/missing items are
+        # the consumer's responsibility to filter pre-rank.
         item = CanvasItem(
             ptype="quiz", title="q", course_code="CS 1", points=10,
             status_flags=["submitted"],
         )
-        assert "DONE" in serialize_item(item)
+        out = serialize_item(item)
+        assert "DONE" not in out
+        assert "MISSING" not in out
+        assert "LATE" not in out
 
     def test_serialize_omits_points_when_zero(self):
         item = CanvasItem(ptype="event", title="meeting", course_code="X", points=0)
         out = serialize_item(item)
         assert "0pts" not in out
+
+    def test_serialize_overdue_item(self):
+        # An item due in the past (1 year ago) → OVERDUE token.
+        item = CanvasItem(
+            ptype="assignment", title="HW", course_code="CS 1", points=50,
+            due_iso="2025-05-01T12:00:00Z",
+        )
+        out = serialize_item(item)
+        assert "OVERDUE" in out
+
+    def test_serialize_golden_output(self):
+        # Pin one golden serialization. If the format ever changes
+        # (badges, separators, point format, anonymization formula),
+        # this test fails loudly so the consumer-side and the trained
+        # format don't silently drift apart.
+        item = CanvasItem(
+            ptype="assignment", title="Test HW", course_code="CS 3704",
+            points=100, due_iso="2025-05-01T12:00:00Z",
+        )
+        out = serialize_item(item)
+        # Components: badge, title, anonymized course, OVERDUE (past), points
+        assert out.startswith("[ASGN] Test HW @COURSE")
+        assert " OVERDUE " in out
+        assert out.endswith(" 100pts")

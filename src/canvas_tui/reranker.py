@@ -96,16 +96,27 @@ class LocalReranker:
         n_ctx:         context window. 1024 is plenty for two items
                        plus the rationale.
 
-    Inference path: reference-differential pointwise scoring. For each
-    item, compute logprob_delta = logprob(model says item is more
-    urgent than reference) - logprob(model says reference is more
-    urgent than item), then sort items descending by delta. Same
-    method `GemmaReranker/scripts/benchmark.py:score_item` uses.
+    Inference path: greedy reference-differential winner extraction.
+    For each item, ask the model twice (item-in-slot-A vs reference-in-B,
+    then reverse). Greedy-decode 8 tokens from each, parse the first
+    "Item A"/"Item B" mention, score = +1 if model picked the test
+    item, -1 if it picked the reference, 0 on parse failure. Sort
+    items descending by score.
 
-    Per the v3 held-out validation, DPO and the QLoRA-merged BF16
-    base produce identical predictions — recommend pointing model_path
-    at gemma4-reranker-Q5_K_M.gguf or smaller (Q4_K_M for browser/edge
-    deployment).
+    NOTE: this is NOT the logprob-based pointwise scoring that
+    `GemmaReranker/scripts/benchmark.py::score_item` implements (which
+    extracts the next-token-after-"Item " logits directly). The
+    greedy-extraction approximation here is what the v3 held-out
+    validation actually measures (`source/validate_dpo_holdout.py`
+    in the upstream SSOT repo); both DPO and reference produce
+    identical greedy predictions on 148/148 held-out pairs. A future
+    iteration could swap to true logprob extraction to break ties,
+    but the greedy path is sufficient for the saturated-task regime
+    we're in.
+
+    Recommended quants (per upstream `source/benchmark_quants.py`):
+      - Q5_K_M (3.4 GiB): 98% accuracy, recommended default
+      - Q4_K_M (3.18 GiB): 93% accuracy, edge/browser fallback
     """
 
     def __init__(
