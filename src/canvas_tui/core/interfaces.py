@@ -164,7 +164,7 @@ class CanvasClient(ABC):
 
 
     @abstractmethod
-    def fetch_announcements(self, course_ids: list[int], since: datetime) -> list[dict[str, Any]]:
+    def fetch_announcements(self, course_ids: list[int], _since: datetime) -> list[dict[str, Any]]:
         """Fetch announcements for given courses since datetime."""
         ...
 
