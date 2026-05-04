@@ -241,11 +241,11 @@ def main():
     p.add_argument("--contributor", required=True,
                    help="Your PID or GitHub handle — used as anonymization salt, never stored in output")
     p.add_argument("--output", default=None,
-                   help="Output JSONL path (default: data/trajectories/collab/<contributor>.jsonl)")
+                   help="Output JSONL path (default: data/collab/<contributor>.jsonl)")
     args = p.parse_args()
 
     out = Path(args.output) if args.output else \
-        Path("data/trajectories/collab") / f"{args.contributor}.jsonl"
+        Path("data/collab") / f"{args.contributor}.jsonl"
     out.parent.mkdir(parents=True, exist_ok=True)
 
     records = collect(args.contributor)
