@@ -65,23 +65,13 @@ where = ["src"]
 
 [tool.coverage.run]
 omit = [
-    # Textual TUI app and screens cannot run in headless CI
+    # Textual TUI layer — requires a running terminal; cannot execute in headless CI
     "src/canvas_tui/app.py",
     "src/canvas_tui/__main__.py",
     "src/canvas_tui/cli.py",
-    "src/canvas_tui/screens/analytics.py",
-    "src/canvas_tui/screens/announcements.py",
-    "src/canvas_tui/screens/course_overview.py",
-    "src/canvas_tui/screens/courses.py",
-    "src/canvas_tui/screens/dashboard.py",
-    "src/canvas_tui/screens/details.py",
-    "src/canvas_tui/screens/files.py",
-    "src/canvas_tui/screens/grades.py",
-    "src/canvas_tui/screens/modals.py",
-    "src/canvas_tui/screens/syllabi.py",
-    "src/canvas_tui/screens/weekview.py",
+    "src/canvas_tui/screens/*",
     "src/canvas_tui/widgets/pomodoro.py",
-    # Infrastructure stubs not exercised by unit tests
+    # Network/integration-dependent code not exercised by unit tests
     "src/canvas_tui/adapters/*",
     "src/canvas_tui/commands/*",
     "src/canvas_tui/prefetch.py",
