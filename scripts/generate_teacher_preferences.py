@@ -7,7 +7,7 @@ for DPO distillation. The teacher provides natural-language reasoning for WHY
 one item is more urgent, which is more informative than heuristic labels.
 
 Usage:
-    # Option A: Via forge API on spark-maker (recommended — teacher already loaded)
+    # Option A: Via forge API on server (recommended — teacher already loaded)
     python3 scripts/generate_teacher_preferences.py \
         --input data/collab/rerank_clean.jsonl \
         --output data/rerank_dpo.jsonl \
@@ -15,12 +15,10 @@ Usage:
         --api-key "dummy" \
         --batch-size 8
 
-    # Option B: Direct vLLM on spark-maker
-    ssh spark
     docker compose run --rm trainer \
         python3 /workspace/scripts/generate_teacher_preferences.py \
-            --input $SPARK_MOUNT/datasets/rerank_clean.jsonl \
-            --output $SPARK_MOUNT/datasets/rerank_dpo.jsonl \
+            --input data/rerank_clean.jsonl \
+            --output data/rerank_dpo.jsonl \
             --teacher-endpoint http://localhost:8000/v1 \
             --api-key "none"
 
