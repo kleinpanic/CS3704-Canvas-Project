@@ -11,23 +11,21 @@ This is the v2 analogue of the v1 generate_dataset.py / collect_rerank_
 dataset.py preference collectors. Same anonymization pipeline; same
 multi-contributor model.
 
-Usage (from canvas-tui repo root, with canvas_sdk installed and a
-Canvas API token in your env):
+Usage (from repo root, with canvas_sdk installed and a Canvas API token):
 
     export CANVAS_TOKEN=...
     export CANVAS_BASE_URL=https://canvas.vt.edu
     export TEACHER_ENDPOINT=http://spark.local:18080/v1   # optional
-    python3 GemmaReranker/scripts/collect_trajectories.py \
+    python3 scripts/collect_trajectories.py \
         --contributor alice \
-        --queries GemmaReranker/data/canonical_queries.txt \
-        --output GemmaReranker/data/collab/alice_trajectories.jsonl \
-        --max-trajectories 50
+        --output data/trajectories/collab/alice_trajectories.jsonl \
+        --max-trajectories 20
 
 The output JSONL is the v2 SFT corpus. Each line is one trajectory:
     {user_query, context, trajectory[], teacher_model, contributor_id}
 
-Contributors push their anonymized JSONL to GemmaReranker/data/collab/
-in a PR; the maintainer concatenates + further audits before training.
+Contributors commit their anonymized JSONL to data/trajectories/collab/
+and open a PR — the maintainer concatenates + audits before training.
 """
 from __future__ import annotations
 

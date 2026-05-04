@@ -7,25 +7,35 @@ A maintainable, team-ready **Canvas LMS productivity client** with a Textual TUI
 [![Pages](https://img.shields.io/github/actions/workflow/status/kleinpanic/CS3704-Canvas-Project/pages.yml?branch=main&label=Pages)](https://github.com/kleinpanic/CS3704-Canvas-Project/actions/workflows/pages.yml)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![HF Model](https://img.shields.io/badge/🤗_HF-gemma4--canvas--reranker-yellow)](https://huggingface.co/kleinpanic93/gemma4-canvas-reranker)
-[![HF Dataset](https://img.shields.io/badge/🤗_HF-canvas--preference--2k-yellow)](https://huggingface.co/datasets/kleinpanic93/canvas-preference-2k)
-[![HF Collection](https://img.shields.io/badge/🤗_Collection-Canvas_Reranker_v1.0-yellow)](https://huggingface.co/collections/kleinpanic93/canvas-reranker-gemma-4-e2b-it-v10-69f5799662d65c8f39be0a94)
-<!-- Zenodo DOI badge appears here once paper is deposited via source/deposit_zenodo.py -->
+<!-- HF model + dataset badges added after v2.0 release -->
 
 ## ML/AI components
 
-The reranker subsystem (`GemmaReranker/`) trains and evaluates 9 fine-tuning
-methods (SFT, LoRA, QLoRA, DPO, IPO, APO-zero, SPPO, NCA, KTO) on a
-Canvas preference dataset. v1 ships as a fast preference-hint model
-([`kleinpanic93/gemma4-canvas-reranker`](https://huggingface.co/kleinpanic93/gemma4-canvas-reranker))
-in 4 GGUF quants (Q4_K_M / Q5_K_M / Q8_0 / f16) plus the BF16 transformers
-weights. v2 (in design) builds a **specialized calendar+study agent** that
-uses the v1 model as one tool alongside Canvas API + calendar (Google Cal /
-Outlook / calcurses) tool calls and neuroscience-grounded study planning
-heuristics (spaced repetition, deep-work block sizing, exam bracketing). See
-[GemmaReranker/README.md](GemmaReranker/README.md) for the full ML pipeline
-and [`src/canvas_tui/agent/`](src/canvas_tui/agent/) for the consumer-side
-agent code.
+The v2 milestone adds a **specialized calendar+study agent** that combines
+Canvas API tool calls with neuroscience-grounded study planning heuristics
+(spaced repetition, deep-work block sizing, exam bracketing).
+
+### Contributing training data
+
+Teammates collect agent trajectories to build the v2 training corpus:
+
+```bash
+export CANVAS_TOKEN=your_canvas_token
+export CANVAS_BASE_URL=https://canvas.vt.edu
+
+python3 scripts/collect_trajectories.py \
+    --contributor YOUR_HANDLE \
+    --output data/trajectories/collab/YOUR_HANDLE_trajectories.jsonl \
+    --max-trajectories 20
+```
+
+Then open a PR adding your JSONL file to `data/trajectories/collab/`.
+PII is anonymized before write — no raw course codes or names leave your machine.
+See [`data/trajectories/README.md`](data/trajectories/README.md) for full details.
+
+The training pipeline and model weights live at [CS3704-DPO-SSOT](https://github.com/kleinpanic/CS3704-DPO-SSOT)
+and will be published to HuggingFace once v2 training is complete.
+See [`src/canvas_tui/agent/`](src/canvas_tui/agent/) for the agent code.
 
 ---
 
@@ -153,11 +163,17 @@ python -m build           # build package
 ```
 .github/                  CI/CD workflows and governance
 src/canvas_tui/           Application source code
+  agent/                  v2 CalendarAgent (tool calls + study planning)
 tests/                    Test suite
-docs/architecture/        Mermaid diagrams and SVG exports
-docs/assets/              Static images and captures
-docs/project/             Planning artifacts and legacy docs
+scripts/                  Data pipeline utilities
+  collect_trajectories.py  Teammate trajectory collector for v2 training
+docs/                     Architecture and research docs
 docs-site/                GitHub Pages documentation
+data/
+  trajectories/           v2 SFT training data
+    collab/               Teammate-contributed trajectory JSONL files
+    seeds/                Canonical seed examples
+  v1-reranker/            Legacy v1 preference pair data
 extension/                Browser extension source
 sdk/                      Python SDK experiments and support code
 ```
