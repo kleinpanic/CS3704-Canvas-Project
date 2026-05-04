@@ -15,8 +15,7 @@ The v2 milestone adds a **specialized calendar+study agent** that combines
 Canvas API tool calls with neuroscience-grounded study planning heuristics
 (spaced repetition, deep-work block sizing, exam bracketing).
 
-The training pipeline and model weights live at [CS3704-DPO-SSOT](https://github.com/kleinpanic/CS3704-DPO-SSOT)
-and will be published to HuggingFace once v2 training is complete. The accompanying paper will be published on Zenodo.
+Model weights will be published to HuggingFace and the accompanying paper will be published on Zenodo once v2 training is complete.
 
 ---
 
