@@ -7,6 +7,35 @@ A maintainable, team-ready **Canvas LMS productivity client** with a Textual TUI
 [![Pages](https://img.shields.io/github/actions/workflow/status/kleinpanic/CS3704-Canvas-Project/pages.yml?branch=main&label=Pages)](https://github.com/kleinpanic/CS3704-Canvas-Project/actions/workflows/pages.yml)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+<!-- HF model + dataset badges added after v2.0 release -->
+
+## ML/AI components
+
+The v2 milestone adds a **specialized calendar+study agent** that combines
+Canvas API tool calls with neuroscience-grounded study planning heuristics
+(spaced repetition, deep-work block sizing, exam bracketing).
+
+### Contributing training data
+
+Teammates collect agent trajectories to build the v2 training corpus:
+
+```bash
+export CANVAS_TOKEN=your_canvas_token
+export CANVAS_BASE_URL=https://canvas.vt.edu
+
+python3 scripts/collect_trajectories.py \
+    --contributor YOUR_HANDLE \
+    --output data/trajectories/collab/YOUR_HANDLE_trajectories.jsonl \
+    --max-trajectories 20
+```
+
+Then open a PR adding your JSONL file to `data/trajectories/collab/`.
+PII is anonymized before write — no raw course codes or names leave your machine.
+See [`data/trajectories/README.md`](data/trajectories/README.md) for full details.
+
+The training pipeline and model weights live at [CS3704-DPO-SSOT](https://github.com/kleinpanic/CS3704-DPO-SSOT)
+and will be published to HuggingFace once v2 training is complete.
+See [`src/canvas_tui/agent/`](src/canvas_tui/agent/) for the agent code.
 
 ---
 
@@ -23,8 +52,9 @@ This is the **CS3704 team project repository** for a Canvas LMS productivity too
 
 ### Architecture goals
 - **Current**: Feature-complete TUI application
-- **Shared core**: Reusable domain logic and orchestration
-- **Future**: Browser extension parity with same business logic
+- **Current**: Browser extension with popup, background worker, IndexedDB cache, and shared JS client/runtime layer
+- **Shared core direction**: Reusable domain logic and orchestration where practical across surfaces
+- **Future**: Deeper parity between TUI and browser-facing features
 
 ---
 
@@ -133,11 +163,19 @@ python -m build           # build package
 ```
 .github/                  CI/CD workflows and governance
 src/canvas_tui/           Application source code
+  agent/                  v2 CalendarAgent (tool calls + study planning)
 tests/                    Test suite
-docs/architecture/        Mermaid diagrams and SVG exports
-docs/assets/              Static images and captures
-docs/project/             Planning artifacts and legacy docs
+scripts/                  Data pipeline utilities
+  collect_trajectories.py  Teammate trajectory collector for v2 training
+docs/                     Architecture and research docs
 docs-site/                GitHub Pages documentation
+data/
+  trajectories/           v2 SFT training data
+    collab/               Teammate-contributed trajectory JSONL files
+    seeds/                Canonical seed examples
+  v1-reranker/            Legacy v1 preference pair data
+extension/                Browser extension source
+sdk/                      Python SDK experiments and support code
 ```
 
 ---
@@ -145,16 +183,17 @@ docs-site/                GitHub Pages documentation
 ## Team Workflow
 
 ### For maintainers
-1. Push directly to `main` (protected, but admin bypass enabled)
-2. Ensure CI passes before merging others' PRs
-3. Review team PRs promptly
+1. Treat `main` as the only long-term branch
+2. Use short-lived feature branches for scoped work when possible
+3. Ensure CI passes before merging others' PRs
+4. Prefer squash merges and let GitHub auto-delete merged branches
 
 ### For team members
 1. **Never push directly to `main`**
-2. Create a feature branch: `feature/your-feature-name`
-3. Open a Pull Request
+2. Create a short-lived feature branch: `feature/your-feature-name`
+3. Open a Pull Request into `main`
 4. Wait for CI to pass and a maintainer to review
-5. Merge when approved
+5. Merge with squash when approved
 
 ### Branch naming convention
 - `feature/*` — new features
@@ -177,13 +216,16 @@ This repository has extensive automation:
 | **Stale** | Close inactive issues/PRs after 30 days |
 | **Labeler** | Auto-label PRs by changed files |
 
+The repository is configured for squash-only merges into protected `main`, linear history, and branch auto-delete after merge.
 All commits to protected branches must be **GPG signed**.
 
 ---
 
 ## Documentation
 
+- **[Docs site](https://kleinpanic.github.io/CS3704-Canvas-Project/)** — live project docs
 - **[Architecture docs](docs-site/architecture.md)** — system design decisions
+- **[Browser extension docs](docs-site/extension.md)** — shared client/runtime architecture
 - **[Workflow guide](docs-site/workflow.md)** — how the team works
 - **[Contributing](CONTRIBUTING.md)** — contribution guidelines
 - **[Maintainers](MAINTAINERS.md)** — maintainer responsibilities
