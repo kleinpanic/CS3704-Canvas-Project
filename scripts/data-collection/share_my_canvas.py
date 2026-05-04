@@ -79,13 +79,21 @@ def _anon_course(code: str) -> str:
 
 
 def anonymize(obj: object, salt: str) -> object:
+    def _walk(o):
+        if isinstance(o, dict):
+            return {k: _walk(v) for k, v in o.items()}
+        if isinstance(o, list):
+            return [_walk(v) for v in o]
+        if isinstance(o, int):
+            s = str(o)
+            if re.match(r"[1-9]\d{6,8}$", s):
+                return _hash(salt, s)
+        if isinstance(o, str):
+            o = re.sub(r"\b([1-9]\d{6,8})\b", lambda m: _hash(salt, m.group(1)), o)
+        return o
+
+    obj = _walk(obj)
     text = json.dumps(obj, default=str)
-    # Canvas numeric IDs
-    text = re.sub(
-        r"\b([1-9]\d{6,8})\b",
-        lambda m: _hash(salt, m.group(1)),
-        text,
-    )
     # Course codes like "CS 3704", "ENGL2204"
     text = re.sub(
         r"\b([A-Z]{2,5})\s*(\d{3,4}[A-Z]?)\b",
