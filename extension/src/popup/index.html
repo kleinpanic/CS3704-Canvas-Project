@@ -20,6 +20,11 @@
       </div>
     </header>
 
+    <nav id="tab-bar">
+      <button class="tab active" data-view="upcoming">Upcoming</button>
+      <button class="tab" data-view="courses">Courses</button>
+    </nav>
+
     <section id="filter-section" class="toolbar hidden">
       <label class="field-label" for="course-filter">Course</label>
       <select id="course-filter">
@@ -28,7 +33,8 @@
     </section>
 
     <main>
-      <section id="upcoming-section" class="panel">
+      <!-- Upcoming View -->
+      <section id="view-upcoming" class="view active panel">
         <div class="section-heading">
           <div>
             <p class="section-kicker">Assignments</p>
@@ -36,10 +42,33 @@
           </div>
           <span id="assignment-count" class="count-pill hidden">0 items</span>
         </div>
-
         <ul id="upcoming-list" class="assignment-list"></ul>
         <div id="loading" class="status-card spinner">Loading your assignments...</div>
         <div id="error" class="status-card error hidden"></div>
+      </section>
+
+      <!-- Courses View -->
+      <section id="view-courses" class="view hidden panel">
+        <div class="section-heading">
+          <div>
+            <p class="section-kicker">Enrolled</p>
+            <h2>Your courses</h2>
+          </div>
+        </div>
+        <ul id="courses-list" class="assignment-list"></ul>
+        <div id="courses-loading" class="status-card spinner">Loading courses...</div>
+        <div id="courses-error" class="status-card error hidden"></div>
+      </section>
+
+      <!-- Course Detail View -->
+      <section id="view-course-detail" class="view hidden panel">
+        <div class="detail-header">
+          <button id="back-btn" class="back-btn">← Back</button>
+          <h2 id="detail-course-name"></h2>
+        </div>
+        <ul id="detail-list" class="assignment-list"></ul>
+        <div id="detail-loading" class="status-card spinner">Loading...</div>
+        <div id="detail-empty" class="status-card hidden">No upcoming assignments</div>
       </section>
     </main>
 

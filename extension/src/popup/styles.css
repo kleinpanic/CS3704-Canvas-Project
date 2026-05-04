@@ -496,3 +496,116 @@ button:hover {
 .hidden {
   display: none !important;
 }
+
+/* ── Tab Navigation ──────────────────────────────────────── */
+
+#tab-bar {
+  display: flex;
+  background: transparent;
+  margin: 12px 0 0;
+  gap: 4px;
+}
+
+.tab {
+  flex: 1;
+  padding: 9px 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: rgba(255,255,255,0.55);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: all 0.15s;
+}
+
+.tab.active {
+  background: var(--canvas-red);
+  color: white;
+  border-color: var(--canvas-red);
+}
+
+.tab:hover:not(.active) { background: rgba(255,255,255,0.85); color: var(--text); }
+
+/* ── Views ───────────────────────────────────────────────── */
+
+.view { display: none; }
+.view.active { display: block; }
+
+/* ── Course Cards ────────────────────────────────────────── */
+
+.course-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: linear-gradient(180deg, white 0%, #fbfcff 100%);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: transform 0.12s, box-shadow 0.12s, border-color 0.12s;
+}
+
+.course-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(15,23,42,0.1);
+  border-color: var(--canvas-blue);
+}
+
+.course-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--canvas-blue);
+  flex-shrink: 0;
+}
+
+.course-info { flex: 1; min-width: 0; }
+
+.course-full-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.course-code { font-size: 0.68rem; color: var(--text-muted); margin-top: 2px; }
+.course-arrow { font-size: 0.9rem; color: var(--text-muted); flex-shrink: 0; }
+
+/* ── Course Detail ───────────────────────────────────────── */
+
+.detail-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.back-btn {
+  background: rgba(56,88,152,0.1);
+  border: none;
+  color: var(--canvas-blue);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 5px 10px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  transition: background 0.12s;
+}
+
+.back-btn:hover { background: rgba(56,88,152,0.18); }
+
+.detail-header h2 {
+  font-size: 0.85rem;
+  font-weight: 600;
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-transform: none;
+  letter-spacing: 0;
+}
