@@ -120,7 +120,12 @@ class DashboardScreen(Screen):
 
     def on_resize(self, event: Resize) -> None:
         if self._cached_courses is not None and self._cached_grades is not None:
-            self._render_dashboard(self._cached_courses, self._cached_items or [], self._cached_grades)
+            def _deferred() -> None:
+                if self._cached_courses is not None and self._cached_grades is not None:
+                    self._render_dashboard(
+                        self._cached_courses, self._cached_items or [], self._cached_grades
+                    )
+            self.call_after_refresh(_deferred)
 
     def _panel_content_size(self, widget_id: str, fallback_w: int = 40, fallback_h: int = 10) -> tuple[int, int]:
         try:

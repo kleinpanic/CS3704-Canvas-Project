@@ -108,7 +108,7 @@ class CanvasTUI(App):
         overflow-y: auto;
     }
     #sidebar {
-        width: 56;
+        width: 44;
         border-left: solid #30363d;
         layout: vertical;
         padding: 0 1;
@@ -154,30 +154,23 @@ class CanvasTUI(App):
         border-left: solid #30363d;
     }
 
-    /* Chart panels: expand to fill remaining space below table */
+    /* Chart panels: two-column layout filling remaining space below table */
     #bottom-panel {
         layout: horizontal;
         height: 1fr;
         min-height: 12;
         border-top: solid #30363d;
-        overflow-y: auto;
     }
     #bottom-trends {
         width: 1fr;
         padding: 0 1;
-        overflow: auto;
-    }
-    #bottom-stats {
-        width: 1fr;
-        padding: 0 1;
-        border-left: solid #30363d;
-        overflow: auto;
+        overflow: hidden;
     }
     #bottom-due {
         width: 1fr;
         padding: 0 1;
         border-left: solid #30363d;
-        overflow: auto;
+        overflow-y: auto;
     }
 
     /* === Pane borders (tmux-style) === */
@@ -425,12 +418,10 @@ class CanvasTUI(App):
                         yield self.stat_upcoming
                         self.stat_summary = Static(id="stat-summary", classes="stat-cell")
                         yield self.stat_summary
-                    # Plotext chart panels
+                    # Chart panels: Grade Trends (left) | Due list (right)
                     with Horizontal(id="bottom-panel"):
                         self.bottom_trends = Static(id="bottom-trends")
                         yield self.bottom_trends
-                        self.bottom_stats = Static(id="bottom-stats")
-                        yield self.bottom_stats
                         self.bottom_due = Static(id="bottom-due")
                         yield self.bottom_due
             with Vertical(id="sidebar"):
@@ -539,11 +530,16 @@ class CanvasTUI(App):
             f" {len(self.announcements)} announcements"
         )
 
-    def _widget_content_size(self, widget_id: str, fallback_w: int = 50, fallback_h: int = 12) -> tuple[int, int]:
-        """Return (width, height) of a widget's inner content area, minus padding."""
+    def _widget_content_size(
+        self, widget_id: str, fallback_w: int = 50, fallback_h: int = 12, border_x: int = 2
+    ) -> tuple[int, int]:
+        """Return (width, height) of a widget's inner content area.
+
+        border_x: total horizontal CSS overhead (padding + border chars) to subtract.
+        """
         try:
             w = self.query_one(f"#{widget_id}")
-            return max(20, w.size.width - 2), max(4, w.size.height - 1)
+            return max(20, w.size.width - border_x), max(4, w.size.height - 1)
         except Exception:
             return fallback_w, fallback_h
 
@@ -554,8 +550,6 @@ class CanvasTUI(App):
     def _render_graphs(self) -> None:
         """Render charts in banner and bottom panels."""
         from .widgets.charts import (
-            completion_bullet,
-            grade_histogram,
             multi_line_chart,
             scatter_scores,
             score_bar_chart,
@@ -566,8 +560,7 @@ class CanvasTUI(App):
         banner_w, banner_h = self._widget_content_size("banner-scores", fallback_w=60, fallback_h=8)
         banner_h = max(5, min(banner_h, len(self._active_courses()) + 3))
         panel_w_t, panel_h_t = self._widget_content_size("bottom-trends", fallback_w=40, fallback_h=14)
-        panel_w_s, panel_h_s = self._widget_content_size("bottom-stats", fallback_w=40, fallback_h=14)
-        panel_w_d, panel_h_d = self._widget_content_size("bottom-due", fallback_w=40, fallback_h=14)
+        panel_w_d, panel_h_d = self._widget_content_size("bottom-due", fallback_w=40, fallback_h=14, border_x=3)
 
         # --- Collect course data (filtered by hidden courses) ---
         active = self._active_courses()
@@ -634,40 +627,6 @@ class CanvasTUI(App):
                 self.bottom_trends.update(sc)
             else:
                 self.bottom_trends.update("[dim]No trend data[/dim]")
-
-        # --- Bottom center: histogram + bullet stacked ---
-        with contextlib.suppress(Exception):
-            if all_scores:
-                # Give histogram most of the panel; bullet chart gets the rest.
-                # panel is scrollable so combined content may exceed visible height.
-                hist_h = max(8, panel_h_s * 2 // 3)
-                bullet_h = max(6, panel_h_s - hist_h)
-                hist = grade_histogram(
-                    all_scores,
-                    width=panel_w_s,
-                    height=hist_h,
-                    title="Grade Distribution",
-                    bins=min(12, len(all_scores)),
-                )
-                if labels and scores:
-                    bullet = completion_bullet(
-                        labels,
-                        scores,
-                        width=panel_w_s,
-                        height=bullet_h,
-                        title="Score vs 100%",
-                    )
-                    from rich.text import Text
-
-                    combined = Text()
-                    combined.append_text(hist)
-                    combined.append("\n")
-                    combined.append_text(bullet)
-                    self.bottom_stats.update(combined)
-                else:
-                    self.bottom_stats.update(hist)
-            else:
-                self.bottom_stats.update("[dim]No grade data[/dim]")
 
         # --- Bottom right: due soon + upcoming timeline ---
         now = dt.datetime.now(ZoneInfo(self.cfg.user_tz))
@@ -786,7 +745,6 @@ class CanvasTUI(App):
         self.stat_upcoming.update("[dim]---[/dim]")
         self.stat_summary.update("[dim]---[/dim]")
         self.bottom_trends.update("[dim]Loading...[/dim]")
-        self.bottom_stats.update("[dim]Loading...[/dim]")
         self.bottom_due.update("[dim]Loading...[/dim]")
 
         # Load cached data immediately for instant display

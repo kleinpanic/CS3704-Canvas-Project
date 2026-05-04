@@ -58,18 +58,22 @@ class AnalyticsScreen(Screen):
         self.call_after_refresh(self._render_all)
 
     def _get_pane_size(self, pane_id: str) -> tuple[int, int]:
-        """Get the actual rendered size of a chart pane."""
+        """Get the usable content size of a chart pane."""
         try:
             pane = self.query_one(f"#{pane_id}", Static)
-            # content_size excludes border and padding — use it directly
-            w, h = pane.content_size
-            return max(20, w), max(6, h)
+            # First try content_size (inner area); fall back to outer size minus CSS overhead.
+            # .chart-pane has padding: 0 1 (2 chars) + border-right (1 char) = 3 horizontal overhead.
+            cw, ch = pane.content_size
+            if cw > 5 and ch > 2:
+                return max(20, cw), max(6, ch)
+            outer_w = pane.size.width
+            outer_h = pane.size.height
+            if outer_w > 5:
+                return max(20, outer_w - 3), max(6, outer_h - 2)
+            tw, th = self.app.size
+            return max(40, tw // 2 - 4), max(10, th // 3 - 2)
         except Exception:
-            try:
-                tw, th = self.app.size
-                return max(40, tw // 2 - 4), max(10, th // 3 - 2)
-            except Exception:
-                return 50, 12
+            return 50, 12
 
     def _render_all(self) -> None:
         from ..widgets.charts import (
