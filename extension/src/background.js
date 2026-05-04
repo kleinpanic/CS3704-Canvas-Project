@@ -104,6 +104,13 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     return true;
   }
 
+  if (msg.type === "GET_COURSE_ASSIGNMENTS") {
+    getCourseAssignments(canvasGet, msg.courseId)
+      .then(({ data, cached }) => sendResponse({ ok: true, data, cached }))
+      .catch(err => sendResponse({ ok: false, error: err.message }));
+    return true;
+  }
+
   if (msg.type === "DISMISS") {
     dismissAssignment(msg.assignmentId)
       .then(() => {

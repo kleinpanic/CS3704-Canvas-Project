@@ -3,29 +3,58 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Canvas Deadline Tracker</title>
+  <title>Canvas Tracker</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <div id="app">
     <header>
-      <h1>Canvas Deadline Tracker</h1>
-      <span id="user-info"></span>
-      <span class="cache-badge hidden">cached</span>
+      <div class="header-main">
+        <span class="header-logo">C</span>
+        <div class="header-text">
+          <span class="header-title">Canvas Tracker</span>
+          <span id="user-info" class="header-sub"></span>
+        </div>
+        <span class="cache-badge hidden">cached</span>
+      </div>
     </header>
 
-    <section id="filter-section" class="hidden">
-      <select id="course-filter">
-        <option value="">All Courses</option>
-      </select>
-    </section>
+    <nav id="tab-bar">
+      <button class="tab active" data-view="upcoming">Upcoming</button>
+      <button class="tab" data-view="courses">Courses</button>
+    </nav>
 
     <main>
-      <section id="upcoming-section">
-        <h2>Upcoming Assignments</h2>
-        <ul id="upcoming-list" class="assignment-list"></ul>
-        <div id="loading" class="spinner">Loading...</div>
-        <div id="error" class="error hidden"></div>
+      <!-- Upcoming View -->
+      <section id="view-upcoming" class="view active">
+        <div id="filter-section" class="filter-bar hidden">
+          <select id="course-filter">
+            <option value="">All Courses</option>
+          </select>
+        </div>
+        <div id="upcoming-content">
+          <ul id="upcoming-list" class="item-list"></ul>
+          <div id="loading" class="state-msg">Loading…</div>
+          <div id="error" class="state-msg error hidden"></div>
+        </div>
+      </section>
+
+      <!-- Courses View -->
+      <section id="view-courses" class="view hidden">
+        <ul id="courses-list" class="item-list"></ul>
+        <div id="courses-loading" class="state-msg">Loading…</div>
+        <div id="courses-error" class="state-msg error hidden"></div>
+      </section>
+
+      <!-- Course Detail View -->
+      <section id="view-course-detail" class="view hidden">
+        <div class="detail-header">
+          <button id="back-btn" class="back-btn">← Back</button>
+          <h2 id="detail-course-name"></h2>
+        </div>
+        <ul id="detail-list" class="item-list"></ul>
+        <div id="detail-loading" class="state-msg">Loading…</div>
+        <div id="detail-empty" class="state-msg hidden">No upcoming assignments</div>
       </section>
     </main>
 
