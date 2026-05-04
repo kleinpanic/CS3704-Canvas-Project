@@ -409,8 +409,10 @@ def submission_heatmap(
     label_w = max(len(d) for d in day_labels) + 1
     hour_header = " " * label_w + "│"
     for b in range(n_buckets):
-        h = b * bucket_size
-        hour_header += f"{h:>3} "
+        if hours and b < len(hours):
+            hour_header += f"{hours[b]:>3} "
+        else:
+            hour_header += f"{b * bucket_size:>3} "
     lines.append(f"[dim]{hour_header}[/dim]")
 
     for i, row in enumerate(day_hour_counts):

@@ -2,10 +2,9 @@
 collect_trajectories.py — teammate-runnable v2 trajectory collector.
 
 Purpose: build the v2 calendar-agent training dataset by replaying a fixed
-set of canonical user queries against a teacher LLM (Nemotron-120B at
-Spark slot0:18080 by default) with the canvas-tui agent's tool surface
-exposed for function-calling. Captures the full tool-call trajectory
-(tool calls + tool results + final answer) per query.
+set of canonical user queries against a teacher LLM with the canvas-tui
+agent's tool surface exposed for function-calling. Captures the full
+tool-call trajectory (tool calls + tool results + final answer) per query.
 
 This is the v2 analogue of the v1 generate_dataset.py / collect_rerank_
 dataset.py preference collectors. Same anonymization pipeline; same
@@ -15,11 +14,15 @@ Usage (from repo root, with canvas_sdk installed and a Canvas API token):
 
     export CANVAS_TOKEN=...
     export CANVAS_BASE_URL=https://canvas.vt.edu
-    export TEACHER_ENDPOINT=http://spark.local:18080/v1   # optional
+    export TEACHER_ENDPOINT=https://api.openai.com/v1
+    export OPENAI_API_KEY=...
     python3 scripts/collect_trajectories.py \
         --contributor alice \
         --output data/trajectories/collab/alice_trajectories.jsonl \
         --max-trajectories 20
+
+TEACHER_ENDPOINT must be set — any OpenAI-compatible API works
+(OpenAI, Together AI, Groq, Ollama, etc.).
 
 The output JSONL is the v2 SFT corpus. Each line is one trajectory:
     {user_query, context, trajectory[], teacher_model, contributor_id}
@@ -181,7 +184,7 @@ def anonymize_record(rec: dict, contributor_salt: str) -> dict:
     return json.loads(text)
 
 
-# ── Teacher interaction (Nemotron-120B at slot0:18080 by default) ────────────
+# ── Teacher interaction ───────────────────────────────────────────────────────
 
 def call_teacher(messages: list[dict], tools: list[dict], endpoint: str, model: str) -> dict:
     """Make one tool-aware call to the teacher. Returns the full response
@@ -333,8 +336,16 @@ def main():
     p.add_argument("--contributor", required=True, help="Contributor ID (used as anonymization salt; e.g. 'alice')")
     p.add_argument("--queries", help="File of queries, one per line. Default: built-in CANONICAL_QUERIES.")
     p.add_argument("--output", required=True, help="Output JSONL path.")
-    p.add_argument("--endpoint", default=os.environ.get("TEACHER_ENDPOINT", "http://localhost:18080/v1"))
-    p.add_argument("--model", default=os.environ.get("TEACHER_MODEL", "nvidia/Gemma-4-31B-IT-NVFP4"))
+    _ep = os.environ.get("TEACHER_ENDPOINT")
+    if not _ep:
+        print("ERROR: TEACHER_ENDPOINT is not set.\n"
+              "Set it to any OpenAI-compatible API, e.g.:\n"
+              "  export TEACHER_ENDPOINT=https://api.openai.com/v1\n"
+              "  export OPENAI_API_KEY=...\n"
+              "See CONTRIBUTING-DATA.md for full setup instructions.")
+        sys.exit(1)
+    p.add_argument("--endpoint", default=_ep)
+    p.add_argument("--model", default=os.environ.get("TEACHER_MODEL", "gpt-4o-mini"))
     p.add_argument("--max-trajectories", type=int, default=20)
     p.add_argument("--anonymize", default=True, action="store_true")
     args = p.parse_args()
