@@ -32,6 +32,13 @@ dependencies = [
 
 [project.optional-dependencies]
 keyring = ["keyring>=23.0"]
+ai = [
+    # On-device GGUF inference for canvas_tui.reranker.LocalReranker.
+    # Pull a quant from huggingface.co/kleinpanic93/gemma4-canvas-reranker
+    # (Q4_K_M ~3.2 GiB recommended for resource-constrained machines;
+    # Q5_K_M ~3.4 GiB is the published default).
+    "llama-cpp-python>=0.3",
+]
 dev = [
     "black",
     "build",
