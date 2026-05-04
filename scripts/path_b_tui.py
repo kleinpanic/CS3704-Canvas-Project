@@ -2,24 +2,24 @@
 """
 Path B — DPO Distillation TUI
 =============================
-Textual TUI for running the full Path B DPO distillation pipeline on Spark DGX.
+Textual TUI for running the full Path B DPO distillation pipeline.
 
 Usage:
     python3 scripts/path_b_tui.py [--state state.json]
 
-On Spark (spark-maker):
+Usage:
     docker compose run --rm trainer \
         python3 /workspace/scripts/path_b_tui.py \
             --state /workspace/gemma2b-reranker/path_b_state.json \
             --output /workspace/gemma2b-reranker/output
 
 Pipeline steps:
-    1. [OPTIONAL] forge unload 0          — free Nemotron memory
+    1. [OPTIONAL] forge unload 0          — free teacher model memory
     2. forge load Gemma-4-31B-IT-NVFP4   — load teacher model
     3. Generate teacher preferences        — label pairs with Gemma-4-31B
     4. forge load Gemma-2B                — load student model
     5. DPO train student                  — train on synthetic preferences
-    6. [OPTIONAL] forge load Nemotron      — restart Nemotron inference
+    6. [OPTIONAL] forge load <model>     — reload model
 """
 
 import argparse
@@ -109,7 +109,7 @@ def run_cmd(cmd: list[str], timeout: int = 300, capture: bool = True) -> subproc
         capture_output=capture,
         text=True,
         timeout=timeout,
-        cwd="$SPARK_MOUNT",
+        cwd=".",
     )
     if result.returncode != 0:
         raise RuntimeError(f"Command failed: {' '.join(cmd)}\nSTDOUT: {result.stdout[-500:]}\nSTDERR: {result.stderr[-500:]}")
@@ -176,7 +176,7 @@ def generate_preferences(
         "--batch-size", str(batch_size),
         "--workers", "4",
     ]
-    # Run in docker on spark-maker
+    # Run in docker on your server
     docker_cmd = [
         "docker", "compose", "run", "--rm", "-T",
         "trainer",
@@ -191,7 +191,7 @@ def generate_preferences(
     result = subprocess.run(
         docker_cmd,
         capture_output=True, text=True, timeout=3600,
-        cwd="$SPARK_MOUNT",
+        cwd=".",
     )
     if result.returncode != 0:
         raise RuntimeError(f"Preference generation failed:\n{result.stderr[-1000:]}")
@@ -656,9 +656,9 @@ def parse_args():
     p = argparse.ArgumentParser(description="Path B DPO Distillation TUI")
     p.add_argument("--state", default="/tmp/path_b_state.json",
                    help="Path to state file (for resume support)")
-    p.add_argument("--output", default="$SPARK_MOUNT/output/gemma2b-reranker",
+    p.add_argument("--output", default="./output/gemma2b-reranker",
                    help="Output directory for adapter and results")
-    p.add_argument("--dataset", default="$SPARK_MOUNT/datasets/rerank_clean.jsonl",
+    p.add_argument("--dataset", default="./datasets/rerank_clean.jsonl",
                    help="Path to cleaned + merged pairwise dataset")
     p.add_argument("--teacher", default="nvidia/Gemma-4-31B-IT-NVFP4",
                    help="Teacher model ID")
