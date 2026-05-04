@@ -176,7 +176,7 @@ def generate_preferences(
         "--batch-size", str(batch_size),
         "--workers", "4",
     ]
-    # Run in docker on spark-maker
+    # Run in docker on your server
     docker_cmd = [
         "docker", "compose", "run", "--rm", "-T",
         "trainer",
