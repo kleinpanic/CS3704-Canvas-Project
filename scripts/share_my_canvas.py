@@ -254,7 +254,9 @@ def main():
         for r in records:
             f.write(json.dumps(r) + "\n")
 
-    print(f"\nWrote {len(records)} records to {out}")
+    course_snaps = [r for r in records if r.get("type") == "course_snapshot"]
+    total_asgn = sum(len(r.get("assignments", [])) for r in course_snaps)
+    print(f"\nWrote {len(records)} records ({len(course_snaps)} courses, {total_asgn} assignments) to {out}")
     print("Submit this file via PR or email to rodie105@gmail.com")
 
 
