@@ -40,12 +40,10 @@ That's it.
 
 | Original | Replaced with |
 |---|---|
-| Course names / codes | `@COURSE1`, `@COURSE2`, … |
-| Canvas numeric IDs | deterministic hash (`ID######`) |
-| Assignment names | kept as-is |
-| Submission status | `GRADED` / `SUBMITTED` / `NOT_SUBMITTED` |
+| Course codes (e.g. `CS 3704`, `ENGL2204`) | `@COURSE1`, `@COURSE2`, … |
+| Canvas numeric IDs (7–9 digit numbers) | deterministic hash (`ID######`) |
 
-Your Canvas token is **never** written to the output file.
+Assignment names are kept as-is. Your Canvas token is **never** written to the output file.
 
 ---
 

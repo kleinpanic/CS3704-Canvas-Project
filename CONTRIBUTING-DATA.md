@@ -39,7 +39,7 @@ That's it. Klein handles everything else.
 ## What the script collects
 
 All assignments across your full Canvas history (4 years), including:
-- Course name (anonymized)
+- Course code (anonymized to `@COURSE1`, etc.)
 - Assignment name, due date, point value
 - Whether you submitted / got graded
 
@@ -47,10 +47,10 @@ All assignments across your full Canvas history (4 years), including:
 
 | Original | Replaced with |
 |---|---|
-| Course names / codes | `@COURSE1`, `@COURSE2`, … |
-| Canvas numeric IDs | deterministic 6-digit hash |
+| Course codes (e.g. `CS 3704`, `ENGL2204`) | `@COURSE1`, `@COURSE2`, … |
+| Canvas numeric IDs (7–9 digit numbers) | deterministic hash (`ID######`) |
 
-Your Canvas token is **never** written to the output. Nothing sensitive leaves your machine.
+Assignment names are kept as-is. Your Canvas token is **never** written to the output.
 
 ---
 
