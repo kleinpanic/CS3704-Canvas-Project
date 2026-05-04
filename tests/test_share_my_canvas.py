@@ -1,5 +1,5 @@
 """
-Tests for scripts/data-collection/share_my_canvas.py
+Tests for scripts/share_my_canvas.py
 
 Verifies the anonymization logic, output format, and error handling
 without making any real Canvas API calls.
@@ -12,8 +12,7 @@ from pathlib import Path
 
 import pytest
 
-# Add data-collection dir to path
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts" / "data-collection"))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
 import share_my_canvas  # noqa: E402
 

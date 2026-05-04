@@ -241,11 +241,11 @@ def main():
     p.add_argument("--contributor", required=True,
                    help="Your PID or GitHub handle — used as anonymization salt, never stored in output")
     p.add_argument("--output", default=None,
-                   help="Output JSONL path (default: data/trajectories/collab/<contributor>.jsonl)")
+                   help="Output JSONL path (default: data/collab/<contributor>.jsonl)")
     args = p.parse_args()
 
     out = Path(args.output) if args.output else \
-        Path("data/trajectories/collab") / f"{args.contributor}.jsonl"
+        Path("data/collab") / f"{args.contributor}.jsonl"
     out.parent.mkdir(parents=True, exist_ok=True)
 
     records = collect(args.contributor)
@@ -254,7 +254,9 @@ def main():
         for r in records:
             f.write(json.dumps(r) + "\n")
 
-    print(f"\nWrote {len(records)} records to {out}")
+    course_snaps = [r for r in records if r.get("type") == "course_snapshot"]
+    total_asgn = sum(len(r.get("assignments", [])) for r in course_snaps)
+    print(f"\nWrote {len(records)} records ({len(course_snaps)} courses, {total_asgn} assignments) to {out}")
     print("Submit this file via PR or email to rodie105@gmail.com")
 
 
