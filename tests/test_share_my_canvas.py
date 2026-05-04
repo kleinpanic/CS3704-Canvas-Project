@@ -44,8 +44,8 @@ def test_anon_course_mapping():
     c1 = share_my_canvas._anon_course("CS 3704")
     c2 = share_my_canvas._anon_course("ENGL 2204")
     c3 = share_my_canvas._anon_course("CS 3704")  # repeat
-    assert c1 == "COURSE1"
-    assert c2 == "COURSE2"
+    assert c1 == "@COURSE1"
+    assert c2 == "@COURSE2"
     assert c1 == c3  # same course → same anon code
 
 
@@ -95,11 +95,13 @@ def test_token_returned_from_env(monkeypatch):
 # ── collect() — mocked HTTP ───────────────────────────────────────────────────
 
 FAKE_COURSES = [
-    {"id": 98765432, "name": "CS 3704 Software Engineering", "course_code": "CS3704"},
+    {"id": 98765432, "name": "CS 3704 Software Engineering", "course_code": "CS3704",
+     "term": {"name": "Spring 2026"}},
 ]
 FAKE_ASSIGNMENTS = [
     {"name": "Homework 1", "due_at": "2026-05-15T23:59:00Z",
-     "points_possible": 100, "submission_types": ["online_upload"]},
+     "points_possible": 100, "submission_types": ["online_upload"],
+     "submission": {"submitted_at": None, "graded_at": None, "workflow_state": "unsubmitted"}},
 ]
 FAKE_TODOS = [
     {"type": "submitting", "assignment": {"name": "Homework 1", "due_at": "2026-05-15T23:59:00Z"},
@@ -108,6 +110,8 @@ FAKE_TODOS = [
 
 
 def _mock_get(path, params=None):
+    # collect() calls /courses once per enrollment state — return same list each time,
+    # dedup by id is handled inside collect()
     if path == "/courses":
         return FAKE_COURSES
     if "/assignments" in path:
@@ -130,6 +134,22 @@ def test_collect_produces_anonymized_records(monkeypatch, tmp_path):
     assert "98765432" not in dumped, "Canvas ID should be anonymized"
     assert "CS 3704" not in dumped, "Course code should be anonymized"
     assert "testuser" in dumped, "Contributor ID should be present"
+    assert "@COURSE" in dumped, "Anonymized course should use @COURSE prefix"
+
+
+def test_collect_assignments_have_submission_status(monkeypatch):
+    monkeypatch.setenv("CANVAS_TOKEN", "fake-token")
+    monkeypatch.setattr(share_my_canvas, "_get", _mock_get)
+    share_my_canvas._COURSE_MAP.clear()
+    share_my_canvas._COURSE_CTR[0] = 0
+
+    records = share_my_canvas.collect("testuser")
+    course_snaps = [r for r in records if r.get("type") == "course_snapshot"]
+    assert course_snaps, "Expected at least one course_snapshot"
+    for snap in course_snaps:
+        for asgn in snap.get("assignments", []):
+            assert "submission_status" in asgn, "Each assignment must have submission_status"
+            assert asgn["submission_status"] in ("GRADED", "SUBMITTED", "NOT_SUBMITTED")
 
 
 def test_collect_writes_jsonl(monkeypatch, tmp_path):
