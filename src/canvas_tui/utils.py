@@ -29,7 +29,7 @@ class _HTMLStripper(HTMLParser):
         self._parts: list[str] = []
         self._skip = False
 
-    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+    def handle_starttag(self, tag: str, _attrs: list[tuple[str, str | None]]) -> None:
         if tag in ("script", "style"):
             self._skip = True
         elif tag in ("br", "p", "div", "li", "tr"):
