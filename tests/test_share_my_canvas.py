@@ -7,9 +7,7 @@ without making any real Canvas API calls.
 from __future__ import annotations
 
 import json
-import os
 import sys
-import unittest.mock as mock
 from pathlib import Path
 
 import pytest
