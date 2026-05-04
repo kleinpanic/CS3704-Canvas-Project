@@ -62,3 +62,24 @@ Repository = "https://github.com/kleinpanic/CS3704-Canvas-Project"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.coverage.run]
+omit = [
+    # Textual TUI layer — requires a running terminal; cannot execute in headless CI
+    "src/canvas_tui/app.py",
+    "src/canvas_tui/__main__.py",
+    "src/canvas_tui/cli.py",
+    "src/canvas_tui/screens/*",
+    "src/canvas_tui/widgets/pomodoro.py",
+    # Network/integration-dependent code not exercised by unit tests
+    "src/canvas_tui/adapters/*",
+    "src/canvas_tui/commands/*",
+    "src/canvas_tui/prefetch.py",
+    "src/canvas_tui/rmp/client.py",
+    "src/canvas_tui/core/__init__.py",
+    "src/canvas_tui/core/interfaces.py",
+    "src/canvas_tui/models.py",
+]
+
+[tool.coverage.report]
+fail_under = 80
