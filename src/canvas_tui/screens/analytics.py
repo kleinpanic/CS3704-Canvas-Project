@@ -58,14 +58,16 @@ class AnalyticsScreen(Screen):
         self.call_after_refresh(self._render_all)
 
     def _get_pane_size(self, pane_id: str) -> tuple[int, int]:
-        """Get the usable content size of a chart pane."""
+        """Get the usable viewport size of a chart pane.
+
+        Uses widget.size (outer dims) minus CSS overhead rather than
+        content_size, which reflects the virtual scroll dimensions of the
+        previously-rendered text and returns stale values after a terminal
+        shrink — causing oversized re-renders on resize.
+        .chart-pane CSS: padding 0 1 (2 chars) + border-right (1 char) = 3 overhead.
+        """
         try:
             pane = self.query_one(f"#{pane_id}", Static)
-            # First try content_size (inner area); fall back to outer size minus CSS overhead.
-            # .chart-pane has padding: 0 1 (2 chars) + border-right (1 char) = 3 horizontal overhead.
-            cw, ch = pane.content_size
-            if cw > 5 and ch > 2:
-                return max(20, cw), max(6, ch)
             outer_w = pane.size.width
             outer_h = pane.size.height
             if outer_w > 5:
