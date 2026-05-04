@@ -1,6 +1,6 @@
 # Contributing Your Canvas Data
 
-**All you need:** your VT Canvas API token. No other accounts, API keys, or setup required.
+**All you need:** your VT Canvas API token. One script. Done in 2 minutes.
 
 ---
 
@@ -22,30 +22,35 @@ pip install requests
 
 ```bash
 export CANVAS_TOKEN=your_token_here
-
 python3 scripts/share_my_canvas.py --contributor yourpid
 ```
 
-Replace `yourpid` with your VT PID or any handle. This pulls your courses, assignments, and todo list from Canvas, anonymizes all personal info, and writes a `.jsonl` file to `data/trajectories/collab/yourpid.jsonl`.
+Replace `yourpid` with your VT PID or GitHub handle. The script pulls your full 4-year Canvas history (all courses, all assignments, submission status), anonymizes everything on your machine, and writes the output to `data/collab/yourpid.jsonl`.
 
 **4. Submit your file**
 
-- **Option A — PR:** Add your `data/trajectories/collab/yourpid.jsonl` and open a PR.
-- **Option B — Email:** Send the file to rodie105@gmail.com with subject `[CS3704] data - yourpid`.
+- **PR:** Add `data/collab/yourpid.jsonl` and open a pull request.
+- **Email:** Send the file to rodie105@gmail.com with subject `[CS3704] data - yourpid`.
 
-Klein downloads all contributions and handles the rest.
+That's it. Klein handles everything else.
 
 ---
 
-## What gets anonymized
+## What the script collects
+
+All assignments across your full Canvas history (4 years), including:
+- Course code (anonymized to `@COURSE1`, etc.)
+- Assignment name, due date, point value
+- Whether you submitted / got graded
+
+## What gets anonymized (before anything leaves your machine)
 
 | Original | Replaced with |
 |---|---|
-| Course names / codes | `COURSE1`, `COURSE2`, … |
-| Canvas numeric IDs | deterministic hash |
-| Assignment names | kept but IDs replaced |
+| Course codes (e.g. `CS 3704`, `ENGL2204`) | `@COURSE1`, `@COURSE2`, … |
+| Canvas numeric IDs (7–9 digit numbers) | deterministic hash (`ID######`) |
 
-Your Canvas token is **never** written to the output file.
+Assignment names are kept as-is. Your Canvas token is **never** written to the output.
 
 ---
 
@@ -54,5 +59,3 @@ Your Canvas token is **never** written to the output file.
 **`CANVAS_TOKEN is not set`** — run `export CANVAS_TOKEN=...` first.
 
 **`401 Unauthorized`** — token expired or copied wrong. Regenerate it in Canvas Settings.
-
-**Empty output** — Canvas returned no active courses. Make sure your token is for an account with current enrollments.

@@ -2,7 +2,7 @@
 convert_canvas_contributions.py — convert share_my_canvas.py output to canvas_items format.
 
 Reads JSONL files produced by classmates running share_my_canvas.py
-(from data/trajectories/collab/ or a path you specify) and converts
+(from data/collab/ or a path you specify) and converts
 each assignment into the flat canvas_items schema used by the v4+
 training pipeline.
 
@@ -20,8 +20,8 @@ Output schema (one line per assignment):
   }
 
 Usage:
-    python3 scripts/data-collection/convert_canvas_contributions.py \\
-        --input  data/trajectories/collab/ \\
+    python3 scripts/convert_canvas_contributions.py \\
+        --input  data/collab/ \\
         --output data/canvas_items_collab.jsonl
 
 Then merge into the main items file:
