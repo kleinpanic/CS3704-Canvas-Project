@@ -202,10 +202,15 @@ def collect(contributor: str) -> list[dict]:
         if not asgn_records:
             continue  # skip courses with nothing plannable
 
+        # Anonymize course_code explicitly — VT CRN format (CS_3704_21936_202601)
+        # is not caught by the regex in anonymize() because underscores block \b.
+        _raw_code = course.get("course_code", "")
+        _m = re.search(r"[A-Z]{2,5}\s*\d{3,4}[A-Z]?", _raw_code)
+        _code_key = _m.group(0) if _m else _raw_code
         records.append({
             "type": "course_snapshot",
             "course_name": cname,
-            "course_code": course.get("course_code", ""),
+            "course_code": _anon_course(_code_key) if _code_key else "",
             "term": term,
             "assignments": asgn_records,
             "contributor_id": contributor,
