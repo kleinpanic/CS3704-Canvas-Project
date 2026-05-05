@@ -9,7 +9,8 @@
   'use strict';
 
   const TOKEN = '__CANVAS_TOKEN__';
-  const DATA_BASE = '../data/';
+  // Popup lives at extension/src/popup/ — data is 3 levels up at site root /data/
+  const DATA_BASE = '../../../data/';
 
   const storage = {};
   storage['canvas_token'] = TOKEN;
@@ -70,6 +71,9 @@
       return { ok: true, answer, toolCalls };
     },
     DISMISS: async (msg) => { dismissed.add(msg.assignmentId); return { ok: true }; },
+    GET_DISMISSED: async () => ({ ok: true, data: [...dismissed] }),
+    GET_PREFERENCES: async () => ({ ok: true, theme: 'light', daysAhead: 14 }),
+    SAVE_PREFERENCES: async () => ({ ok: true }),
     CLEAR_CACHE: async () => ({ ok: true }),
     REFRESH_BADGE: async () => ({ ok: true }),
   };
