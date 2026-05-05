@@ -1,17 +1,7 @@
-/**
- * Canvas Deadline Tracker — Popup App
- *
- * Features:
- * - Course filter (dropdown to filter by course)
- * - Stale-while-revalidate (instant load from cache, background refresh)
- * - Dismiss/snooze assignments
- * - Quick open in Canvas
- * - Settings panel for token management
- */
-
 import { getDismissed, dismissAssignment } from '../lib/cache.js';
 import {
   getCourses,
+  getCourseAssignments,
   getUpcomingAssignments,
   setToken,
   clearCache,
@@ -20,286 +10,350 @@ import {
 
 // ── DOM Refs ──────────────────────────────────────────────────────────────────
 
-const $upcomingList = document.getElementById("upcoming-list");
-const $loading = document.getElementById("loading");
-const $error = document.getElementById("error");
-const $userInfo = document.getElementById("user-info");
-const $refreshBtn = document.getElementById("refresh-btn");
-const $settingsBtn = document.getElementById("settings-btn");
-const $courseFilter = document.getElementById("course-filter");
-const $filterSection = document.getElementById("filter-section");
-const $cacheBadge = document.getElementById("cache-badge");
-const $assignmentCount = document.getElementById("assignment-count");
+const $userInfo       = document.getElementById("user-info");
+const $cacheBadge     = document.querySelector(".cache-badge");
+const $refreshBtn     = document.getElementById("refresh-btn");
+const $settingsBtn    = document.getElementById("settings-btn");
+
+// Tabs
+const $tabs           = document.querySelectorAll(".tab");
+const $viewUpcoming   = document.getElementById("view-upcoming");
+const $viewCourses    = document.getElementById("view-courses");
+const $viewDetail     = document.getElementById("view-course-detail");
+
+// Upcoming
+const $upcomingList   = document.getElementById("upcoming-list");
+const $loading        = document.getElementById("loading");
+const $error          = document.getElementById("error");
+const $filterSection  = document.getElementById("filter-section");
+const $courseFilter   = document.getElementById("course-filter");
+
+// Courses
+const $coursesList    = document.getElementById("courses-list");
+const $coursesLoading = document.getElementById("courses-loading");
+const $coursesError   = document.getElementById("courses-error");
+
+// Detail
+const $backBtn        = document.getElementById("back-btn");
+const $detailName     = document.getElementById("detail-course-name");
+const $detailList     = document.getElementById("detail-list");
+const $detailLoading  = document.getElementById("detail-loading");
+const $detailEmpty    = document.getElementById("detail-empty");
 
 // ── State ─────────────────────────────────────────────────────────────────────
 
 let allAssignments = [];
-let dismissedIds = new Set();
-let courses = [];
-let settingsOpen = false;
+let dismissedIds   = new Set();
+let allCourses     = [];
+let activeTab      = "upcoming";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
-
 function formatDue(dateStr) {
   if (!dateStr) return "No due date";
-  const dueDate = new Date(dateStr);
+  const d = new Date(dateStr);
   const now = new Date();
-  const diff = dueDate - now;
-  const days = Math.floor(diff / 86400000);
+  const diff = d - now;
   const hours = Math.floor(diff / 3600000);
-
-  if (diff < 0) return "Overdue";
-  if (hours < 1) return "Due in under 1 hour";
-  if (hours < 24) return `Due in ${hours}h`;
-  if (days === 1) return "Due tomorrow";
+  const days  = Math.floor(diff / 86400000);
+  if (diff < 0)    return "OVERDUE";
+  if (hours < 1)   return "Due < 1h";
+  if (hours < 24)  return `Due in ${hours}h`;
+  if (days === 1)  return "Due tomorrow";
   return `Due in ${days} days`;
 }
 
-function urgentClass(dateStr) {
+function urgencyClass(dateStr) {
   if (!dateStr) return "";
-  const dueDate = new Date(dateStr);
-  const diff = dueDate - new Date();
-
-  if (diff < 0) return "overdue";
-  if (diff < 86400000) return "urgent";
+  const diff = new Date(dateStr) - new Date();
+  if (diff < 0)         return "overdue";
+  if (diff < 86400000)  return "urgent";
   if (diff < 172800000) return "due-soon";
   return "";
 }
 
-function getCourseName(item) {
-  return item.context_course_name || item.course_name || "Canvas";
-}
+// ── Render: Upcoming ──────────────────────────────────────────────────────────
 
-function getDueDate(item) {
-  return item.all_day ? item.start_at : item.due_at;
-}
-
-function updateAssignmentCount(count) {
-  if (!count) {
-    $assignmentCount.classList.add("hidden");
-    return;
-  }
-
-  $assignmentCount.textContent = `${count} item${count === 1 ? "" : "s"}`;
-  $assignmentCount.classList.remove("hidden");
-}
-
-function renderEmptyState(message = "No upcoming assignments", detail = "You're caught up for now.") {
-  updateAssignmentCount(0);
-  $upcomingList.innerHTML = `
-    <li class="status-card empty-state">
-      <strong>${escapeHtml(message)}</strong>
-      <span>${escapeHtml(detail)}</span>
-    </li>
-  `;
-}
-
-function renderAssignment(item) {
-  if (item.type !== "assignment") return "";
-
+function renderAssignmentItem(item, { showCourse = true } = {}) {
   const id = String(item.assignment?.id || item.id);
   if (dismissedIds.has(id)) return "";
-
-  const courseName = getCourseName(item);
-  const dueDate = getDueDate(item);
-  const cls = urgentClass(dueDate);
-  const dueText = formatDue(dueDate);
-  const title = item.title || item.assignment?.name || "Assignment";
-  const url = item.html_url || "";
+  const courseName = item.context_course_name || item.course_name || "";
+  const dueDate    = item.all_day ? item.start_at : item.due_at;
+  const cls        = urgencyClass(dueDate);
 
   return `
-    <li class="assignment-item ${cls}" data-id="${escapeHtml(id)}">
+    <li class="assignment-item ${cls}" data-id="${id}">
       <div class="assignment-main">
-        <div class="course-name" title="${escapeHtml(courseName)}">${escapeHtml(courseName)}</div>
-        <div class="assignment-name">${escapeHtml(title)}</div>
-        <div class="due-date ${cls}">${escapeHtml(dueText)}</div>
+        ${showCourse && courseName ? `<div class="course-name">${courseName}</div>` : ""}
+        <div class="assignment-name">${item.title || item.assignment?.name || "Assignment"}</div>
+        <div class="due-date ${cls}">${formatDue(dueDate)}</div>
       </div>
       <div class="assignment-actions">
-        <button class="open-btn" data-url="${escapeHtml(url)}" title="Open in Canvas" aria-label="Open in Canvas">↗</button>
-        <button class="dismiss-btn" data-id="${escapeHtml(id)}" title="Dismiss" aria-label="Dismiss assignment">✓</button>
+        <button class="dismiss-btn" data-id="${id}" title="Mark done">✓</button>
+        <button class="open-btn" data-url="${item.html_url || ""}" title="Open in Canvas">→</button>
       </div>
-    </li>
-  `;
+    </li>`;
 }
 
-function renderCourseFilter() {
-  const uniqueCourses = [...new Set(allAssignments.map(getCourseName).filter(Boolean))].sort();
-
-  if (uniqueCourses.length <= 1) {
-    $filterSection.classList.add("hidden");
-    return;
-  }
-
-  $filterSection.classList.remove("hidden");
-  $courseFilter.innerHTML = '<option value="">All Courses</option>' +
-    uniqueCourses.map((courseName) => `<option value="${escapeHtml(courseName)}">${escapeHtml(courseName)}</option>`).join("");
-}
-
-function applyFilter(assignments) {
-  const selectedCourse = $courseFilter.value;
-  if (!selectedCourse) return assignments;
-  return assignments.filter((assignment) => getCourseName(assignment) === selectedCourse);
-}
-
-function attachHandlers() {
-  $upcomingList.querySelectorAll(".dismiss-btn").forEach((btn) => {
-    btn.addEventListener("click", async (event) => {
-      event.stopPropagation();
-      const { id } = btn.dataset;
+function attachItemHandlers(list) {
+  list.querySelectorAll(".dismiss-btn").forEach(btn => {
+    btn.addEventListener("click", async e => {
+      e.stopPropagation();
+      const id = btn.dataset.id;
       await dismissAssignment(id);
       dismissedIds.add(id);
-      render(allAssignments);
+      btn.closest(".assignment-item").remove();
       refreshBadge();
     });
   });
-
-  $upcomingList.querySelectorAll(".open-btn").forEach((btn) => {
+  list.querySelectorAll(".open-btn").forEach(btn => {
     btn.addEventListener("click", () => {
-      const { url } = btn.dataset;
+      const url = btn.dataset.url;
       if (url) window.open(url, "_blank");
     });
   });
 }
 
-function render(assignments) {
+function renderUpcoming(assignments) {
   $loading.classList.add("hidden");
-  $error.classList.add("hidden");
-
-  const filtered = applyFilter(assignments).filter((item) => !dismissedIds.has(String(item.assignment?.id || item.id)));
-  updateAssignmentCount(filtered.length);
+  const filtered = $courseFilter.value
+    ? assignments.filter(a => (a.context_course_name || a.course_name) === $courseFilter.value)
+    : assignments;
 
   if (filtered.length === 0) {
-    const detail = $courseFilter.value
-      ? `Nothing upcoming for ${$courseFilter.value}.`
-      : "You're caught up for now.";
-    renderEmptyState("No upcoming assignments", detail);
+    $upcomingList.innerHTML = `<li class="assignment-item"><div class="assignment-main"><div class="assignment-name">No upcoming assignments</div></div></li>`;
     return;
   }
 
-  $upcomingList.innerHTML = filtered.map(renderAssignment).join("");
-  attachHandlers();
+  $upcomingList.innerHTML = filtered.map(a => renderAssignmentItem(a)).join("");
+  attachItemHandlers($upcomingList);
 }
 
-// ── Data Fetch ─────────────────────────────────────────────────────────────────
+function populateCourseFilter() {
+  const unique = [...new Set(allAssignments.map(a => a.context_course_name || a.course_name).filter(Boolean))].sort();
+  if (unique.length === 0) return;
+  $filterSection.classList.remove("hidden");
+  $courseFilter.innerHTML = `<option value="">All Courses</option>` +
+    unique.map(c => `<option value="${c}">${c}</option>`).join("");
+}
 
-async function fetchAll() {
+// ── Render: Courses ───────────────────────────────────────────────────────────
+
+function renderCourses(courses) {
+  $coursesLoading.classList.add("hidden");
+  if (!courses.length) {
+    $coursesError.textContent = "No active courses found.";
+    $coursesError.classList.remove("hidden");
+    return;
+  }
+
+  $coursesList.innerHTML = courses.map(c => `
+    <li class="course-card" data-id="${c.id}" data-name="${encodeURIComponent(c.name || c.course_code || "Course")}">
+      <span class="course-dot"></span>
+      <div class="course-info">
+        <div class="course-full-name">${c.name || "Unnamed Course"}</div>
+        <div class="course-code">${c.course_code || ""}</div>
+      </div>
+      <span class="course-arrow">›</span>
+    </li>`).join("");
+
+  $coursesList.querySelectorAll(".course-card").forEach(card => {
+    card.addEventListener("click", () => {
+      const id   = card.dataset.id;
+      const name = decodeURIComponent(card.dataset.name);
+      openCourseDetail(id, name);
+    });
+  });
+}
+
+// ── Render: Course Detail ─────────────────────────────────────────────────────
+
+async function openCourseDetail(courseId, courseName) {
+  $viewCourses.classList.remove("active");
+  $viewCourses.classList.add("hidden");
+  $viewDetail.classList.remove("hidden");
+  $viewDetail.classList.add("active");
+
+  $detailName.textContent = courseName;
+  $detailList.innerHTML = "";
+  $detailLoading.classList.remove("hidden");
+  $detailEmpty.classList.add("hidden");
+
+  try {
+    const res = await getCourseAssignments(courseId);
+    $detailLoading.classList.add("hidden");
+
+    if (!res.ok) throw new Error(res.error || "Failed");
+
+    const assignments = (res.data || []).filter(a => {
+      if (!a.due_at) return false;
+      return new Date(a.due_at) > new Date();
+    }).sort((a, b) => new Date(a.due_at) - new Date(b.due_at));
+
+    if (!assignments.length) {
+      $detailEmpty.classList.remove("hidden");
+      return;
+    }
+
+    $detailList.innerHTML = assignments.map(a => {
+      const cls = urgencyClass(a.due_at);
+      return `
+        <li class="assignment-item ${cls}" data-id="${a.id}">
+          <div class="assignment-main">
+            <div class="assignment-name">${a.name || "Assignment"}</div>
+            <div class="due-date ${cls}">${formatDue(a.due_at)}</div>
+          </div>
+          <div class="assignment-actions">
+            <button class="open-btn" data-url="${a.html_url || ""}" title="Open in Canvas">→</button>
+          </div>
+        </li>`;
+    }).join("");
+
+    $detailList.querySelectorAll(".open-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const url = btn.dataset.url;
+        if (url) window.open(url, "_blank");
+      });
+    });
+  } catch (err) {
+    $detailLoading.classList.add("hidden");
+    $detailList.innerHTML = `<li class="state-msg error">${err.message}</li>`;
+  }
+}
+
+// ── Tab Navigation ────────────────────────────────────────────────────────────
+
+function switchTab(tabName) {
+  if (tabName === "course-detail") return;
+  activeTab = tabName;
+
+  $tabs.forEach(t => t.classList.toggle("active", t.dataset.view === tabName));
+
+  $viewUpcoming.classList.toggle("active",  tabName === "upcoming");
+  $viewUpcoming.classList.toggle("hidden",  tabName !== "upcoming");
+  $viewCourses.classList.toggle("active",   tabName === "courses");
+  $viewCourses.classList.toggle("hidden",   tabName !== "courses");
+  $viewDetail.classList.add("hidden");
+  $viewDetail.classList.remove("active");
+
+  if (tabName === "courses" && $coursesList.innerHTML === "") {
+    loadCourses();
+  }
+}
+
+$tabs.forEach(tab => {
+  tab.addEventListener("click", () => switchTab(tab.dataset.view));
+});
+
+$backBtn.addEventListener("click", () => {
+  $viewDetail.classList.add("hidden");
+  $viewDetail.classList.remove("active");
+  $viewCourses.classList.remove("hidden");
+  $viewCourses.classList.add("active");
+});
+
+// ── Data Loading ──────────────────────────────────────────────────────────────
+
+async function loadUpcoming() {
   $loading.classList.remove("hidden");
   $error.classList.add("hidden");
   $upcomingList.innerHTML = "";
-  $cacheBadge.classList.add("hidden");
-  updateAssignmentCount(0);
 
   try {
     dismissedIds = await getDismissed();
 
     const coursesRes = await getCourses();
     if (coursesRes.ok && coursesRes.data?.length) {
-      courses = coursesRes.data;
-      $userInfo.textContent = `${courses.length} course${courses.length === 1 ? "" : "s"}`;
-    } else {
-      $userInfo.textContent = "Canvas";
+      allCourses = coursesRes.data;
+      $userInfo.textContent = `${allCourses.length} courses`;
     }
 
     const res = await getUpcomingAssignments();
-    if (!res.ok) throw new Error(res.error || "Failed to fetch assignments");
+    if (!res.ok) throw new Error(res.error || "Failed to fetch");
 
-    allAssignments = res.data.filter((entry) => entry.type === "assignment");
-    renderCourseFilter();
-    render(allAssignments);
+    allAssignments = res.data.filter(e => e.type === "assignment");
+    populateCourseFilter();
+    renderUpcoming(allAssignments);
 
     if (res.cached) {
       $cacheBadge.classList.remove("hidden");
+    } else {
+      $cacheBadge.classList.add("hidden");
     }
   } catch (err) {
     $loading.classList.add("hidden");
     $error.textContent = err.message;
     $error.classList.remove("hidden");
-    renderEmptyState("Could not load assignments", "Open Settings to check your token, then refresh.");
+  }
+}
+
+async function loadCourses() {
+  $coursesLoading.classList.remove("hidden");
+  $coursesError.classList.add("hidden");
+  $coursesList.innerHTML = "";
+
+  try {
+    const res = await getCourses();
+    if (!res.ok) throw new Error(res.error || "Failed to fetch courses");
+    allCourses = res.data || [];
+    renderCourses(allCourses);
+  } catch (err) {
+    $coursesLoading.classList.add("hidden");
+    $coursesError.textContent = err.message;
+    $coursesError.classList.remove("hidden");
   }
 }
 
 // ── Settings Panel ────────────────────────────────────────────────────────────
 
 function openSettings() {
-  settingsOpen = true;
-
   const panel = document.createElement("div");
   panel.id = "settings-panel";
   panel.innerHTML = `
-    <div class="settings-modal">
+    <div style="max-width:340px;width:100%">
       <div class="settings-header">
-        <div>
-          <h2>Settings</h2>
-          <p>Connect the extension to Canvas and refresh when you're ready.</p>
-        </div>
-        <button id="close-settings" aria-label="Close settings">✕</button>
+        <h2>Settings</h2>
+        <button id="close-settings">✕</button>
       </div>
       <div class="settings-body">
-        <label for="token-input">Canvas API Token</label>
-        <input type="password" id="token-input" placeholder="Paste your Canvas API token..." />
-        <small>Get your token from canvas.vt.edu → Account → Settings → New Access Token</small>
+        <label>
+          Canvas API Token
+          <input type="password" id="token-input" placeholder="Paste your Canvas API token…" />
+          <small>canvas.vt.edu → Account → Settings → New Access Token</small>
+        </label>
         <button id="save-token" class="primary-btn">Save Token</button>
         <div id="token-status"></div>
       </div>
-    </div>
-  `;
-
+    </div>`;
   document.body.appendChild(panel);
 
-  panel.addEventListener("click", (event) => {
-    if (event.target === panel) closeSettings();
-  });
-
-  document.getElementById("close-settings").onclick = closeSettings;
+  document.getElementById("close-settings").onclick = () => panel.remove();
   document.getElementById("save-token").onclick = async () => {
     const token = document.getElementById("token-input").value.trim();
+    if (!token) return;
     const status = document.getElementById("token-status");
-
-    if (!token) {
-      status.textContent = "Enter a token first.";
-      return;
-    }
-
-    status.textContent = "Saving and validating...";
+    status.textContent = "Saving…";
     const res = await setToken(token);
-    status.textContent = res.ok
-      ? `Connected as ${res.user?.name || res.user?.short_name || 'Canvas user'}.`
-      : `Error: ${res.error}`;
-    if (res.ok) {
-      setTimeout(() => {
-        closeSettings();
-        fetchAll();
-      }, 900);
-    }
+    status.textContent = res.ok ? "Token saved!" : `Error: ${res.error}`;
+    if (res.ok) setTimeout(() => panel.remove(), 1000);
   };
-}
-
-function closeSettings() {
-  document.getElementById("settings-panel")?.remove();
-  settingsOpen = false;
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 
 $refreshBtn.addEventListener("click", async () => {
   await clearCache();
-  fetchAll();
+  if (activeTab === "upcoming") {
+    await loadUpcoming();
+  } else if (activeTab === "courses") {
+    await loadCourses();
+  }
 });
 
 $settingsBtn.addEventListener("click", () => {
-  if (settingsOpen) closeSettings();
-  else openSettings();
+  if (!document.getElementById("settings-panel")) openSettings();
 });
 
-$courseFilter.addEventListener("change", () => render(allAssignments));
+$courseFilter.addEventListener("change", () => renderUpcoming(allAssignments));
 
-fetchAll();
+loadUpcoming();
