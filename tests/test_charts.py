@@ -144,6 +144,63 @@ class TestCharts:
         assert "No data" in _plain(result)
 
 
+class TestChartResize:
+    """Verify chart functions handle post-resize dimensions without crashing or overflowing."""
+
+    _LABELS = ["CS3704", "MATH2114", "ENGL2204"]
+    _SCORES = [88.5, 72.0, 95.0]
+
+    def _width_ok(self, result: Text, max_w: int) -> bool:
+        """Each line of the plain text must fit within max_w characters."""
+        return all(len(line) <= max_w for line in _plain(result).splitlines())
+
+    def test_score_bar_chart_narrow(self):
+        result = score_bar_chart(self._LABELS, self._SCORES, width=20, height=6)
+        assert isinstance(result, Text)
+        assert _plain(result)
+
+    def test_score_bar_chart_wide(self):
+        result = score_bar_chart(self._LABELS, self._SCORES, width=200, height=20)
+        assert isinstance(result, Text)
+
+    def test_grade_histogram_narrow(self):
+        result = grade_histogram([80, 90, 70, 95], width=20, height=6)
+        assert isinstance(result, Text)
+        assert _plain(result)
+
+    def test_multi_line_chart_narrow(self):
+        result = multi_line_chart({"CS": [85, 90, 78]}, width=20, height=6)
+        assert isinstance(result, Text)
+        assert _plain(result)
+
+    def test_scatter_narrow(self):
+        result = scatter_scores([1, 2, 3], [70, 80, 90], width=20, height=6)
+        assert isinstance(result, Text)
+        assert _plain(result)
+
+    def test_completion_bullet_narrow(self):
+        result = completion_bullet(self._LABELS, self._SCORES, width=20, height=6)
+        assert isinstance(result, Text)
+        assert _plain(result)
+
+    def test_weekly_activity_narrow(self):
+        result = weekly_activity_chart(["Mon", "Tue", "Wed"], [3, 1, 4], width=20, height=6)
+        assert isinstance(result, Text)
+        assert _plain(result)
+
+    def test_pie_chart_narrow(self):
+        result = pie_chart(["A", "B"], [60, 40], width=20, height=6)
+        assert isinstance(result, Text)
+        assert _plain(result)
+
+    def test_charts_stable_across_widths(self):
+        """Rendering at decreasing widths (simulating terminal shrink) must not raise."""
+        for w in (200, 120, 80, 40, 20):
+            score_bar_chart(self._LABELS, self._SCORES, width=w, height=8)
+            grade_histogram([75, 85, 95], width=w, height=8)
+            multi_line_chart({"CS": [80, 85, 90]}, width=w, height=8)
+
+
 class TestCommandBar:
     def test_pages_exist(self):
         from canvas_tui.widgets.command_bar import PAGES
