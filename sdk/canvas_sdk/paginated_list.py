@@ -113,9 +113,7 @@ class PaginatedList(Iterable[T]):
             re.escape(self._requester.new_quizzes_url),
         )
 
-        self._next_url = (
-            re.search(regex, next_link["url"]).group(1) if next_link else None
-        )
+        self._next_url = re.search(regex, next_link["url"]).group(1) if next_link else None
 
         self._next_params = {}
 
@@ -125,9 +123,7 @@ class PaginatedList(Iterable[T]):
             try:
                 data = data[self._root]
             except KeyError:
-                raise ValueError(
-                    "The key <{}> does not exist in the response.".format(self._root)
-                )
+                raise ValueError("The key <{}> does not exist in the response.".format(self._root))
 
         for element in data:
             if element is not None:

@@ -44,9 +44,7 @@ class PollSession(CanvasObject):
         ):
             kwargs["poll_submissions"] = poll_submissions
         else:
-            raise RequiredFieldMissing(
-                "Dictionary with key 'poll_choice_id is required."
-            )
+            raise RequiredFieldMissing("Dictionary with key 'poll_choice_id is required.")
 
         response = self._requester.request(
             "POST",
@@ -85,15 +83,11 @@ class PollSession(CanvasObject):
 
         :rtype: :class:`canvas_sdk.poll_submission.PollSubmission`
         """
-        poll_submission_id = obj_or_id(
-            poll_submission, "poll_submission", (PollSubmission,)
-        )
+        poll_submission_id = obj_or_id(poll_submission, "poll_submission", (PollSubmission,))
 
         response = self._requester.request(
             "GET",
-            "polls/{}/poll_sessions/{}/poll_submissions/{}".format(
-                self.poll_id, self.id, poll_submission_id
-            ),
+            "polls/{}/poll_sessions/{}/poll_submissions/{}".format(self.poll_id, self.id, poll_submission_id),
             _kwargs=combine_kwargs(**kwargs),
         )
         return PollSubmission(self._requester, response.json()["poll_submissions"][0])
@@ -128,11 +122,7 @@ class PollSession(CanvasObject):
 
         :rtype: :class:`canvas_sdk.poll_session.PollSession`
         """
-        if (
-            isinstance(poll_session, list)
-            and isinstance(poll_session[0], dict)
-            and "course_id" in poll_session[0]
-        ):
+        if isinstance(poll_session, list) and isinstance(poll_session[0], dict) and "course_id" in poll_session[0]:
             kwargs["poll_session"] = poll_session
         else:
             raise RequiredFieldMissing("Dictionary with key 'course_id' is required.")

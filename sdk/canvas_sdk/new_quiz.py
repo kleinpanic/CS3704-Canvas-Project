@@ -44,9 +44,7 @@ class NewQuiz(CanvasObject):
         :returns: AccommodationResponse object containing the status of the accommodation request.
         :rtype: :class:`canvas_sdk.new_quiz.AccommodationResponse`
         """
-        endpoint = "courses/{}/quizzes/{}/accommodations".format(
-            self.course_id, self.id
-        )
+        endpoint = "courses/{}/quizzes/{}/accommodations".format(self.course_id, self.id)
 
         response = self._requester.request(
             "POST",

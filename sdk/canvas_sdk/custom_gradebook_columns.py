@@ -37,9 +37,7 @@ class CustomGradebookColumn(CanvasObject):
             ColumnData,
             self._requester,
             "GET",
-            "courses/{}/custom_gradebook_columns/{}/data".format(
-                self.course_id, self.id
-            ),
+            "courses/{}/custom_gradebook_columns/{}/data".format(self.course_id, self.id),
             {"course_id": self.course_id, "gradebook_column_id": self.id},
             _kwargs=combine_kwargs(**kwargs),
         )

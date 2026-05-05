@@ -33,17 +33,12 @@ class Quiz(CanvasObject):
             kwargs["conversations"] = conversations
         else:
             raise RequiredFieldMissing(
-                (
-                    "conversations must be a dictionary with keys "
-                    "'body', 'recipients', and 'subject'."
-                )
+                ("conversations must be a dictionary with keys 'body', 'recipients', and 'subject'.")
             )
 
         response = self._requester.request(
             "POST",
-            "courses/{}/quizzes/{}/submission_users/message".format(
-                self.course_id, self.id
-            ),
+            "courses/{}/quizzes/{}/submission_users/message".format(self.course_id, self.id),
             _kwargs=combine_kwargs(**kwargs),
         )
 
@@ -132,9 +127,7 @@ class Quiz(CanvasObject):
         :rtype: :class:`canvas_sdk.quiz.QuizReport`
         """
         if report_type not in ["student_analysis", "item_analysis"]:
-            raise ValueError(
-                "Param `report_type` must be a either 'student_analysis' or 'item_analysis'"
-            )
+            raise ValueError("Param `report_type` must be a either 'student_analysis' or 'item_analysis'")
 
         kwargs["quiz_report"] = {"report_type": report_type}
 
@@ -243,9 +236,7 @@ class Quiz(CanvasObject):
 
         response = self._requester.request(
             "GET",
-            "courses/{}/quizzes/{}/questions/{}".format(
-                self.course_id, self.id, question_id
-            ),
+            "courses/{}/quizzes/{}/questions/{}".format(self.course_id, self.id, question_id),
             _kwargs=combine_kwargs(**kwargs),
         )
         response_json = response.json()
@@ -334,36 +325,22 @@ class Quiz(CanvasObject):
 
         :rtype: :class:`canvas_sdk.quiz.QuizSubmission`
         """
-        quiz_submission_id = obj_or_id(
-            quiz_submission, "quiz_submission", (QuizSubmission,)
-        )
+        quiz_submission_id = obj_or_id(quiz_submission, "quiz_submission", (QuizSubmission,))
 
         response = self._requester.request(
             "GET",
-            "courses/{}/quizzes/{}/submissions/{}".format(
-                self.course_id, self.id, quiz_submission_id
-            ),
+            "courses/{}/quizzes/{}/submissions/{}".format(self.course_id, self.id, quiz_submission_id),
             _kwargs=combine_kwargs(**kwargs),
         )
 
         response_json = response.json()["quiz_submissions"][0]
         response_json.update({"course_id": self.course_id})
         if len(response.json().get("quizzes", [])) > 0:
-            response_json.update(
-                {"quiz": Quiz(self._requester, response.json()["quizzes"][0])}
-            )
+            response_json.update({"quiz": Quiz(self._requester, response.json()["quizzes"][0])})
         if len(response.json().get("submissions", [])) > 0:
-            response_json.update(
-                {
-                    "submission": Submission(
-                        self._requester, response.json()["submissions"][0]
-                    )
-                }
-            )
+            response_json.update({"submission": Submission(self._requester, response.json()["submissions"][0])})
         if len(response.json().get("users", [])) > 0:
-            response_json.update(
-                {"user": User(self._requester, response.json()["users"][0])}
-            )
+            response_json.update({"user": User(self._requester, response.json()["users"][0])})
 
         return QuizSubmission(self._requester, response_json)
 
@@ -445,9 +422,7 @@ class Quiz(CanvasObject):
             raise ValueError("Param `quiz_extensions` must only contain dictionaries")
 
         if any("user_id" not in extension for extension in quiz_extensions):
-            raise RequiredFieldMissing(
-                "Dictionaries in `quiz_extensions` must contain key `user_id`"
-            )
+            raise RequiredFieldMissing("Dictionaries in `quiz_extensions` must contain key `user_id`")
 
         kwargs["quiz_extensions"] = quiz_extensions
 
@@ -457,9 +432,7 @@ class Quiz(CanvasObject):
             _kwargs=combine_kwargs(**kwargs),
         )
         extension_list = response.json()["quiz_extensions"]
-        return [
-            QuizExtension(self._requester, extension) for extension in extension_list
-        ]
+        return [QuizExtension(self._requester, extension) for extension in extension_list]
 
 
 class QuizStatistic(CanvasObject):
@@ -488,8 +461,7 @@ class QuizSubmission(CanvasObject):
             kwargs["validation_token"] = validation_token or self.validation_token
         except AttributeError:
             raise RequiredFieldMissing(
-                "`validation_token` not set on this QuizSubmission, must be passed"
-                " as a function argument."
+                "`validation_token` not set on this QuizSubmission, must be passed as a function argument."
             )
 
         # Only the latest attempt for a quiz submission can be updated, and Canvas
@@ -534,8 +506,7 @@ class QuizSubmission(CanvasObject):
             kwargs["validation_token"] = validation_token or self.validation_token
         except AttributeError:
             raise RequiredFieldMissing(
-                "`validation_token` not set on this QuizSubmission, must be passed"
-                " as a function argument."
+                "`validation_token` not set on this QuizSubmission, must be passed as a function argument."
             )
 
         # Only the latest attempt for a quiz submission can be updated, and Canvas
@@ -545,9 +516,7 @@ class QuizSubmission(CanvasObject):
 
         response = self._requester.request(
             "POST",
-            "courses/{}/quizzes/{}/submissions/{}/complete".format(
-                self.course_id, self.quiz_id, self.id
-            ),
+            "courses/{}/quizzes/{}/submissions/{}/complete".format(self.course_id, self.quiz_id, self.id),
             _kwargs=combine_kwargs(**kwargs),
         )
 
@@ -569,9 +538,7 @@ class QuizSubmission(CanvasObject):
             QuizSubmissionEvent,
             self._requester,
             "GET",
-            "courses/{}/quizzes/{}/submissions/{}/events".format(
-                self.course_id, self.quiz_id, self.id
-            ),
+            "courses/{}/quizzes/{}/submissions/{}/events".format(self.course_id, self.quiz_id, self.id),
             _root="quiz_submission_events",
             _kwargs=combine_kwargs(**kwargs),
         )
@@ -611,9 +578,7 @@ class QuizSubmission(CanvasObject):
         """
         response = self._requester.request(
             "GET",
-            "courses/{}/quizzes/{}/submissions/{}/time".format(
-                self.course_id, self.quiz_id, self.id
-            ),
+            "courses/{}/quizzes/{}/submissions/{}/time".format(self.course_id, self.quiz_id, self.id),
             _kwargs=combine_kwargs(**kwargs),
         )
 
@@ -632,20 +597,14 @@ class QuizSubmission(CanvasObject):
         :returns: True if the submission was successful, false otherwise.
         :rtype: bool
         """
-        if isinstance(quiz_submission_events, list) and isinstance(
-            quiz_submission_events[0], QuizSubmissionEvent
-        ):
+        if isinstance(quiz_submission_events, list) and isinstance(quiz_submission_events[0], QuizSubmissionEvent):
             kwargs["quiz_submission_events"] = quiz_submission_events
         else:
-            raise RequiredFieldMissing(
-                "Required parameter quiz_submission_events missing."
-            )
+            raise RequiredFieldMissing("Required parameter quiz_submission_events missing.")
 
         response = self._requester.request(
             "POST",
-            "courses/{}/quizzes/{}/submissions/{}/events".format(
-                self.course_id, self.quiz_id, self.id
-            ),
+            "courses/{}/quizzes/{}/submissions/{}/events".format(self.course_id, self.quiz_id, self.id),
             _kwargs=combine_kwargs(**kwargs),
         )
         return response.status_code == 204
@@ -664,9 +623,7 @@ class QuizSubmission(CanvasObject):
         """
         response = self._requester.request(
             "PUT",
-            "courses/{}/quizzes/{}/submissions/{}".format(
-                self.course_id, self.quiz_id, self.id
-            ),
+            "courses/{}/quizzes/{}/submissions/{}".format(self.course_id, self.quiz_id, self.id),
             _kwargs=combine_kwargs(**kwargs),
         )
         response_json = response.json()["quiz_submissions"][0]
@@ -696,9 +653,7 @@ class QuizQuestion(CanvasObject):
         """
         response = self._requester.request(
             "DELETE",
-            "courses/{}/quizzes/{}/questions/{}".format(
-                self.course_id, self.quiz_id, self.id
-            ),
+            "courses/{}/quizzes/{}/questions/{}".format(self.course_id, self.quiz_id, self.id),
             _kwargs=combine_kwargs(**kwargs),
         )
 
@@ -715,9 +670,7 @@ class QuizQuestion(CanvasObject):
         """
         response = self._requester.request(
             "PUT",
-            "courses/{}/quizzes/{}/questions/{}".format(
-                self.course_id, self.quiz_id, self.id
-            ),
+            "courses/{}/quizzes/{}/questions/{}".format(self.course_id, self.quiz_id, self.id),
             _kwargs=combine_kwargs(**kwargs),
         )
         response_json = response.json()
@@ -745,9 +698,7 @@ class QuizReport(CanvasObject):
         """
         response = self._requester.request(
             "DELETE",
-            "courses/{}/quizzes/{}/reports/{}".format(
-                self.course_id, self.quiz_id, self.id
-            ),
+            "courses/{}/quizzes/{}/reports/{}".format(self.course_id, self.quiz_id, self.id),
             _kwargs=combine_kwargs(**kwargs),
         )
 
@@ -780,8 +731,7 @@ class QuizSubmissionQuestion(CanvasObject):
             kwargs["validation_token"] = validation_token or self.validation_token
         except AttributeError:
             raise RequiredFieldMissing(
-                "`validation_token` not set on this QuizSubmissionQuestion, must be passed"
-                " as a function argument."
+                "`validation_token` not set on this QuizSubmissionQuestion, must be passed as a function argument."
             )
 
         # Only the latest attempt for a quiz submission can be updated, and Canvas
@@ -791,9 +741,7 @@ class QuizSubmissionQuestion(CanvasObject):
 
         response = self._requester.request(
             "PUT",
-            "quiz_submissions/{}/questions/{}/flag".format(
-                self.quiz_submission_id, self.id
-            ),
+            "quiz_submissions/{}/questions/{}/flag".format(self.quiz_submission_id, self.id),
             _kwargs=combine_kwargs(**kwargs),
         )
 
@@ -825,8 +773,7 @@ class QuizSubmissionQuestion(CanvasObject):
             kwargs["validation_token"] = validation_token or self.validation_token
         except AttributeError:
             raise RequiredFieldMissing(
-                "`validation_token` not set on this QuizSubmissionQuestion, must be passed"
-                " as a function argument."
+                "`validation_token` not set on this QuizSubmissionQuestion, must be passed as a function argument."
             )
 
         # Only the latest attempt for a quiz submission can be updated, and Canvas
@@ -836,9 +783,7 @@ class QuizSubmissionQuestion(CanvasObject):
 
         response = self._requester.request(
             "PUT",
-            "quiz_submissions/{}/questions/{}/unflag".format(
-                self.quiz_submission_id, self.id
-            ),
+            "quiz_submissions/{}/questions/{}/unflag".format(self.quiz_submission_id, self.id),
             _kwargs=combine_kwargs(**kwargs),
         )
 

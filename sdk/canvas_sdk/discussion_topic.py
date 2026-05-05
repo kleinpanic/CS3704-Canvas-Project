@@ -62,9 +62,7 @@ class DiscussionTopic(CanvasObject):
         """
         response = self._requester.request(
             "DELETE",
-            "{}s/{}/discussion_topics/{}".format(
-                self._parent_type, self._parent_id, self.id
-            ),
+            "{}s/{}/discussion_topics/{}".format(self._parent_type, self._parent_id, self.id),
             _kwargs=combine_kwargs(**kwargs),
         )
         return "deleted_at" in response.json()
@@ -94,9 +92,7 @@ class DiscussionTopic(CanvasObject):
             DiscussionEntry,
             self._requester,
             "GET",
-            "{}s/{}/discussion_topics/{}/entry_list".format(
-                self._parent_type, self._parent_id, self.id
-            ),
+            "{}s/{}/discussion_topics/{}/entry_list".format(self._parent_type, self._parent_id, self.id),
             {
                 "discussion_id": self.id,
                 "{}_id".format(self._parent_type): self._parent_id,
@@ -141,9 +137,7 @@ class DiscussionTopic(CanvasObject):
             DiscussionEntry,
             self._requester,
             "GET",
-            "{}s/{}/discussion_topics/{}/entries".format(
-                self._parent_type, self._parent_id, self.id
-            ),
+            "{}s/{}/discussion_topics/{}/entries".format(self._parent_type, self._parent_id, self.id),
             {
                 "discussion_id": self.id,
                 "{}_id".format(self._parent_type): self._parent_id,
@@ -165,9 +159,7 @@ class DiscussionTopic(CanvasObject):
         """
         response = self._requester.request(
             "PUT",
-            "{}s/{}/discussion_topics/{}/read".format(
-                self._parent_type, self._parent_id, self.id
-            ),
+            "{}s/{}/discussion_topics/{}/read".format(self._parent_type, self._parent_id, self.id),
             _kwargs=combine_kwargs(**kwargs),
         )
         return response.status_code == 204
@@ -186,9 +178,7 @@ class DiscussionTopic(CanvasObject):
         """
         response = self._requester.request(
             "DELETE",
-            "{}s/{}/discussion_topics/{}/read".format(
-                self._parent_type, self._parent_id, self.id
-            ),
+            "{}s/{}/discussion_topics/{}/read".format(self._parent_type, self._parent_id, self.id),
             _kwargs=combine_kwargs(**kwargs),
         )
         return response.status_code == 204
@@ -207,9 +197,7 @@ class DiscussionTopic(CanvasObject):
         """
         response = self._requester.request(
             "PUT",
-            "{}s/{}/discussion_topics/{}/read_all".format(
-                self._parent_type, self._parent_id, self.id
-            ),
+            "{}s/{}/discussion_topics/{}/read_all".format(self._parent_type, self._parent_id, self.id),
             _kwargs=combine_kwargs(**kwargs),
         )
         return response.status_code == 204
@@ -228,9 +216,7 @@ class DiscussionTopic(CanvasObject):
         """
         response = self._requester.request(
             "DELETE",
-            "{}s/{}/discussion_topics/{}/read_all".format(
-                self._parent_type, self._parent_id, self.id
-            ),
+            "{}s/{}/discussion_topics/{}/read_all".format(self._parent_type, self._parent_id, self.id),
             _kwargs=combine_kwargs(**kwargs),
         )
         return response.status_code == 204
@@ -249,9 +235,7 @@ class DiscussionTopic(CanvasObject):
         """
         response = self._requester.request(
             "POST",
-            "{}s/{}/discussion_topics/{}/entries".format(
-                self._parent_type, self._parent_id, self.id
-            ),
+            "{}s/{}/discussion_topics/{}/entries".format(self._parent_type, self._parent_id, self.id),
             _kwargs=combine_kwargs(**kwargs),
         )
         response_json = response.json()
@@ -277,9 +261,7 @@ class DiscussionTopic(CanvasObject):
         """
         response = self._requester.request(
             "PUT",
-            "{}s/{}/discussion_topics/{}/subscribed".format(
-                self._parent_type, self._parent_id, self.id
-            ),
+            "{}s/{}/discussion_topics/{}/subscribed".format(self._parent_type, self._parent_id, self.id),
             _kwargs=combine_kwargs(**kwargs),
         )
         return response.status_code == 204
@@ -298,9 +280,7 @@ class DiscussionTopic(CanvasObject):
         """
         response = self._requester.request(
             "DELETE",
-            "{}s/{}/discussion_topics/{}/subscribed".format(
-                self._parent_type, self._parent_id, self.id
-            ),
+            "{}s/{}/discussion_topics/{}/subscribed".format(self._parent_type, self._parent_id, self.id),
             _kwargs=combine_kwargs(**kwargs),
         )
         return response.status_code == 204
@@ -319,9 +299,7 @@ class DiscussionTopic(CanvasObject):
         """
         response = self._requester.request(
             "PUT",
-            "{}s/{}/discussion_topics/{}".format(
-                self._parent_type, self._parent_id, self.id
-            ),
+            "{}s/{}/discussion_topics/{}".format(self._parent_type, self._parent_id, self.id),
             _kwargs=combine_kwargs(**kwargs),
         )
         return DiscussionTopic(self._requester, response.json())
@@ -401,9 +379,7 @@ class DiscussionEntry(CanvasObject):
         )
 
         response_json = response.json()
-        response_json.update(
-            {"{}_id".format(self._discussion_parent_type): self._discussion_parent_id}
-        )
+        response_json.update({"{}_id".format(self._discussion_parent_type): self._discussion_parent_id})
 
         return DiscussionTopic(self._requester, response.json())
 
@@ -434,9 +410,7 @@ class DiscussionEntry(CanvasObject):
             ),
             {
                 "discussion_id": self.discussion_id,
-                "{}_id".format(
-                    self._discussion_parent_type
-                ): self._discussion_parent_id,
+                "{}_id".format(self._discussion_parent_type): self._discussion_parent_id,
             },
             _kwargs=combine_kwargs(**kwargs),
         )

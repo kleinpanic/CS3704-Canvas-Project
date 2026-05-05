@@ -11,6 +11,7 @@ Usage:
     schemas = get_schemas()          # list[dict] for model system prompt
     result  = dispatch("canvas.get_assignments", {"horizon_days": 7})
 """
+
 from __future__ import annotations
 
 from . import calendar_tools, canvas_tools, reranker_tools, study_tools
@@ -30,6 +31,7 @@ def get_schemas() -> list[dict]:
 def get_schema_json() -> str:
     """Return all tool schemas as a JSON string (for extension consumption)."""
     import json
+
     return json.dumps(get_schemas(), indent=2)
 
 

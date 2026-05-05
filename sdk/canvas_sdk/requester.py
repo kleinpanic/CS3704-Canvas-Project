@@ -164,9 +164,7 @@ class Requester:
 
         # Call the request method
         logger.info("Request: {method} {url}".format(method=method, url=full_url))
-        logger.debug(
-            "Headers: {headers}".format(headers=pformat(clean_headers(headers)))
-        )
+        logger.debug("Headers: {headers}".format(headers=pformat(clean_headers(headers))))
 
         if _kwargs:
             logger.debug("Data: {data}".format(data=pformat(_kwargs)))
@@ -176,20 +174,12 @@ class Requester:
 
         response = req_method(full_url, headers, _kwargs, json=json)
         logger.info(
-            "Response: {method} {url} {status}".format(
-                method=method, url=full_url, status=response.status_code
-            )
+            "Response: {method} {url} {status}".format(method=method, url=full_url, status=response.status_code)
         )
-        logger.debug(
-            "Headers: {headers}".format(
-                headers=pformat(clean_headers(response.headers))
-            )
-        )
+        logger.debug("Headers: {headers}".format(headers=pformat(clean_headers(response.headers))))
 
         try:
-            logger.debug(
-                "Data: {data}".format(data=pformat(response.content.decode("utf-8")))
-            )
+            logger.debug("Data: {data}".format(data=pformat(response.content.decode("utf-8"))))
         except UnicodeDecodeError:
             logger.debug("Data: {data}".format(data=pformat(response.content)))
         except AttributeError:
@@ -226,8 +216,6 @@ class Requester:
             )
         elif response.status_code > 400:
             # generic catch-all for error codes
-            raise CanvasException(
-                "Encountered an error: status code {}".format(response.status_code)
-            )
+            raise CanvasException("Encountered an error: status code {}".format(response.status_code))
 
         return response

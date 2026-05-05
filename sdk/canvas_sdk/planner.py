@@ -33,9 +33,7 @@ class PlannerNote(CanvasObject):
         :rtype: :class:`canvas_sdk.planner.PlannerNote`
         """
 
-        response = self._requester.request(
-            "PUT", "planner_notes/{}".format(self.id), _kwargs=combine_kwargs(**kwargs)
-        )
+        response = self._requester.request("PUT", "planner_notes/{}".format(self.id), _kwargs=combine_kwargs(**kwargs))
         return PlannerNote(self._requester, response.json())
 
 

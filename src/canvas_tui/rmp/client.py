@@ -65,10 +65,12 @@ class RMPClient:
         self.cache_dir = cache_dir
         self.rate_limit = rate_limit
         self._session = requests.Session()
-        self._session.headers.update({
-            "User-Agent": "CS3704-Canvas-Project/1.0 (Educational)",
-            "Accept": "application/json, text/html, */*",
-        })
+        self._session.headers.update(
+            {
+                "User-Agent": "CS3704-Canvas-Project/1.0 (Educational)",
+                "Accept": "application/json, text/html, */*",
+            }
+        )
         self._last_request_time: float = 0.0
         self._professors_cache: Optional[list[ProfessorRating]] = None
 
@@ -118,17 +120,19 @@ class RMPClient:
 
             professors = []
             for entry in data.get("professors", []):
-                professors.append(ProfessorRating(
-                    rmp_id=entry["rmp_id"],
-                    first_name=entry["first_name"],
-                    last_name=entry["last_name"],
-                    department=entry.get("department", ""),
-                    rating=entry.get("rating", 0.0),
-                    difficulty=entry.get("difficulty", 0.0),
-                    num_ratings=entry.get("num_ratings", 0),
-                    would_take_again_percent=entry.get("would_take_again_percent"),
-                    url=f"{self.rmp_base_url}/professor/{entry['rmp_id']}",
-                ))
+                professors.append(
+                    ProfessorRating(
+                        rmp_id=entry["rmp_id"],
+                        first_name=entry["first_name"],
+                        last_name=entry["last_name"],
+                        department=entry.get("department", ""),
+                        rating=entry.get("rating", 0.0),
+                        difficulty=entry.get("difficulty", 0.0),
+                        num_ratings=entry.get("num_ratings", 0),
+                        would_take_again_percent=entry.get("would_take_again_percent"),
+                        url=f"{self.rmp_base_url}/professor/{entry['rmp_id']}",
+                    )
+                )
             logger.info("Loaded %d professors from cache for school %d", len(professors), self.rmp_school_id)
             return professors
         except (json.JSONDecodeError, KeyError) as e:
@@ -239,7 +243,10 @@ class RMPClient:
             page += 1
             logger.info(
                 "RMP scrape: school %d, page %d/%d, %d professors so far",
-                self.rmp_school_id, page - 1, total_pages, len(professors),
+                self.rmp_school_id,
+                page - 1,
+                total_pages,
+                len(professors),
             )
 
         return professors

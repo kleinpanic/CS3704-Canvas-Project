@@ -14,6 +14,7 @@ from typing import Any
 
 # ── Cache ──────────────────────────────────────────────────────────────────────
 
+
 class CacheBackend(ABC):
     """Abstract cache. Implement with SQLite for TUI, IndexedDB for extension."""
 
@@ -40,9 +41,11 @@ class CacheBackend(ABC):
 
 # ── Auth ──────────────────────────────────────────────────────────────────────
 
+
 @dataclass
 class TokenInfo:
     """Validated token with metadata."""
+
     token: str
     user_id: int
     user_name: str
@@ -70,6 +73,7 @@ class AuthManager(ABC):
 
 
 # ── Canvas Client ──────────────────────────────────────────────────────────────
+
 
 @dataclass
 class Course:
@@ -144,8 +148,7 @@ class CanvasClient(ABC):
     """Abstract Canvas API client. Shares business logic across TUI and extension."""
 
     @abstractmethod
-    def validate_token(self) -> bool:
-        ...
+    def validate_token(self) -> bool: ...
 
     @abstractmethod
     def fetch_courses(self) -> list[Course]:
@@ -162,7 +165,6 @@ class CanvasClient(ABC):
         """Fetch grades for a specific course."""
         ...
 
-
     @abstractmethod
     def fetch_announcements(self, course_ids: list[int], _since: datetime) -> list[dict[str, Any]]:
         """Fetch announcements for given courses since datetime."""
@@ -172,7 +174,6 @@ class CanvasClient(ABC):
     def fetch_upcoming(self) -> list[dict[str, Any]]:
         """Fetch upcoming assignments across all enrolled courses."""
         ...
-
 
     @abstractmethod
     def fetch_course_info(self, course_id: int) -> dict[str, Any] | None:

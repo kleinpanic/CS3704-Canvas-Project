@@ -20,9 +20,7 @@ class SearchResult(CanvasObject):
 
     def __str__(self):
         # Using Untitled as a fallback in the event the API changes.
-        return "<SearchResult: {} - {}>".format(
-            self.content_type, getattr(self, "title", "Untitled")
-        )
+        return "<SearchResult: {} - {}>".format(self.content_type, getattr(self, "title", "Untitled"))
 
     def resolve(self):
         """
@@ -34,9 +32,7 @@ class SearchResult(CanvasObject):
                 :class:`canvas_sdk.discussion_topic.DiscussionTopic`
         """
         if not hasattr(self, "content_type") or not hasattr(self, "content_id"):
-            raise ValueError(
-                "SearchResult is missing 'content_type' or 'content_id' for resolution"
-            )
+            raise ValueError("SearchResult is missing 'content_type' or 'content_id' for resolution")
 
         # Use course_id set from Course.smartsearch to create a "fake" Course object to work from
         from canvas_sdk.course import Course
@@ -52,10 +48,6 @@ class SearchResult(CanvasObject):
 
         resolver = types.get(self.content_type)
         if not resolver:
-            raise ValueError(
-                "Resolution not supported for content_type: {}".format(
-                    self.content_type
-                )
-            )
+            raise ValueError("Resolution not supported for content_type: {}".format(self.content_type))
 
         return resolver(self.content_id)

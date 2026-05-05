@@ -1,4 +1,5 @@
 """Calendar agent tools — list, create, modify events via the configured calendar backend."""
+
 from __future__ import annotations
 
 __all__ = ["ListEvents", "FindFreeBlocks", "CreateEvent", "ModifyEvent", "DeleteEvent"]
@@ -6,6 +7,7 @@ __all__ = ["ListEvents", "FindFreeBlocks", "CreateEvent", "ModifyEvent", "Delete
 
 def _adapter():
     from canvas_tui.agent.backends.calendar_adapter import CalendarAdapter
+
     return CalendarAdapter.from_config()
 
 
@@ -45,8 +47,16 @@ class FindFreeBlocks:
             "properties": {
                 "min_minutes": {"type": "integer", "default": 90, "description": "Minimum block length in minutes."},
                 "horizon_days": {"type": "integer", "default": 7},
-                "earliest_hour": {"type": "integer", "default": 7, "description": "24h clock — never propose before this hour."},
-                "latest_hour": {"type": "integer", "default": 22, "description": "24h clock — never propose blocks ending after this hour."},
+                "earliest_hour": {
+                    "type": "integer",
+                    "default": 7,
+                    "description": "24h clock — never propose before this hour.",
+                },
+                "latest_hour": {
+                    "type": "integer",
+                    "default": 22,
+                    "description": "24h clock — never propose blocks ending after this hour.",
+                },
                 "calendar_id": {"type": "string", "default": "primary"},
                 "exclude_weekends": {"type": "boolean", "default": False},
             },
@@ -64,8 +74,7 @@ class CreateEvent:
     SCHEMA = {
         "name": NAME,
         "description": (
-            "Create a calendar event. Always call find_free_blocks first to confirm "
-            "the slot is available."
+            "Create a calendar event. Always call find_free_blocks first to confirm the slot is available."
         ),
         "parameters": {
             "type": "object",
@@ -119,10 +128,7 @@ class DeleteEvent:
     NAME = "calendar.delete_event"
     SCHEMA = {
         "name": NAME,
-        "description": (
-            "Propose deletion of a calendar event. Returns a pending action; "
-            "never silently deletes."
-        ),
+        "description": ("Propose deletion of a calendar event. Returns a pending action; never silently deletes."),
         "parameters": {
             "type": "object",
             "properties": {

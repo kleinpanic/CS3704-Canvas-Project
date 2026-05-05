@@ -17,9 +17,7 @@ class Outcome(CanvasObject):
         :returns: True if updated, False otherwise.
         :rtype: bool
         """
-        response = self._requester.request(
-            "PUT", "outcomes/{}".format(self.id), _kwargs=combine_kwargs(**kwargs)
-        )
+        response = self._requester.request("PUT", "outcomes/{}".format(self.id), _kwargs=combine_kwargs(**kwargs))
 
         if "id" in response.json():
             super(Outcome, self).set_attributes(response.json())
@@ -29,9 +27,7 @@ class Outcome(CanvasObject):
 
 class OutcomeLink(CanvasObject):
     def __str__(self):
-        return "Group {} with Outcome {} ({})".format(
-            self.outcome_group, self.outcome, self.url
-        )
+        return "Group {} with Outcome {} ({})".format(self.outcome_group, self.outcome, self.url)
 
     def context_ref(self):
         if self.context_type == "Course":
@@ -50,9 +46,7 @@ class OutcomeLink(CanvasObject):
         :rtype: :class:`canvas_sdk.outcome.Outcome`
         """
         oid = self.outcome["id"]
-        response = self._requester.request(
-            "GET", "outcomes/{}".format(oid), _kwargs=combine_kwargs(**kwargs)
-        )
+        response = self._requester.request("GET", "outcomes/{}".format(oid), _kwargs=combine_kwargs(**kwargs))
 
         return Outcome(self._requester, response.json())
 
@@ -207,9 +201,7 @@ class OutcomeGroup(CanvasObject):
         :returns: Itself as an OutcomeGroup object.
         :rtype: :class:`canvas_sdk.outcome.OutcomeGroup`
         """
-        source_outcome_group_id = obj_or_id(
-            outcome_group, "outcome_group", (OutcomeGroup,)
-        )
+        source_outcome_group_id = obj_or_id(outcome_group, "outcome_group", (OutcomeGroup,))
 
         response = self._requester.request(
             "POST",

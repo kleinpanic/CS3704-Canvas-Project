@@ -41,11 +41,11 @@ if TYPE_CHECKING:
 
 # ─── Type badge helpers ────────────────────────────────────────────────────────
 _PTYPE_TAGS = {
-    "assignment":   "[bold yellow]ASGN[/bold yellow]",
-    "quiz":         "[bold red]QUIZ[/bold red]",
-    "discussion":   "[bold cyan]DISC[/bold cyan]",
-    "exam":         "[bold magenta]EXAM[/bold magenta]",
-    "event":        "[bold green]EVNT[/bold green]",
+    "assignment": "[bold yellow]ASGN[/bold yellow]",
+    "quiz": "[bold red]QUIZ[/bold red]",
+    "discussion": "[bold cyan]DISC[/bold cyan]",
+    "exam": "[bold magenta]EXAM[/bold magenta]",
+    "event": "[bold green]EVNT[/bold green]",
     "announcement": "[bold]NOTE[/bold]",
 }
 
@@ -57,15 +57,15 @@ def _item_tag(ptype: str) -> str:
 def _urgency_label(delta_h: float) -> tuple[str, str]:
     """Return (rich_style, text) for urgency based on hours remaining."""
     if delta_h < 0:
-        return ("bold red",    "OVERDUE")
+        return ("bold red", "OVERDUE")
     if delta_h < 6:
-        return ("bold red",    "< 6h")
+        return ("bold red", "< 6h")
     if delta_h < 12:
         return ("bold yellow", "< 12h")
     if delta_h < 24:
-        return ("bold green",  "TODAY")
+        return ("bold green", "TODAY")
     if delta_h < 48:
-        return ("bold cyan",   "< 48h")
+        return ("bold cyan", "< 48h")
     return ("dim", "")
 
 
@@ -74,10 +74,10 @@ class DashboardScreen(Screen):
     """Overview dashboard — course scores, upcoming items, grade trends."""
 
     BINDINGS = [
-        ("backspace", "pop",        "Back"),
-        ("escape",    "pop",        "Back"),
-        ("r",         "refresh_dash", "Refresh"),
-        ("enter",     "back_to_main", "Main"),
+        ("backspace", "pop", "Back"),
+        ("escape", "pop", "Back"),
+        ("r", "refresh_dash", "Refresh"),
+        ("enter", "back_to_main", "Main"),
     ]
 
     def __init__(self, owner_app: CanvasTUI) -> None:
@@ -120,11 +120,11 @@ class DashboardScreen(Screen):
 
     def on_resize(self, event: Resize) -> None:
         if self._cached_courses is not None and self._cached_grades is not None:
+
             def _deferred() -> None:
                 if self._cached_courses is not None and self._cached_grades is not None:
-                    self._render_dashboard(
-                        self._cached_courses, self._cached_items or [], self._cached_grades
-                    )
+                    self._render_dashboard(self._cached_courses, self._cached_items or [], self._cached_grades)
+
             self.call_after_refresh(_deferred)
 
     def _panel_content_size(self, widget_id: str, fallback_w: int = 40, fallback_h: int = 10) -> tuple[int, int]:
@@ -154,9 +154,7 @@ class DashboardScreen(Screen):
                 self.app.call_from_thread(self._render_dashboard, courses, items, course_grades)
             except Exception as exc:
                 err = str(exc)
-                self.app.call_from_thread(
-                    lambda: self.scores_panel.update(f"[red]Error: {err}[/red]")
-                )
+                self.app.call_from_thread(lambda: self.scores_panel.update(f"[red]Error: {err}[/red]"))
             finally:
                 self._loading = False
 
@@ -227,16 +225,12 @@ class DashboardScreen(Screen):
                 title = it.title[:36]
                 tag = _item_tag(it.ptype)
                 color = grade_color(50)
-                due_lines.append(
-                    f"  {tag} [{color}]{it.course_code}[/{color}] {title}"
-                )
+                due_lines.append(f"  {tag} [{color}]{it.course_code}[/{color}] {title}")
             if len(upcoming) > 12:
                 due_lines.append(f"  [dim]… and {len(upcoming) - 12} more[/dim]")
 
         if overdue_count:
-            due_lines.append(
-                f"[red bold]  ▸ {overdue_count} overdue item(s) — act now[/red bold]"
-            )
+            due_lines.append(f"[red bold]  ▸ {overdue_count} overdue item(s) — act now[/red bold]")
 
         self.due_panel.update("\n".join(due_lines))
 
@@ -279,9 +273,7 @@ class DashboardScreen(Screen):
         else:
             self.trends_panel.update("[dim]No grade data for trends[/dim]")
 
-    def _build_upcoming(
-        self, items: list[CanvasItem], now: dt.datetime
-    ) -> list[tuple[str, str, CanvasItem]]:
+    def _build_upcoming(self, items: list[CanvasItem], now: dt.datetime) -> list[tuple[str, str, CanvasItem]]:
         """Return [(urgency_style, urgency_text, item)] sorted by due date."""
         upcoming: list[tuple[str, str, CanvasItem]] = []
         for it in items:

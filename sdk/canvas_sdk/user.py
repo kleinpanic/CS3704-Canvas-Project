@@ -150,9 +150,7 @@ class User(CanvasObject):
 
         :rtype: :class:`canvas_sdk.user.User`
         """
-        response = self._requester.request(
-            "PUT", "users/{}".format(self.id), _kwargs=combine_kwargs(**kwargs)
-        )
+        response = self._requester.request("PUT", "users/{}".format(self.id), _kwargs=combine_kwargs(**kwargs))
         super(User, self).set_attributes(response.json())
         return self
 
@@ -388,9 +386,7 @@ class User(CanvasObject):
         """
         from canvas_sdk.content_migration import ContentMigration
 
-        migration_id = obj_or_id(
-            content_migration, "content_migration", (ContentMigration,)
-        )
+        migration_id = obj_or_id(content_migration, "content_migration", (ContentMigration,))
 
         response = self._requester.request(
             "GET",
@@ -829,9 +825,7 @@ class User(CanvasObject):
 
         :rtype: dict
         """
-        response = self._requester.request(
-            "GET", "users/{}/profile".format(self.id), _kwargs=combine_kwargs(**kwargs)
-        )
+        response = self._requester.request("GET", "users/{}/profile".format(self.id), _kwargs=combine_kwargs(**kwargs))
         return response.json()
 
     def get_user_logins(self, **kwargs):
@@ -1063,9 +1057,7 @@ class User(CanvasObject):
 
         :rtype: dict
         """
-        response = self._requester.request(
-            "PUT", "users/{}/settings".format(self.id), _kwargs=combine_kwargs(**kwargs)
-        )
+        response = self._requester.request("PUT", "users/{}/settings".format(self.id), _kwargs=combine_kwargs(**kwargs))
         return response.json()
 
     def upload(self, file: FileOrPathLike, **kwargs):
@@ -1085,9 +1077,7 @@ class User(CanvasObject):
                     and the JSON response from the API.
         :rtype: tuple
         """
-        return Uploader(
-            self._requester, "users/{}/files".format(self.id), file, **kwargs
-        ).start()
+        return Uploader(self._requester, "users/{}/files".format(self.id), file, **kwargs).start()
 
 
 class UserDisplay(CanvasObject):

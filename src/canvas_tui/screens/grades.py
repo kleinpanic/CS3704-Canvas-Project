@@ -31,6 +31,7 @@ _SORT_MODES = ["Default", "Score ↓", "% ↓", "Name"]
 
 # ─── Grade summary dataclass (pure, testable) ────────────────────────────────
 
+
 @dataclass
 class GradeSummary:
     """Computed grade summary for a single course."""
@@ -128,6 +129,7 @@ def sort_assignments(assignments: list[dict[str, Any]], mode: int) -> list[dict[
         return list(assignments)
 
     if mode == 1:  # Score ↓ — ungraded to end
+
         def _key_score(a: dict[str, Any]) -> float:
             sub = a.get("submission") or {}
             s = sub.get("score")
@@ -136,6 +138,7 @@ def sort_assignments(assignments: list[dict[str, Any]], mode: int) -> list[dict[
         return sorted(assignments, key=_key_score)
 
     if mode == 2:  # % ↓ — ungraded to end
+
         def _key_pct(a: dict[str, Any]) -> float:
             sub = a.get("submission") or {}
             s = sub.get("score")
@@ -153,6 +156,7 @@ def sort_assignments(assignments: list[dict[str, Any]], mode: int) -> list[dict[
 
 
 # ─── Screen ──────────────────────────────────────────────────────────────────
+
 
 class GradesScreen(Screen):
     """Grades overview — course list, assignment breakdown, trend sparkline, and what-if calculator."""
@@ -349,9 +353,7 @@ class GradesScreen(Screen):
 
         # What-if projected grade line
         if not summary.has_whatif:
-            summary_lines.append(
-                "[dim]Press [w] on an ungraded row to try what-if scores[/dim]"
-            )
+            summary_lines.append("[dim]Press [w] on an ungraded row to try what-if scores[/dim]")
         else:
             proj_color = grade_color(summary.projected_avg)
             summary_lines.append(
@@ -367,10 +369,7 @@ class GradesScreen(Screen):
             summary_lines.append(f"Trend: {spark}")
 
         # Sort mode hint
-        summary_lines.append(
-            f"[dim]Sort: {_SORT_MODES[self._sort_mode]}  "
-            f"[s] cycle  [w] what-if  [r] refresh[/dim]"
-        )
+        summary_lines.append(f"[dim]Sort: {_SORT_MODES[self._sort_mode]}  [s] cycle  [w] what-if  [r] refresh[/dim]")
 
         # Assignment group weight bar
         groups = self._owner.api.fetch_assignment_groups(cid)

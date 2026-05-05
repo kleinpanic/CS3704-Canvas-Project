@@ -1,0 +1,8 @@
+{% if versions -%}
+{% for group, commits in changelog.groups -%}
+### {{ group }}
+{% for commit, messages in commits -%}
+- {{ messages[0] }}
+{% endfor -%}
+{% endfor -%}
+{% endif -%}

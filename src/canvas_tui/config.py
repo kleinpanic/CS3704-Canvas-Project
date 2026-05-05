@@ -39,12 +39,8 @@ class Config:
     google_credentials_path: str = field(
         default_factory=lambda: os.path.expanduser("~/.config/canvas-tui/google_credentials.json")
     )
-    google_token_path: str = field(
-        default_factory=lambda: os.path.expanduser("~/.config/canvas-tui/google_token.json")
-    )
-    ical_path: str = field(
-        default_factory=lambda: os.path.expanduser("~/.local/share/canvas-tui/calendar.ics")
-    )
+    google_token_path: str = field(default_factory=lambda: os.path.expanduser("~/.config/canvas-tui/google_token.json"))
+    ical_path: str = field(default_factory=lambda: os.path.expanduser("~/.local/share/canvas-tui/calendar.ics"))
     ical_write_path: str = ""
 
     # AI reranker

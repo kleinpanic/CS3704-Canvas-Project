@@ -19,9 +19,7 @@ class QuizGroup(CanvasObject):
         """
         response = self._requester.request(
             "DELETE",
-            "courses/{}/quizzes/{}/groups/{}".format(
-                self.course_id, self.quiz_id, self.id
-            ),
+            "courses/{}/quizzes/{}/groups/{}".format(self.course_id, self.quiz_id, self.id),
             _kwargs=combine_kwargs(**kwargs),
         )
         return response.status_code == 204
@@ -46,10 +44,7 @@ class QuizGroup(CanvasObject):
 
         for question in order:
             if not isinstance(question, dict):
-                raise ValueError(
-                    "`order` must consist only of dictionaries representing "
-                    "Question items."
-                )
+                raise ValueError("`order` must consist only of dictionaries representing Question items.")
             if "id" not in question:
                 raise ValueError("Dictionaries in `order` must contain an `id` key.")
 
@@ -57,9 +52,7 @@ class QuizGroup(CanvasObject):
 
         response = self._requester.request(
             "POST",
-            "courses/{}/quizzes/{}/groups/{}/reorder".format(
-                self.course_id, self.quiz_id, self.id
-            ),
+            "courses/{}/quizzes/{}/groups/{}/reorder".format(self.course_id, self.quiz_id, self.id),
             _kwargs=combine_kwargs(**kwargs),
         )
 
@@ -95,9 +88,7 @@ class QuizGroup(CanvasObject):
 
         response = self._requester.request(
             "PUT",
-            "courses/{}/quizzes/{}/groups/{}".format(
-                self.course_id, self.quiz_id, self.id
-            ),
+            "courses/{}/quizzes/{}/groups/{}".format(self.course_id, self.quiz_id, self.id),
             _kwargs=combine_kwargs(**kwargs),
         )
 

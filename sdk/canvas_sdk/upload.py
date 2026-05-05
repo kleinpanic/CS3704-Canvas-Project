@@ -49,9 +49,7 @@ class Uploader(object):
         self.kwargs["name"] = os.path.basename(file.name)
         self.kwargs["size"] = os.fstat(file.fileno()).st_size
 
-        response = self._requester.request(
-            "POST", self.url, _kwargs=combine_kwargs(**self.kwargs)
-        )
+        response = self._requester.request("POST", self.url, _kwargs=combine_kwargs(**self.kwargs))
 
         return self.upload(response, file)
 

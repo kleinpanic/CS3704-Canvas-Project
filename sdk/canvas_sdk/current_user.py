@@ -42,9 +42,7 @@ class CurrentUser(User):
             course_id = obj_or_id(course, "course", (Course,))
             uri_str = "users/self/favorites/courses/{}"
 
-        response = self._requester.request(
-            "POST", uri_str.format(course_id), _kwargs=combine_kwargs(**kwargs)
-        )
+        response = self._requester.request("POST", uri_str.format(course_id), _kwargs=combine_kwargs(**kwargs))
         return Favorite(self._requester, response.json())
 
     def add_favorite_group(self, group, use_sis_id=False, **kwargs):
@@ -71,9 +69,7 @@ class CurrentUser(User):
             group_id = obj_or_id(group, "group", (Group,))
             uri_str = "users/self/favorites/groups/{}"
 
-        response = self._requester.request(
-            "POST", uri_str.format(group_id), _kwargs=combine_kwargs(**kwargs)
-        )
+        response = self._requester.request("POST", uri_str.format(group_id), _kwargs=combine_kwargs(**kwargs))
         return Favorite(self._requester, response.json())
 
     def create_bookmark(self, name, url, **kwargs):
@@ -209,9 +205,7 @@ class CurrentUser(User):
         :rtype: bool
         """
 
-        response = self._requester.request(
-            "DELETE", "users/self/favorites/courses", _kwargs=combine_kwargs(**kwargs)
-        )
+        response = self._requester.request("DELETE", "users/self/favorites/courses", _kwargs=combine_kwargs(**kwargs))
         return response.json().get("message") == "OK"
 
     def reset_favorite_groups(self, **kwargs):
@@ -226,7 +220,5 @@ class CurrentUser(User):
         :rtype: bool
         """
 
-        response = self._requester.request(
-            "DELETE", "users/self/favorites/groups", _kwargs=combine_kwargs(**kwargs)
-        )
+        response = self._requester.request("DELETE", "users/self/favorites/groups", _kwargs=combine_kwargs(**kwargs))
         return response.json().get("message") == "OK"
