@@ -36,6 +36,13 @@ Welcome to the team documentation portal. This site is built with MkDocs and dep
 - GitHub Pages documentation site
 - CI/CD and protected-branch governance
 
+### Recently Merged
+- **#81** settings UI — full config persistence, keybindings, theme/layout controls
+- **#83** SDK agent tools — 18-tool agent registry and calendar adapter
+- **#70** extension multi-view — courses tab and drill-down navigation
+- **#86** settings follow-up — 10 fixes applied across 47 tests from cross-AI review
+- **REVIEWS.md** introduced — formalizes the cross-AI review process for all major PRs
+
 ### Important Repo Policy
 - `main` is the canonical long-term branch
 - feature branches are temporary and PR-scoped
