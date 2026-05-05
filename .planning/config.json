@@ -1,0 +1,19 @@
+{
+  "mode": "yolo",
+  "granularity": "standard",
+  "parallelization": true,
+  "commit_docs": true,
+  "model_profile": "balanced",
+  "workflow": {
+    "research": true,
+    "plan_check": true,
+    "verifier": true,
+    "nyquist_validation": true,
+    "auto_advance": true
+  },
+  "project": {
+    "code": "CS3704-REFACTOR",
+    "path": "/home/broklein/codeWS/Python/CS3704-Canvas-Project",
+    "is_brownfield": true
+  }
+}
