@@ -17,6 +17,38 @@ Canvas API tool calls with neuroscience-grounded study planning heuristics
 
 Model weights will be published to HuggingFace and the accompanying paper will be published on Zenodo once v2 training is complete.
 
+### Try the agent right now
+
+You don't need the fine-tuned weights to try the agent — the SDK ships a
+**Gemini fallback backend** that speaks the same Gemma4 tool-call protocol.
+
+- **Browser demo** (mock Canvas data, your Gemini API key): [kleinpanic.github.io/CS3704-Canvas-Project/agent-demo/](https://kleinpanic.github.io/CS3704-Canvas-Project/agent-demo/)
+- **Python SDK** (real Canvas data via your token):
+
+  ```bash
+  pip install canvas-sdk[gemini]          # base + Gemini fallback
+  pip install canvas-sdk[autodownload]    # also fetches the v7-dpo Gemma4 model from HF
+  pip install canvas-sdk[all]             # both
+  ```
+
+  ```python
+  import os
+  from canvas_sdk import CanvasAgent
+
+  os.environ["GOOGLE_API_KEY"]   = "..."        # for the Gemini fallback
+  os.environ["CANVAS_TOKEN"]     = "..."        # your Canvas token
+  os.environ["CANVAS_BASE_URL"]  = "https://canvas.vt.edu"
+
+  agent = CanvasAgent.auto()                    # auto-resolves: env -> local -> HF -> Gemini
+  print(agent.run("What is due this week?"))
+  ```
+
+  Resolution order for `CanvasAgent.auto()`:
+  1. `CANVAS_LLM_ENDPOINT` env (skip auto-download, use your own server)
+  2. Local cache at `~/.cache/canvas-agent/v7-dpo/` (spawns vLLM on :8765)
+  3. Download `kleinpanic/canvas-calendar-agent-v7-dpo` from HF, then (2)
+  4. Fall back to Gemini (`gemini-2.5-flash` by default)
+
 ---
 
 ## Overview
@@ -203,6 +235,7 @@ All commits to protected branches must be **GPG signed**.
 ## Documentation
 
 - **[Docs site](https://kleinpanic.github.io/CS3704-Canvas-Project/)** — live project docs
+- **[Agent demo](https://kleinpanic.github.io/CS3704-Canvas-Project/agent-demo/)** — chat with the Canvas Calendar Agent in your browser (Gemini-backed)
 - **[Architecture docs](docs-site/architecture.md)** — system design decisions
 - **[Browser extension docs](docs-site/extension.md)** — shared client/runtime architecture
 - **[Workflow guide](docs-site/workflow.md)** — how the team works

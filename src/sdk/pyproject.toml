@@ -9,3 +9,11 @@ description = "Canvas LMS Python SDK"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = ["requests>=2.20", "arrow>=1.0", "pytz>=2019.1", "httpx>=0.24"]
+
+[project.optional-dependencies]
+gemini = ["google-generativeai>=0.8"]
+autodownload = ["huggingface-hub>=0.20"]
+all = [
+    "google-generativeai>=0.8",
+    "huggingface-hub>=0.20",
+]

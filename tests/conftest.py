@@ -10,8 +10,10 @@ from pathlib import Path
 
 import pytest
 
-# Ensure src/ is importable
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+# Ensure src/ and src/sdk/ are importable
+_repo_root = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_repo_root / "src"))
+sys.path.insert(0, str(_repo_root / "src" / "sdk"))
 
 
 @pytest.fixture
