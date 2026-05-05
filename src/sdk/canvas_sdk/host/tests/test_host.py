@@ -16,6 +16,7 @@ from canvas_sdk.host.__main__ import _serialize, _drain, _handle
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
+
 class FakeCanvasObject:
     """Minimal stand-in for a CanvasObject with instance variables."""
 
@@ -25,6 +26,7 @@ class FakeCanvasObject:
 
 
 # ── _serialize tests ──────────────────────────────────────────────────────────
+
 
 class TestSerialize:
     def test_primitives_pass_through(self):
@@ -82,6 +84,7 @@ class TestSerialize:
 
 # ── _drain tests ──────────────────────────────────────────────────────────────
 
+
 class TestDrain:
     def _make_paginated(self, n):
         """Return a plain list of FakeCanvasObjects (iterator compatible)."""
@@ -118,6 +121,7 @@ class TestDrain:
 
 
 # ── _handle tests ─────────────────────────────────────────────────────────────
+
 
 class TestHandle:
     def test_no_token_returns_error(self):
