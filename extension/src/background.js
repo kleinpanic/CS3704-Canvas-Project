@@ -14,6 +14,8 @@ import {
   getUpcomingAssignments,
   getCourses,
   getCourseAssignments,
+  getCourseAnnouncements,
+  getCourseModules,
   dismissAssignment,
   getDismissed,
   clearCache,
@@ -97,6 +99,12 @@ const messageHandlers = {
   [MESSAGE_TYPES.getCourseAssignments]: (msg) =>
     getCourseAssignments((courseId) => canvasClient.getCourseAssignments(courseId), msg.courseId),
 
+  [MESSAGE_TYPES.getCourseAnnouncements]: (msg) =>
+    getCourseAnnouncements((courseId) => canvasClient.getCourseAnnouncements(courseId), msg.courseId),
+
+  [MESSAGE_TYPES.getCourseModules]: (msg) =>
+    getCourseModules((courseId) => canvasClient.getCourseModules(courseId), msg.courseId),
+
   [MESSAGE_TYPES.validateToken]: async () => {
     const { user } = await canvasClient.validateToken();
     return { user };
@@ -130,6 +138,22 @@ const messageHandlers = {
     await clearCache().catch(() => {});
     await updateBadge().catch(() => {});
     return {};
+  },
+
+  [MESSAGE_TYPES.getRmpRating]: async (msg) => {
+    const lastName = (msg.professorName || '').split(' ').pop();
+    if (!lastName) return { rating: null, difficulty: null, numRatings: 0 };
+    const url = `https://www.ratemyprofessors.com/filter/teacher?institution_id=1346&query=${encodeURIComponent(lastName)}`;
+    const res = await fetch(url);
+    if (!res.ok) return { rating: null, difficulty: null, numRatings: 0 };
+    const json = await res.json();
+    const teacher = (json.data || [])[0];
+    if (!teacher) return { rating: null, difficulty: null, numRatings: 0 };
+    return {
+      rating: teacher.avg_rating ?? null,
+      difficulty: teacher.avg_difficulty ?? null,
+      numRatings: teacher.num_ratings ?? 0,
+    };
   },
 };
 

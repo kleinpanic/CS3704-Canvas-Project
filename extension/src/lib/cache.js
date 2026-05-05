@@ -116,6 +116,22 @@ export async function getCourseAssignments(fetcher, courseId) {
   );
 }
 
+export async function getCourseAnnouncements(fetcher, courseId) {
+  return swrGet(
+    `announcements:${courseId}`,
+    () => fetcher(courseId),
+    600 // 10 min TTL
+  );
+}
+
+export async function getCourseModules(fetcher, courseId) {
+  return swrGet(
+    `modules:${courseId}`,
+    () => fetcher(courseId),
+    3600 // 1 hour TTL
+  );
+}
+
 export async function dismissAssignment(assignmentId) {
   await idbSet(String(assignmentId), { assignment_id: String(assignmentId), dismissedAt: Date.now() }, "dismissed");
 }
