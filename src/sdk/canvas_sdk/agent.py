@@ -64,7 +64,7 @@ def build_system_prompt(template: str = DEFAULT_SYSTEM_PROMPT) -> str:
 class CanvasAgent:
     """Drives a Gemma4 backend through the Canvas tool registry."""
 
-    def __init__(self, backend: Gemma4Backend, max_turns: int = 8):
+    def __init__(self, backend: Gemma4Backend, max_turns: int = 1):
         self.backend = backend
         self.max_turns = max_turns
 
