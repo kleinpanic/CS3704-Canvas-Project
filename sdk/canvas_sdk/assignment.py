@@ -15,10 +15,7 @@ class Assignment(CanvasObject):
         super(Assignment, self).__init__(requester, attributes)
 
         if "overrides" in attributes:
-            self.overrides = [
-                AssignmentOverride(requester, override)
-                for override in attributes["overrides"]
-            ]
+            self.overrides = [AssignmentOverride(requester, override) for override in attributes["overrides"]]
 
     def __str__(self):
         return "{} ({})".format(self.name, self.id)
@@ -111,9 +108,7 @@ class Assignment(CanvasObject):
             UserDisplay,
             self._requester,
             "GET",
-            "courses/{}/assignments/{}/gradeable_students".format(
-                self.course_id, self.id
-            ),
+            "courses/{}/assignments/{}/gradeable_students".format(self.course_id, self.id),
             {"course_id": self.course_id},
             _kwargs=combine_kwargs(**kwargs),
         )
@@ -134,9 +129,7 @@ class Assignment(CanvasObject):
 
         response = self._requester.request(
             "GET",
-            "courses/{}/assignments/{}/overrides/{}".format(
-                self.course_id, self.id, override_id
-            ),
+            "courses/{}/assignments/{}/overrides/{}".format(self.course_id, self.id, override_id),
             _kwargs=combine_kwargs(**kwargs),
         )
         response_json = response.json()
@@ -197,9 +190,7 @@ class Assignment(CanvasObject):
         kwargs["student_id"] = obj_or_id(student_id, "student_id", (User,))
         request = self._requester.request(
             "GET",
-            "courses/{}/assignments/{}/provisional_grades/status".format(
-                self.course_id, self.id
-            ),
+            "courses/{}/assignments/{}/provisional_grades/status".format(self.course_id, self.id),
             _kwargs=combine_kwargs(**kwargs),
         )
 
@@ -221,9 +212,7 @@ class Assignment(CanvasObject):
             User,
             self._requester,
             "GET",
-            "courses/{}/assignments/{}/moderated_students".format(
-                self.course_id, self.id
-            ),
+            "courses/{}/assignments/{}/moderated_students".format(self.course_id, self.id),
             _kwargs=combine_kwargs(**kwargs),
         )
 
@@ -243,9 +232,7 @@ class Assignment(CanvasObject):
 
         response = self._requester.request(
             "GET",
-            "courses/{}/assignments/{}/submissions/{}".format(
-                self.course_id, self.id, user_id
-            ),
+            "courses/{}/assignments/{}/submissions/{}".format(self.course_id, self.id, user_id),
             _kwargs=combine_kwargs(**kwargs),
         )
         response_json = response.json()
@@ -290,9 +277,7 @@ class Assignment(CanvasObject):
         """
         response = self._requester.request(
             "POST",
-            "courses/{}/assignments/{}/provisional_grades/publish".format(
-                self.course_id, self.id
-            ),
+            "courses/{}/assignments/{}/provisional_grades/publish".format(self.course_id, self.id),
             _kwargs=combine_kwargs(**kwargs),
         )
         return response.json()
@@ -312,9 +297,7 @@ class Assignment(CanvasObject):
             User,
             self._requester,
             "POST",
-            "courses/{}/assignments/{}/moderated_students".format(
-                self.course_id, self.id
-            ),
+            "courses/{}/assignments/{}/moderated_students".format(self.course_id, self.id),
             _kwargs=combine_kwargs(**kwargs),
         )
 
@@ -371,14 +354,10 @@ class Assignment(CanvasObject):
             raise ValueError("Param `assignment_extensions` must be a non-empty list.")
 
         if any(not isinstance(extension, dict) for extension in assignment_extensions):
-            raise ValueError(
-                "Param `assignment_extensions` must only contain dictionaries"
-            )
+            raise ValueError("Param `assignment_extensions` must only contain dictionaries")
 
         if any("user_id" not in extension for extension in assignment_extensions):
-            raise RequiredFieldMissing(
-                "Dictionaries in `assignment_extensions` must contain key `user_id`"
-            )
+            raise RequiredFieldMissing("Dictionaries in `assignment_extensions` must contain key `user_id`")
         kwargs["assignment_extensions"] = assignment_extensions
         response = self._requester.request(
             "POST",
@@ -386,10 +365,7 @@ class Assignment(CanvasObject):
             _kwargs=combine_kwargs(**kwargs),
         )
         extension_list = response.json()["assignment_extensions"]
-        return [
-            AssignmentExtension(self._requester, extension)
-            for extension in extension_list
-        ]
+        return [AssignmentExtension(self._requester, extension) for extension in extension_list]
 
     def show_provisonal_grades_for_student(self, anonymous_id, **kwargs):
         """
@@ -407,9 +383,7 @@ class Assignment(CanvasObject):
 
         request = self._requester.request(
             "GET",
-            "courses/{}/assignments/{}/anonymous_provisional_grades/status".format(
-                self.course_id, self.id
-            ),
+            "courses/{}/assignments/{}/anonymous_provisional_grades/status".format(self.course_id, self.id),
             _kwargs=combine_kwargs(**kwargs),
         )
 
@@ -428,9 +402,7 @@ class Assignment(CanvasObject):
         """
         response = self._requester.request(
             "POST",
-            "courses/{}/assignments/{}/submissions/update_grades".format(
-                self.course_id, self.id
-            ),
+            "courses/{}/assignments/{}/submissions/update_grades".format(self.course_id, self.id),
             _kwargs=combine_kwargs(**kwargs),
         )
         return Progress(self._requester, response.json())
@@ -453,15 +425,11 @@ class Assignment(CanvasObject):
         if isinstance(submission, dict) and "submission_type" in submission:
             kwargs["submission"] = submission
         else:
-            raise RequiredFieldMissing(
-                "Dictionary with key 'submission_type' is required."
-            )
+            raise RequiredFieldMissing("Dictionary with key 'submission_type' is required.")
 
         if file:
             if submission.get("submission_type") != "online_upload":
-                raise ValueError(
-                    "To upload a file, `submission['submission_type']` must be `online_upload`."
-                )
+                raise ValueError("To upload a file, `submission['submission_type']` must be `online_upload`.")
 
             upload_response = self.upload_to_submission(file, **kwargs)
             if upload_response[0]:
@@ -501,11 +469,9 @@ class Assignment(CanvasObject):
 
         return Uploader(
             self._requester,
-            "courses/{}/assignments/{}/submissions/{}/files".format(
-                self.course_id, self.id, user_id
-            ),
+            "courses/{}/assignments/{}/submissions/{}/files".format(self.course_id, self.id, user_id),
             file,
-            **kwargs
+            **kwargs,
         ).start()
 
 
@@ -571,9 +537,7 @@ class AssignmentOverride(CanvasObject):
         """
         response = self._requester.request(
             "DELETE",
-            "courses/{}/assignments/{}/overrides/{}".format(
-                self.course_id, self.assignment_id, self.id
-            ),
+            "courses/{}/assignments/{}/overrides/{}".format(self.course_id, self.assignment_id, self.id),
             _kwargs=combine_kwargs(**kwargs),
         )
 
@@ -595,9 +559,7 @@ class AssignmentOverride(CanvasObject):
         """
         response = self._requester.request(
             "PUT",
-            "courses/{}/assignments/{}/overrides/{}".format(
-                self.course_id, self.assignment_id, self.id
-            ),
+            "courses/{}/assignments/{}/overrides/{}".format(self.course_id, self.assignment_id, self.id),
             _kwargs=combine_kwargs(**kwargs),
         )
 

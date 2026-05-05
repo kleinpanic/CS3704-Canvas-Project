@@ -72,9 +72,7 @@ class Course(CanvasObject):
             if not isinstance(entry, dict):
                 raise ValueError("grading_scheme_entry must consist of dictionaries.")
             if "name" not in entry or "value" not in entry:
-                raise ValueError(
-                    "Dictionaries with keys 'name' and 'value' are required."
-                )
+                raise ValueError("Dictionaries with keys 'name' and 'value' are required.")
         kwargs["grading_scheme_entry"] = grading_scheme_entry
 
         response = self._requester.request(
@@ -541,9 +539,7 @@ class Course(CanvasObject):
         else:
             raise RequiredFieldMissing("Dictionary with key 'title' is required.")
 
-        response = self._requester.request(
-            "POST", "courses/{}/pages".format(self.id), _kwargs=combine_kwargs(**kwargs)
-        )
+        response = self._requester.request("POST", "courses/{}/pages".format(self.id), _kwargs=combine_kwargs(**kwargs))
 
         page_json = response.json()
         page_json.update({"course_id": self.id})
@@ -831,9 +827,7 @@ class Course(CanvasObject):
         """
         from canvas_sdk.assignment import AssignmentGroup
 
-        assignment_group_id = obj_or_id(
-            assignment_group, "assignment_group", (AssignmentGroup,)
-        )
+        assignment_group_id = obj_or_id(assignment_group, "assignment_group", (AssignmentGroup,))
 
         response = self._requester.request(
             "GET",
@@ -924,17 +918,13 @@ class Course(CanvasObject):
             :class:`canvas_sdk.assignment.Assignment`
         """
 
-        assignment_group_id = obj_or_id(
-            assignment_group, "assignment_group", (AssignmentGroup,)
-        )
+        assignment_group_id = obj_or_id(assignment_group, "assignment_group", (AssignmentGroup,))
 
         return PaginatedList(
             Assignment,
             self._requester,
             "GET",
-            "courses/{}/assignment_groups/{}/assignments".format(
-                self.id, assignment_group_id
-            ),
+            "courses/{}/assignment_groups/{}/assignments".format(self.id, assignment_group_id),
             _kwargs=combine_kwargs(**kwargs),
         )
 
@@ -1036,9 +1026,7 @@ class Course(CanvasObject):
         """
         from canvas_sdk.content_migration import ContentMigration
 
-        migration_id = obj_or_id(
-            content_migration, "content_migration", (ContentMigration,)
-        )
+        migration_id = obj_or_id(content_migration, "content_migration", (ContentMigration,))
 
         response = self._requester.request(
             "GET",
@@ -1693,9 +1681,7 @@ class Course(CanvasObject):
         :rtype: :class:`canvas_sdk.lti_resource_link.LTIResourceLink`
         """
 
-        lti_resource_link_id = obj_or_id(
-            lti_resource_link, "lti_resource_link", (LTIResourceLink,)
-        )
+        lti_resource_link_id = obj_or_id(lti_resource_link, "lti_resource_link", (LTIResourceLink,))
 
         response = self._requester.request(
             "GET",
@@ -1929,9 +1915,7 @@ class Course(CanvasObject):
         if outcome_import == "latest":
             outcome_import_id = "latest"
         else:
-            outcome_import_id = obj_or_id(
-                outcome_import, "outcome_import", (OutcomeImport,)
-            )
+            outcome_import_id = obj_or_id(outcome_import, "outcome_import", (OutcomeImport,))
 
         response = self._requester.request(
             "GET",
@@ -2720,9 +2704,7 @@ class Course(CanvasObject):
             raise ValueError("Param `quiz_extensions` must only contain dictionaries")
 
         if any("user_id" not in extension for extension in quiz_extensions):
-            raise RequiredFieldMissing(
-                "Dictionaries in `quiz_extensions` must contain key `user_id`"
-            )
+            raise RequiredFieldMissing("Dictionaries in `quiz_extensions` must contain key `user_id`")
 
         kwargs["quiz_extensions"] = quiz_extensions
 
@@ -2732,9 +2714,7 @@ class Course(CanvasObject):
             _kwargs=combine_kwargs(**kwargs),
         )
         extension_list = response.json()["quiz_extensions"]
-        return [
-            QuizExtension(self._requester, extension) for extension in extension_list
-        ]
+        return [QuizExtension(self._requester, extension) for extension in extension_list]
 
     def set_usage_rights(self, **kwargs):
         """
@@ -2826,9 +2806,7 @@ class Course(CanvasObject):
         :returns: `True` if the course was updated, `False` otherwise.
         :rtype: `bool`
         """
-        response = self._requester.request(
-            "PUT", "courses/{}".format(self.id), _kwargs=combine_kwargs(**kwargs)
-        )
+        response = self._requester.request("PUT", "courses/{}".format(self.id), _kwargs=combine_kwargs(**kwargs))
 
         if response.json().get("name"):
             super(Course, self).set_attributes(response.json())
@@ -2872,9 +2850,7 @@ class Course(CanvasObject):
 
         :rtype: dict
         """
-        response = self._requester.request(
-            "PUT", "courses/{}/settings".format(self.id), **kwargs
-        )
+        response = self._requester.request("PUT", "courses/{}/settings".format(self.id), **kwargs)
         return response.json()
 
     def upload(self, file: FileOrPathLike, **kwargs):
@@ -2890,9 +2866,7 @@ class Course(CanvasObject):
                     and the JSON response from the API.
         :rtype: tuple
         """
-        return Uploader(
-            self._requester, "courses/{}/files".format(self.id), file, **kwargs
-        ).start()
+        return Uploader(self._requester, "courses/{}/files".format(self.id), file, **kwargs).start()
 
 
 class CourseNickname(CanvasObject):

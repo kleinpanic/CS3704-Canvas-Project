@@ -28,9 +28,7 @@ class Module(CanvasObject):
             if module_item["type"] in unrequired_types or "content_id" in module_item:
                 kwargs["module_item"] = module_item
             else:
-                raise RequiredFieldMissing(
-                    "Dictionary with key 'content_id' is required."
-                )
+                raise RequiredFieldMissing("Dictionary with key 'content_id' is required.")
         else:
             raise RequiredFieldMissing("Dictionary with key 'type' is required.")
 
@@ -98,9 +96,7 @@ class Module(CanvasObject):
 
         response = self._requester.request(
             "GET",
-            "courses/{}/modules/{}/items/{}".format(
-                self.course_id, self.id, module_item_id
-            ),
+            "courses/{}/modules/{}/items/{}".format(self.course_id, self.id, module_item_id),
             _kwargs=combine_kwargs(**kwargs),
         )
         module_item_json = response.json()
@@ -166,9 +162,7 @@ class ModuleItem(CanvasObject):
         """
         response = self._requester.request(
             "PUT",
-            "courses/{}/modules/{}/items/{}/done".format(
-                self.course_id, self.module_id, self.id
-            ),
+            "courses/{}/modules/{}/items/{}/done".format(self.course_id, self.module_id, self.id),
             _kwargs=combine_kwargs(**kwargs),
         )
         module_item_json = response.json()
@@ -187,9 +181,7 @@ class ModuleItem(CanvasObject):
         """
         response = self._requester.request(
             "DELETE",
-            "courses/{}/modules/{}/items/{}".format(
-                self.course_id, self.module_id, self.id
-            ),
+            "courses/{}/modules/{}/items/{}".format(self.course_id, self.module_id, self.id),
             _kwargs=combine_kwargs(**kwargs),
         )
         module_item_json = response.json()
@@ -209,9 +201,7 @@ class ModuleItem(CanvasObject):
         """
         response = self._requester.request(
             "PUT",
-            "courses/{}/modules/{}/items/{}".format(
-                self.course_id, self.module_id, self.id
-            ),
+            "courses/{}/modules/{}/items/{}".format(self.course_id, self.module_id, self.id),
             _kwargs=combine_kwargs(**kwargs),
         )
         module_item_json = response.json()
@@ -230,9 +220,7 @@ class ModuleItem(CanvasObject):
         """
         response = self._requester.request(
             "DELETE",
-            "courses/{}/modules/{}/items/{}/done".format(
-                self.course_id, self.module_id, self.id
-            ),
+            "courses/{}/modules/{}/items/{}/done".format(self.course_id, self.module_id, self.id),
             _kwargs=combine_kwargs(**kwargs),
         )
         module_item_json = response.json()

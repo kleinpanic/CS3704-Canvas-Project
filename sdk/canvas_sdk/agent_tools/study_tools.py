@@ -2,6 +2,7 @@
 
 All implementations are pure Python with no external dependencies.
 """
+
 from __future__ import annotations
 
 import datetime as dt
@@ -47,15 +48,15 @@ class SpacedSchedule:
         gaps_by_n = {3: [10, 4, 1], 4: [10, 5, 2, 1], 5: [14, 7, 3, 2, 1]}
         sessions = []
         for g in gaps_by_n[n]:
-            t = (exam - dt.timedelta(days=g)).replace(
-                hour=hour, minute=0, second=0, microsecond=0
+            t = (exam - dt.timedelta(days=g)).replace(hour=hour, minute=0, second=0, microsecond=0)
+            sessions.append(
+                {
+                    "start_iso": t.isoformat(),
+                    "end_iso": (t + dt.timedelta(minutes=minutes)).isoformat(),
+                    "label": f"Exam prep — {g}d before",
+                    "minutes": minutes,
+                }
             )
-            sessions.append({
-                "start_iso": t.isoformat(),
-                "end_iso": (t + dt.timedelta(minutes=minutes)).isoformat(),
-                "label": f"Exam prep — {g}d before",
-                "minutes": minutes,
-            })
         return sessions
 
 
@@ -136,15 +137,17 @@ class SemesterSchedule:
             weeks_needed = est / hours_per_week if hours_per_week > 0 else weeks_available
             start_work_date = due - dt.timedelta(weeks=min(weeks_needed, weeks_available))
 
-            result.append({
-                "milestone": dl["title"],
-                "due_iso": dl["due_iso"],
-                "estimated_hours": est,
-                "start_work_iso": start_work_date.isoformat(),
-                "recommended_hours_per_week": round(hours_per_week, 1),
-                "weeks_allocated": round(min(weeks_needed, weeks_available), 1),
-                "intensity": "high" if days_left < ramp_cutoff else "normal",
-            })
+            result.append(
+                {
+                    "milestone": dl["title"],
+                    "due_iso": dl["due_iso"],
+                    "estimated_hours": est,
+                    "start_work_iso": start_work_date.isoformat(),
+                    "recommended_hours_per_week": round(hours_per_week, 1),
+                    "weeks_allocated": round(min(weeks_needed, weeks_available), 1),
+                    "intensity": "high" if days_left < ramp_cutoff else "normal",
+                }
+            )
 
         return result
 
@@ -182,15 +185,15 @@ class DeepBlockSize:
     @staticmethod
     def call(args: dict) -> dict:
         recs = {
-            "writing":      (90, "deep cognitive work — 90min peak, hard cap before fatigue"),
-            "problem_set":  (90, "sustained reasoning — 60-90min; 25min for trivial sets"),
-            "exam_prep":    (90, "recall + practice — 90min with 15min breaks"),
-            "reading":      (45, "moderate load — 45min blocks, frequent breaks"),
-            "review":       (45, "lighter than first-pass learning"),
-            "admin":        (25, "Pomodoro-style — short shallow work"),
-            "discussion":   (60, "structured dialogue — canonical 60min class length"),
+            "writing": (90, "deep cognitive work — 90min peak, hard cap before fatigue"),
+            "problem_set": (90, "sustained reasoning — 60-90min; 25min for trivial sets"),
+            "exam_prep": (90, "recall + practice — 90min with 15min breaks"),
+            "reading": (45, "moderate load — 45min blocks, frequent breaks"),
+            "review": (45, "lighter than first-pass learning"),
+            "admin": (25, "Pomodoro-style — short shallow work"),
+            "discussion": (60, "structured dialogue — canonical 60min class length"),
             "project_work": (90, "deep work — 90min blocks, group adjacent if possible"),
-            "lab":          (120, "hands-on work — longer blocks to account for setup/teardown"),
+            "lab": (120, "hands-on work — longer blocks to account for setup/teardown"),
         }
         minutes, rationale = recs[args["task_type"]]
         return {"minutes": minutes, "rationale": rationale}

@@ -70,6 +70,7 @@ class CanvasTUI(App):
 
     # Read version from __init__ to avoid duplication
     from . import __version__
+
     title = f"CanvasTUI v{__version__}"
 
     CSS = """
@@ -393,8 +394,12 @@ class CanvasTUI(App):
         )
         self.registry = CommandRegistry()
         self.registry.register("validate_token", ValidateTokenCommand(self.api))
-        self.registry.register("refresh_courses", RefreshCoursesCommand(self.api, CacheBackendAdapter(self._response_cache)))
-        self.registry.register("fetch_upcoming", FetchUpcomingCommand(self.api, CacheBackendAdapter(self._response_cache)))
+        self.registry.register(
+            "refresh_courses", RefreshCoursesCommand(self.api, CacheBackendAdapter(self._response_cache))
+        )
+        self.registry.register(
+            "fetch_upcoming", FetchUpcomingCommand(self.api, CacheBackendAdapter(self._response_cache))
+        )
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -1344,6 +1349,7 @@ class CanvasTUI(App):
             # Build and validate on a scratch copy so background threads never
             # observe a partially-updated Config object.
             from dataclasses import replace as _dc_replace
+
             cfg = self.cfg
             candidate = _dc_replace(
                 cfg,
@@ -1628,9 +1634,11 @@ def main() -> None:
     # --ascii flag forces ASCII chart mode before the app object is created
     if getattr(args, "ascii", False):
         import os as _os
+
         _os.environ["CANVAS_ASCII"] = "1"
         # Re-apply so compat module picks it up (it was already imported)
         from . import compat as _compat
+
         _compat.USE_ASCII = True
         _compat.BLOCK_FULL = "#"
         _compat.BLOCK_EMPTY = "-"

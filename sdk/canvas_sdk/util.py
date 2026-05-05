@@ -111,9 +111,7 @@ def obj_or_id(parameter, param_name, object_types):
                     break
 
         obj_type_list = ",".join([obj_type.__name__ for obj_type in object_types])
-        message = "Parameter {} must be of type {} or int.".format(
-            param_name, obj_type_list
-        )
+        message = "Parameter {} must be of type {} or int.".format(param_name, obj_type_list)
         raise TypeError(message)
 
 
@@ -139,9 +137,7 @@ def obj_or_str(parameter, param_name, object_types):
             try:
                 return str(getattr(parameter, param_name))
             except AttributeError:
-                raise AttributeError("{} object does not have {} attribute").format(
-                    parameter, param_name
-                )
+                raise AttributeError("{} object does not have {} attribute").format(parameter, param_name)
 
     obj_type_list = ",".join([obj_type.__name__ for obj_type in object_types])
     raise TypeError("Parameter {} must be of type {}.".format(parameter, obj_type_list))
@@ -198,11 +194,7 @@ def normalize_bool(val, param_name):
     elif val in ("False", "false"):
         return False
     else:
-        raise ValueError(
-            'Parameter `{}` must be True, "True", "true", False, "False", or "false".'.format(
-                param_name
-            )
-        )
+        raise ValueError('Parameter `{}` must be True, "True", "true", False, "False", or "false".'.format(param_name))
 
 
 def clean_headers(headers):

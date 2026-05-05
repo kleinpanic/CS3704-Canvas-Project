@@ -1,4 +1,5 @@
 """Canvas-side tools — read-only access to courses, assignments, syllabi, TODOs."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -14,14 +15,19 @@ class ListCourses:
         "parameters": {
             "type": "object",
             "properties": {
-                "active_only": {"type": "boolean", "description": "If True (default), only courses with a current enrollment."},
+                "active_only": {
+                    "type": "boolean",
+                    "description": "If True (default), only courses with a current enrollment.",
+                },
             },
             "required": [],
         },
     }
+
     @staticmethod
     def call(args: dict) -> list[dict]:
         from canvas_tui.api import CanvasAPI
+
         api = CanvasAPI.from_config()
         active = args.get("active_only", True)
         return [c.to_dict() for c in api.list_courses(active_only=active)]
@@ -45,9 +51,11 @@ class GetAssignments:
             "required": [],
         },
     }
+
     @staticmethod
     def call(args: dict) -> list[dict]:
         from canvas_tui.api import CanvasAPI
+
         api = CanvasAPI.from_config()
         items = api.get_assignments(
             course_id=args.get("course_id"),
@@ -64,9 +72,11 @@ class GetTodo:
         "description": "Fetch the student's Canvas TODO list (the official 'what needs your attention' feed).",
         "parameters": {"type": "object", "properties": {}, "required": []},
     }
+
     @staticmethod
     def call(args: dict) -> list[dict]:
         from canvas_tui.api import CanvasAPI
+
         api = CanvasAPI.from_config()
         return [t.to_dict() for t in api.get_todo()]
 
@@ -85,9 +95,11 @@ class GetSyllabus:
             "required": ["course_id"],
         },
     }
+
     @staticmethod
     def call(args: dict) -> str:
         from canvas_tui.api import CanvasAPI
+
         api = CanvasAPI.from_config()
         return api.get_syllabus(args["course_id"])
 
@@ -103,8 +115,10 @@ class GetCourse:
             "required": ["course_id"],
         },
     }
+
     @staticmethod
     def call(args: dict) -> dict:
         from canvas_tui.api import CanvasAPI
+
         api = CanvasAPI.from_config()
         return api.get_course(args["course_id"]).to_dict()

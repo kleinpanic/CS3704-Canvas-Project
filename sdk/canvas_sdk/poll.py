@@ -21,11 +21,7 @@ class Poll(CanvasObject):
         :type poll_choice: list
         :rtype: :class:`canvas_sdk.poll_choice.PollChoice`
         """
-        if (
-            isinstance(poll_choice, list)
-            and isinstance(poll_choice[0], dict)
-            and "text" in poll_choice[0]
-        ):
+        if isinstance(poll_choice, list) and isinstance(poll_choice[0], dict) and "text" in poll_choice[0]:
             kwargs["poll_choice"] = poll_choice
         else:
             raise RequiredFieldMissing("Dictionary with key 'text' is required.")
@@ -51,11 +47,7 @@ class Poll(CanvasObject):
 
         :rtype: :class:`canvas_sdk.poll_session.PollSession`
         """
-        if (
-            isinstance(poll_session, list)
-            and isinstance(poll_session[0], dict)
-            and "course_id" in poll_session[0]
-        ):
+        if isinstance(poll_session, list) and isinstance(poll_session[0], dict) and "course_id" in poll_session[0]:
             kwargs["poll_session"] = poll_session
         else:
             raise RequiredFieldMissing("Dictionary with key 'course_id' is required.")
@@ -78,9 +70,7 @@ class Poll(CanvasObject):
 
         :rtype: bool
         """
-        response = self._requester.request(
-            "DELETE", "polls/{}".format(self.id), _kwargs=combine_kwargs(**kwargs)
-        )
+        response = self._requester.request("DELETE", "polls/{}".format(self.id), _kwargs=combine_kwargs(**kwargs))
         return response.status_code == 204
 
     def get_choice(self, poll_choice, **kwargs):
@@ -171,16 +161,10 @@ class Poll(CanvasObject):
         :type poll: list
         :rtype: :class:`canvas_sdk.poll.Poll`
         """
-        if (
-            isinstance(poll, list)
-            and isinstance(poll[0], dict)
-            and "question" in poll[0]
-        ):
+        if isinstance(poll, list) and isinstance(poll[0], dict) and "question" in poll[0]:
             kwargs["poll"] = poll
         else:
             raise RequiredFieldMissing("Dictionary with key 'question' is required.")
 
-        response = self._requester.request(
-            "PUT", "polls/{}".format(self.id), _kwargs=combine_kwargs(**kwargs)
-        )
+        response = self._requester.request("PUT", "polls/{}".format(self.id), _kwargs=combine_kwargs(**kwargs))
         return Poll(self._requester, response.json()["polls"][0])

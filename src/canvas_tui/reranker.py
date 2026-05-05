@@ -27,6 +27,7 @@ Defines:
 The default canvas-tui behaviour with `cfg.use_ai_reranker=False` is
 NullReranker — the AI reranker is opt-in.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -37,15 +38,10 @@ from .models.item import CanvasItem, serialize_item
 # Mirrors GemmaReranker/scripts/generate_rerank_data.py prompt template
 # verbatim. Whitespace and punctuation matter for SHA parity.
 RANK_PROMPT_TEMPLATE = (
-    "Which Canvas item is more urgent and why?\n\n"
-    "[Query]: {query}\n"
-    "Item A: {item_a}\n"
-    "Item B: {item_b}"
+    "Which Canvas item is more urgent and why?\n\n[Query]: {query}\nItem A: {item_a}\nItem B: {item_b}"
 )
 
-RANK_PROMPT_FORMAT_SHA = hashlib.sha256(
-    RANK_PROMPT_TEMPLATE.encode("utf-8")
-).hexdigest()
+RANK_PROMPT_FORMAT_SHA = hashlib.sha256(RANK_PROMPT_TEMPLATE.encode("utf-8")).hexdigest()
 
 
 @runtime_checkable
@@ -179,6 +175,7 @@ class LocalReranker:
         # Greedy parse of the model's argued winner (matches the
         # validate_dpo_holdout.py gold extraction strategy).
         import re
+
         m = re.search(r"\bItem\s*([AB])\b", text)
         if m is None:
             return 0.0
@@ -202,9 +199,9 @@ class LocalReranker:
                 item_a=_POINTWISE_REF_ITEM_SERIALIZED,
                 item_b=item_serialized,
             )
-            lp_a = self._call_model(prompt_a)   # +1 if model picks item-in-slot-A (the test item)
-            lp_b = self._call_model(prompt_b)   # -1 if model picks item-in-slot-B (the test item)
-            score = lp_a - lp_b                  # large positive = item is consistently chosen
+            lp_a = self._call_model(prompt_a)  # +1 if model picks item-in-slot-A (the test item)
+            lp_b = self._call_model(prompt_b)  # -1 if model picks item-in-slot-B (the test item)
+            score = lp_a - lp_b  # large positive = item is consistently chosen
             scores.append((score, item))
         scores.sort(key=lambda s: s[0], reverse=True)
         return [item for _, item in scores]

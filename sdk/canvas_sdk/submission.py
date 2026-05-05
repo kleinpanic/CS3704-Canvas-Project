@@ -10,10 +10,7 @@ class Submission(CanvasObject):
     def __init__(self, requester, attributes):
         super(Submission, self).__init__(requester, attributes)
 
-        self.attachments = [
-            File(requester, attachment)
-            for attachment in attributes.get("attachments", [])
-        ]
+        self.attachments = [File(requester, attachment) for attachment in attributes.get("attachments", [])]
 
     def __str__(self):
         return "{}-{}".format(self.assignment_id, self.user_id)
@@ -37,9 +34,7 @@ class Submission(CanvasObject):
         kwargs["user_id"] = user_id
         response = self._requester.request(
             "POST",
-            "courses/{}/assignments/{}/submissions/{}/peer_reviews".format(
-                self.course_id, self.assignment_id, self.id
-            ),
+            "courses/{}/assignments/{}/submissions/{}/peer_reviews".format(self.course_id, self.assignment_id, self.id),
             _kwargs=combine_kwargs(**kwargs),
         )
 
@@ -64,9 +59,7 @@ class Submission(CanvasObject):
         kwargs["user_id"] = user_id
         response = self._requester.request(
             "DELETE",
-            "courses/{}/assignments/{}/submissions/{}/peer_reviews".format(
-                self.course_id, self.assignment_id, self.id
-            ),
+            "courses/{}/assignments/{}/submissions/{}/peer_reviews".format(self.course_id, self.assignment_id, self.id),
             _kwargs=combine_kwargs(**kwargs),
         )
         return PeerReview(self._requester, response.json())
@@ -82,9 +75,7 @@ class Submission(CanvasObject):
         """
         response = self._requester.request(
             "PUT",
-            "courses/{}/assignments/{}/submissions/{}".format(
-                self.course_id, self.assignment_id, self.user_id
-            ),
+            "courses/{}/assignments/{}/submissions/{}".format(self.course_id, self.assignment_id, self.user_id),
             _kwargs=combine_kwargs(**kwargs),
         )
         response_json = response.json()
@@ -109,9 +100,7 @@ class Submission(CanvasObject):
             PeerReview,
             self._requester,
             "GET",
-            "courses/{}/assignments/{}/submissions/{}/peer_reviews".format(
-                self.course_id, self.assignment_id, self.id
-            ),
+            "courses/{}/assignments/{}/submissions/{}/peer_reviews".format(self.course_id, self.assignment_id, self.id),
             _kwargs=combine_kwargs(**kwargs),
         )
 
@@ -128,9 +117,7 @@ class Submission(CanvasObject):
         """
         response = self._requester.request(
             "PUT",
-            "courses/{}/assignments/{}/submissions/{}/read".format(
-                self.course_id, self.assignment_id, self.user_id
-            ),
+            "courses/{}/assignments/{}/submissions/{}/read".format(self.course_id, self.assignment_id, self.user_id),
         )
         return response.status_code == 204
 
@@ -147,9 +134,7 @@ class Submission(CanvasObject):
         """
         response = self._requester.request(
             "DELETE",
-            "courses/{}/assignments/{}/submissions/{}/read".format(
-                self.course_id, self.assignment_id, self.user_id
-            ),
+            "courses/{}/assignments/{}/submissions/{}/read".format(self.course_id, self.assignment_id, self.user_id),
         )
         return response.status_code == 204
 
@@ -173,7 +158,7 @@ class Submission(CanvasObject):
                 self.course_id, self.assignment_id, self.user_id
             ),
             file,
-            **kwargs
+            **kwargs,
         ).start()
 
         if response[0]:
@@ -186,14 +171,9 @@ class GroupedSubmission(CanvasObject):
         super(GroupedSubmission, self).__init__(requester, attributes)
 
         try:
-            self.submissions = [
-                Submission(requester, submission)
-                for submission in attributes["submissions"]
-            ]
+            self.submissions = [Submission(requester, submission) for submission in attributes["submissions"]]
         except KeyError:
             self.submissions = list()
 
     def __str__(self):
-        return "{} submission(s) for User #{}".format(
-            len(self.submissions), self.user_id
-        )
+        return "{} submission(s) for User #{}".format(len(self.submissions), self.user_id)

@@ -1,4 +1,5 @@
 """Schema validation tests for canvas_tools — no network, no mocks, no canvas_tui calls."""
+
 from canvas_sdk.agent_tools.canvas_tools import (
     ListCourses,
     GetAssignments,
@@ -25,9 +26,7 @@ CANVAS_TOOLS = [
 def test_all_canvas_tool_schemas_have_object_parameters():
     for tool in CANVAS_TOOLS:
         params = tool.SCHEMA["parameters"]
-        assert params.get("type") == "object", (
-            f"{tool.__name__}.SCHEMA['parameters']['type'] != 'object'"
-        )
+        assert params.get("type") == "object", f"{tool.__name__}.SCHEMA['parameters']['type'] != 'object'"
 
 
 def test_all_canvas_tool_schemas_have_name():
@@ -78,9 +77,7 @@ def test_get_syllabus_description_mentions_credit_hours():
 
 def test_get_grades_description_mentions_score_or_urgency():
     desc = GetGrades.SCHEMA["description"].lower()
-    assert "score" in desc or "urgency" in desc, (
-        f"GetGrades description does not mention score/urgency: {desc!r}"
-    )
+    assert "score" in desc or "urgency" in desc, f"GetGrades description does not mention score/urgency: {desc!r}"
 
 
 def test_list_announcements_has_past_days_property():

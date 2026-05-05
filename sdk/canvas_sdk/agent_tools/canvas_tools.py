@@ -3,6 +3,7 @@
 All tools use canvas_sdk.Canvas directly via CANVAS_TOKEN + CANVAS_BASE_URL env vars.
 No canvas_tui dependency.
 """
+
 from __future__ import annotations
 
 import os
@@ -22,6 +23,7 @@ __all__ = [
 
 def _client():
     from canvas_sdk import Canvas
+
     base_url = os.environ.get("CANVAS_BASE_URL", "https://canvas.vt.edu")
     token = os.environ.get("CANVAS_TOKEN", "")
     if not token:
@@ -64,8 +66,8 @@ class ListCourses:
                 "course_code": getattr(course, "course_code", ""),
                 "credits": getattr(course, "credits", None),
                 "term": getattr(getattr(course, "term", None), "name", None)
-                        if isinstance(getattr(course, "term", None), object)
-                        else getattr(course, "term", None),
+                if isinstance(getattr(course, "term", None), object)
+                else getattr(course, "term", None),
             }
             for course in c.get_courses(**kwargs)
         ]
@@ -100,6 +102,7 @@ class GetAssignments:
     @staticmethod
     def call(args: dict) -> list[dict]:
         import datetime as dt
+
         c = _client()
         horizon = int(args.get("horizon_days", 14))
         include_submitted = bool(args.get("include_submitted", False))
@@ -125,20 +128,26 @@ class GetAssignments:
                 if due and due > cutoff:
                     continue
                 sub = getattr(item, "submission", {}) or {}
-                submitted = bool(sub.get("submitted_at") if isinstance(sub, dict) else getattr(sub, "submitted_at", None))
+                submitted = bool(
+                    sub.get("submitted_at") if isinstance(sub, dict) else getattr(sub, "submitted_at", None)
+                )
                 if not include_submitted and submitted:
                     continue
-                results.append({
-                    "id": getattr(item, "id", None),
-                    "title": getattr(item, "name", ""),
-                    "course_id": cid,
-                    "due_iso": due,
-                    "points_possible": getattr(item, "points_possible", 0),
-                    "submission_types": getattr(item, "submission_types", []),
-                    "submitted": submitted,
-                    "late": sub.get("late", False) if isinstance(sub, dict) else getattr(sub, "late", False),
-                    "missing": sub.get("missing", False) if isinstance(sub, dict) else getattr(sub, "missing", False),
-                })
+                results.append(
+                    {
+                        "id": getattr(item, "id", None),
+                        "title": getattr(item, "name", ""),
+                        "course_id": cid,
+                        "due_iso": due,
+                        "points_possible": getattr(item, "points_possible", 0),
+                        "submission_types": getattr(item, "submission_types", []),
+                        "submitted": submitted,
+                        "late": sub.get("late", False) if isinstance(sub, dict) else getattr(sub, "late", False),
+                        "missing": sub.get("missing", False)
+                        if isinstance(sub, dict)
+                        else getattr(sub, "missing", False),
+                    }
+                )
         return results
 
 
@@ -167,8 +176,7 @@ class GetCourse:
         )
         teachers_raw = getattr(course, "teachers", []) or []
         teachers = [
-            t.get("display_name", "") if isinstance(t, dict) else getattr(t, "display_name", "")
-            for t in teachers_raw
+            t.get("display_name", "") if isinstance(t, dict) else getattr(t, "display_name", "") for t in teachers_raw
         ]
         term_raw = getattr(course, "term", None)
         term_name = term_raw.get("name") if isinstance(term_raw, dict) else getattr(term_raw, "name", None)
@@ -203,6 +211,7 @@ class GetSyllabus:
     def call(args: dict) -> str:
         import html
         import re
+
         c = _client()
         course = c.get_course(int(args["course_id"]), include=["syllabus_body"])
         raw = getattr(course, "syllabus_body", "") or ""
@@ -216,8 +225,7 @@ class GetTodo:
     SCHEMA = {
         "name": NAME,
         "description": (
-            "Fetch the student's Canvas todo/upcoming-events feed — "
-            "assignments and quizzes that need attention soon."
+            "Fetch the student's Canvas todo/upcoming-events feed — assignments and quizzes that need attention soon."
         ),
         "parameters": {"type": "object", "properties": {}, "required": []},
     }
@@ -227,15 +235,17 @@ class GetTodo:
         c = _client()
         out = []
         for item in c.get_todo_items():
-            out.append({
-                "type": getattr(item, "type", None),
-                "course_id": getattr(item, "course_id", None),
-                "title": getattr(item, "assignment", {}).get("name", "")
-                         if isinstance(getattr(item, "assignment", None), dict)
-                         else getattr(getattr(item, "assignment", None), "name", ""),
-                "due_iso": getattr(getattr(item, "assignment", None), "due_at", None),
-                "points_possible": getattr(getattr(item, "assignment", None), "points_possible", None),
-            })
+            out.append(
+                {
+                    "type": getattr(item, "type", None),
+                    "course_id": getattr(item, "course_id", None),
+                    "title": getattr(item, "assignment", {}).get("name", "")
+                    if isinstance(getattr(item, "assignment", None), dict)
+                    else getattr(getattr(item, "assignment", None), "name", ""),
+                    "due_iso": getattr(getattr(item, "assignment", None), "due_at", None),
+                    "points_possible": getattr(getattr(item, "assignment", None), "points_possible", None),
+                }
+            )
         return out
 
 
@@ -266,11 +276,13 @@ class GetGrades:
         if course_id:
             courses = [c.get_course(int(course_id), include=["total_scores"])]
         else:
-            courses = list(c.get_courses(
-                enrollment_state="active",
-                include=["total_scores"],
-                per_page=100,
-            ))
+            courses = list(
+                c.get_courses(
+                    enrollment_state="active",
+                    include=["total_scores"],
+                    per_page=100,
+                )
+            )
         results = []
         for course in courses:
             cid = getattr(course, "id", None)
@@ -318,6 +330,7 @@ class ListAnnouncements:
     @staticmethod
     def call(args: dict) -> list[dict]:
         import datetime as dt
+
         c = _client()
         course_ids = [int(x) for x in (args.get("course_ids") or [])]
         if not course_ids:
@@ -331,13 +344,15 @@ class ListAnnouncements:
         out = []
         for ann in c.get_announcements(context_codes, start_date=since):
             posted = getattr(ann, "posted_at", None)
-            out.append({
-                "id": getattr(ann, "id", None),
-                "title": getattr(ann, "title", ""),
-                "course_id": getattr(ann, "context_code", "").removeprefix("course_") or None,
-                "posted_iso": posted,
-                "message_preview": (getattr(ann, "message", "") or "")[:300],
-            })
+            out.append(
+                {
+                    "id": getattr(ann, "id", None),
+                    "title": getattr(ann, "title", ""),
+                    "course_id": getattr(ann, "context_code", "").removeprefix("course_") or None,
+                    "posted_iso": posted,
+                    "message_preview": (getattr(ann, "message", "") or "")[:300],
+                }
+            )
         return out
 
 
@@ -358,11 +373,13 @@ class ListPlannerItems:
         c = _client()
         out = []
         for note in c.get_planner_notes():
-            out.append({
-                "id": getattr(note, "id", None),
-                "title": getattr(note, "title", ""),
-                "todo_date": getattr(note, "todo_date", None),
-                "course_id": getattr(note, "course_id", None),
-                "details": getattr(note, "details", ""),
-            })
+            out.append(
+                {
+                    "id": getattr(note, "id", None),
+                    "title": getattr(note, "title", ""),
+                    "todo_date": getattr(note, "todo_date", None),
+                    "course_id": getattr(note, "course_id", None),
+                    "details": getattr(note, "details", ""),
+                }
+            )
         return out

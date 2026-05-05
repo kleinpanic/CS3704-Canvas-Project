@@ -25,13 +25,7 @@ class CanvasObject:
 
     def __repr__(self):  # pragma: no cover
         classname = self.__class__.__name__
-        attrs = ", ".join(
-            [
-                "{}={}".format(attr, val)
-                for attr, val in self.__dict__.items()
-                if attr != "attributes"
-            ]
-        )
+        attrs = ", ".join(["{}={}".format(attr, val) for attr, val in self.__dict__.items() if attr != "attributes"])
         return "{}({})".format(classname, attrs)
 
     def set_attributes(self, attributes: dict):

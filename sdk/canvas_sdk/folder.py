@@ -62,9 +62,7 @@ class Folder(CanvasObject):
 
         :rtype: :class:`canvas_sdk.folder.Folder`
         """
-        response = self._requester.request(
-            "DELETE", "folders/{}".format(self.id), _kwargs=combine_kwargs(**kwargs)
-        )
+        response = self._requester.request("DELETE", "folders/{}".format(self.id), _kwargs=combine_kwargs(**kwargs))
         return Folder(self._requester, response.json())
 
     def get_files(self, **kwargs):
@@ -97,9 +95,7 @@ class Folder(CanvasObject):
         :rtype: :class:`canvas_sdk.paginated_list.PaginatedList` of
             :class:`canvas_sdk.folder.Folder`
         """
-        return PaginatedList(
-            Folder, self._requester, "GET", "folders/{}/folders".format(self.id)
-        )
+        return PaginatedList(Folder, self._requester, "GET", "folders/{}/folders".format(self.id))
 
     def update(self, **kwargs):
         """
@@ -110,9 +106,7 @@ class Folder(CanvasObject):
 
         :rtype: :class:`canvas_sdk.folder.Folder`
         """
-        response = self._requester.request(
-            "PUT", "folders/{}".format(self.id), _kwargs=combine_kwargs(**kwargs)
-        )
+        response = self._requester.request("PUT", "folders/{}".format(self.id), _kwargs=combine_kwargs(**kwargs))
 
         if "name" in response.json():
             super(Folder, self).set_attributes(response.json())

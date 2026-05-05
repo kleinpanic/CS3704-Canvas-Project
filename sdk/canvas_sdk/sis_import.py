@@ -34,9 +34,7 @@ class SisImport(CanvasObject):
         """
         response = self._requester.request(
             "PUT",
-            "accounts/{}/sis_imports/{}/restore_states".format(
-                self.account_id, self.id
-            ),
+            "accounts/{}/sis_imports/{}/restore_states".format(self.account_id, self.id),
             _kwargs=combine_kwargs(**kwargs),
         )
         return Progress(self._requester, response.json())

@@ -131,8 +131,11 @@ class UniversityRegistry:
                 if "name" in entry and ("canvas_url" in entry or "rmp_school_id" in entry):
                     # Replace if name matches, otherwise append
                     idx = next(
-                        (i for i, u in enumerate(self._universities)
-                         if u["name"].casefold() == entry["name"].casefold()),
+                        (
+                            i
+                            for i, u in enumerate(self._universities)
+                            if u["name"].casefold() == entry["name"].casefold()
+                        ),
                         None,
                     )
                     if idx is not None:

@@ -41,9 +41,7 @@ class Enrollment(CanvasObject):
 
         if task not in ALLOWED_TASKS:
             raise ValueError(
-                "{} is not a valid task. Please use one of the following: {}".format(
-                    task, ",".join(ALLOWED_TASKS)
-                )
+                "{} is not a valid task. Please use one of the following: {}".format(task, ",".join(ALLOWED_TASKS))
             )
 
         kwargs["task"] = task

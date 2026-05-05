@@ -3,6 +3,7 @@
 The actual calendar backend is selected by Config.calendar_backend. All tools
 here delegate to a single CalendarAdapter that abstracts the four backends.
 """
+
 from __future__ import annotations
 
 import datetime as dt
@@ -13,6 +14,7 @@ __all__ = ["ListEvents", "FindFreeBlocks", "CreateEvent", "ModifyEvent", "Delete
 
 def _adapter():
     from canvas_tui.agent.backends.calendar_adapter import CalendarAdapter
+
     return CalendarAdapter.from_config()
 
 
@@ -32,6 +34,7 @@ class ListEvents:
             "required": [],
         },
     }
+
     @staticmethod
     def call(args: dict) -> list[dict]:
         return _adapter().list_events(**args)
@@ -51,14 +54,23 @@ class FindFreeBlocks:
             "properties": {
                 "min_minutes": {"type": "integer", "default": 90, "description": "Minimum block length."},
                 "horizon_days": {"type": "integer", "default": 7},
-                "earliest_hour": {"type": "integer", "default": 7, "description": "Don't propose before this hour (24h)."},
-                "latest_hour": {"type": "integer", "default": 22, "description": "Don't propose ending after this hour."},
+                "earliest_hour": {
+                    "type": "integer",
+                    "default": 7,
+                    "description": "Don't propose before this hour (24h).",
+                },
+                "latest_hour": {
+                    "type": "integer",
+                    "default": 22,
+                    "description": "Don't propose ending after this hour.",
+                },
                 "calendar_id": {"type": "string", "default": "primary"},
                 "exclude_weekends": {"type": "boolean", "default": False},
             },
             "required": [],
         },
     }
+
     @staticmethod
     def call(args: dict) -> list[dict]:
         return _adapter().find_free_blocks(**args)
@@ -77,11 +89,15 @@ class CreateEvent:
                 "end_iso": {"type": "string"},
                 "description": {"type": "string"},
                 "calendar_id": {"type": "string", "default": "primary"},
-                "rationale": {"type": "string", "description": "Brief reason for this scheduling decision (logged in event description)."},
+                "rationale": {
+                    "type": "string",
+                    "description": "Brief reason for this scheduling decision (logged in event description).",
+                },
             },
             "required": ["title", "start_iso", "end_iso"],
         },
     }
+
     @staticmethod
     def call(args: dict) -> dict:
         return _adapter().create_event(**args)
@@ -108,6 +124,7 @@ class ModifyEvent:
             "required": ["event_id"],
         },
     }
+
     @staticmethod
     def call(args: dict) -> dict:
         return _adapter().propose_modification(**args)
@@ -127,6 +144,7 @@ class DeleteEvent:
             "required": ["event_id", "rationale"],
         },
     }
+
     @staticmethod
     def call(args: dict) -> dict:
         return _adapter().propose_deletion(**args)

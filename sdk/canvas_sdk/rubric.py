@@ -93,9 +93,7 @@ class RubricAssociation(CanvasObject):
 
         response = self._requester.request(
             "POST",
-            "courses/{}/rubric_associations/{}/rubric_assessments".format(
-                self.course_id, self.id
-            ),
+            "courses/{}/rubric_associations/{}/rubric_assessments".format(self.course_id, self.id),
             _kwargs=combine_kwargs(**kwargs),
         )
 
