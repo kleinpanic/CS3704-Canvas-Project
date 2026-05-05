@@ -1,5 +1,6 @@
-gradio>=4.0
+gradio>=4.0,<5
 transformers>=4.47
 torch>=2.1
 huggingface-hub>=0.20
 accelerate>=0.25
+audioop-lts; python_version >= "3.13"
