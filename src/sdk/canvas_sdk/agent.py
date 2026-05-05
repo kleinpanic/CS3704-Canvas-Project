@@ -7,7 +7,6 @@ registry until the model produces a final answer with no further tool calls
 
 from __future__ import annotations
 
-import json
 import logging
 import os
 from typing import Any
@@ -15,6 +14,9 @@ from typing import Any
 from canvas_sdk.agent_tools import dispatch, get_schemas
 from canvas_sdk.backends.gemma4_backend import Gemma4Backend
 from canvas_sdk.tool_parser import extract_final_answer, format_tool_result, parse_tool_calls
+
+# Re-exported as a Union so callers can pass either backend without an extra import.
+AgentBackend = Gemma4Backend  # alias kept for back-compat; GeminiBackend is duck-compatible
 
 logger = logging.getLogger(__name__)
 
@@ -62,11 +64,31 @@ def build_system_prompt(template: str = DEFAULT_SYSTEM_PROMPT) -> str:
 
 
 class CanvasAgent:
-    """Drives a Gemma4 backend through the Canvas tool registry."""
+    """Drives a Gemma4 (or Gemini fallback) backend through the Canvas tool registry."""
 
-    def __init__(self, backend: Gemma4Backend, max_turns: int = 1):
+    def __init__(self, backend, max_turns: int = 8):
+        # Accepts Gemma4Backend OR GeminiBackend — both expose `.chat(messages, tools=...)`.
         self.backend = backend
         self.max_turns = max_turns
+
+    @classmethod
+    def auto(cls, max_turns: int = 8, **backend_kw):
+        """Build an agent using ``ensure_model()`` to resolve the backend.
+
+        If the model loader returns the Gemini-fallback sentinel, wires up a
+        ``GeminiBackend`` instead of ``Gemma4Backend``. Extra kwargs are
+        forwarded to whichever backend gets constructed (e.g. ``api_key=``).
+        """
+        from canvas_sdk.model_loader import GEMINI_FALLBACK_SENTINEL, ensure_model
+
+        endpoint, model = ensure_model()
+        if endpoint == GEMINI_FALLBACK_SENTINEL:
+            from canvas_sdk.backends.gemini_backend import GeminiBackend
+
+            backend = GeminiBackend(model=model, **backend_kw)
+        else:
+            backend = Gemma4Backend(endpoint=endpoint, model=model, **backend_kw)
+        return cls(backend, max_turns=max_turns)
 
     def run(
         self,
