@@ -46,9 +46,8 @@ cache/
 *.log
 data/rerank_train*.jsonl
 
-# ─── Gemma 2B Reranker / Dataset Pipeline ─────────────────────────────────────
-# Training data contains Canvas PII — NEVER commit
-data/collab/*.jsonl
+# ─── Dataset Pipeline ─────────────────────────────────────────────────────────
+# data/collab/*.jsonl — anonymized contributor files, OK to commit (output of share_my_canvas.py)
 data/rerank_*.jsonl
 rerank_*.jsonl
 # Reranker subdir data (same rules — local only)

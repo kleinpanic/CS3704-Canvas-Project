@@ -15,27 +15,7 @@ The v2 milestone adds a **specialized calendar+study agent** that combines
 Canvas API tool calls with neuroscience-grounded study planning heuristics
 (spaced repetition, deep-work block sizing, exam bracketing).
 
-### Contributing training data
-
-Teammates collect agent trajectories to build the v2 training corpus:
-
-```bash
-export CANVAS_TOKEN=your_canvas_token
-export CANVAS_BASE_URL=https://canvas.vt.edu
-
-python3 scripts/collect_trajectories.py \
-    --contributor YOUR_HANDLE \
-    --output data/trajectories/collab/YOUR_HANDLE_trajectories.jsonl \
-    --max-trajectories 20
-```
-
-Then open a PR adding your JSONL file to `data/trajectories/collab/`.
-PII is anonymized before write — no raw course codes or names leave your machine.
-See [`data/trajectories/README.md`](data/trajectories/README.md) for full details.
-
-The training pipeline and model weights live at [CS3704-DPO-SSOT](https://github.com/kleinpanic/CS3704-DPO-SSOT)
-and will be published to HuggingFace once v2 training is complete.
-See [`src/canvas_tui/agent/`](src/canvas_tui/agent/) for the agent code.
+Model weights will be published to HuggingFace and the accompanying paper will be published on Zenodo once v2 training is complete.
 
 ---
 
@@ -165,8 +145,7 @@ python -m build           # build package
 src/canvas_tui/           Application source code
   agent/                  v2 CalendarAgent (tool calls + study planning)
 tests/                    Test suite
-scripts/                  Data pipeline utilities
-  collect_trajectories.py  Teammate trajectory collector for v2 training
+scripts/                  Data contribution utilities (see scripts/README.md)
 docs/                     Architecture and research docs
 docs-site/                GitHub Pages documentation
 data/
