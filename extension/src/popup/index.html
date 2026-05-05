@@ -37,18 +37,24 @@
           </select>
         </div>
         <div id="upcoming-content">
-          <p class="view-title">Assignments</p>
+          <p class="view-title">Upcoming Assignments</p>
           <ul id="upcoming-list" class="item-list"></ul>
-          <div id="loading" class="state-msg">Loading…</div>
+          <div id="loading" class="state-msg">
+            <div class="loader"></div>
+            <span>Loading assignments…</span>
+          </div>
           <div id="error" class="state-msg error hidden"></div>
         </div>
       </section>
 
       <!-- Courses View -->
       <section id="view-courses" class="view hidden">
-        <p class="view-title">Your Courses</p>
+        <p class="view-title">All Courses</p>
         <ul id="courses-list" class="item-list"></ul>
-        <div id="courses-loading" class="state-msg">Loading…</div>
+        <div id="courses-loading" class="state-msg">
+          <div class="loader"></div>
+          <span>Loading courses…</span>
+        </div>
         <div id="courses-error" class="state-msg error hidden"></div>
         <div id="professor-panel" class="hidden"></div>
       </section>
@@ -60,9 +66,46 @@
           <h2 id="detail-course-name"></h2>
         </div>
         <div id="professor-section" class="hidden"></div>
-        <ul id="detail-list" class="item-list"></ul>
-        <div id="detail-loading" class="state-msg">Loading…</div>
-        <div id="detail-empty" class="state-msg hidden">No upcoming assignments</div>
+        
+        <nav class="detail-tabs">
+          <button class="detail-tab active" data-detail-view="assignments">Assignments</button>
+          <button class="detail-tab" data-detail-view="announcements">Announcements</button>
+          <button class="detail-tab" data-detail-view="modules">Modules</button>
+        </nav>
+
+        <div id="detail-content">
+          <!-- Assignments Sub-view -->
+          <div id="detail-assignments" class="detail-sub-view">
+            <p class="view-title">Upcoming for this Course</p>
+            <ul id="detail-list" class="item-list"></ul>
+            <div id="detail-empty" class="state-msg hidden">
+              <span>No upcoming assignments</span>
+            </div>
+          </div>
+
+          <!-- Announcements Sub-view -->
+          <div id="detail-announcements" class="detail-sub-view hidden">
+            <p class="view-title">Recent Announcements</p>
+            <ul id="announcements-list" class="item-list"></ul>
+            <div id="announcements-empty" class="state-msg hidden">
+              <span>No recent announcements</span>
+            </div>
+          </div>
+
+          <!-- Modules Sub-view -->
+          <div id="detail-modules" class="detail-sub-view hidden">
+            <p class="view-title">Modules</p>
+            <ul id="modules-list" class="item-list"></ul>
+            <div id="modules-empty" class="state-msg hidden">
+              <span>No modules found</span>
+            </div>
+          </div>
+        </div>
+
+        <div id="detail-loading" class="state-msg">
+          <div class="loader"></div>
+          <span>Loading details…</span>
+        </div>
       </section>
     </main>
 

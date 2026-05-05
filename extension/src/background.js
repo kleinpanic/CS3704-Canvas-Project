@@ -14,6 +14,8 @@ import {
   getUpcomingAssignments,
   getCourses,
   getCourseAssignments,
+  getCourseAnnouncements,
+  getCourseModules,
   dismissAssignment,
   getDismissed,
   clearCache,
@@ -96,6 +98,12 @@ const messageHandlers = {
 
   [MESSAGE_TYPES.getCourseAssignments]: (msg) =>
     getCourseAssignments((courseId) => canvasClient.getCourseAssignments(courseId), msg.courseId),
+
+  [MESSAGE_TYPES.getCourseAnnouncements]: (msg) =>
+    getCourseAnnouncements((courseId) => canvasClient.getCourseAnnouncements(courseId), msg.courseId),
+
+  [MESSAGE_TYPES.getCourseModules]: (msg) =>
+    getCourseModules((courseId) => canvasClient.getCourseModules(courseId), msg.courseId),
 
   [MESSAGE_TYPES.validateToken]: async () => {
     const { user } = await canvasClient.validateToken();

@@ -14,6 +14,8 @@ import { getDismissed, dismissAssignment } from '../lib/cache.js';
 import {
   getCourses,
   getCourseAssignments,
+  getCourseAnnouncements,
+  getCourseModules,
   getUpcomingAssignments,
   setToken,
   clearCache,
@@ -55,6 +57,16 @@ const $detailList       = document.getElementById("detail-list");
 const $detailLoading    = document.getElementById("detail-loading");
 const $detailEmpty      = document.getElementById("detail-empty");
 const $professorSection = document.getElementById("professor-section");
+
+// Detail Tabs & Sub-views
+const $detailTabs           = document.querySelectorAll(".detail-tab");
+const $detailAssignments    = document.getElementById("detail-assignments");
+const $detailAnnouncements  = document.getElementById("detail-announcements");
+const $detailModules        = document.getElementById("detail-modules");
+const $announcementsList    = document.getElementById("announcements-list");
+const $announcementsEmpty   = document.getElementById("announcements-empty");
+const $modulesList          = document.getElementById("modules-list");
+const $modulesEmpty         = document.getElementById("modules-empty");
 
 // ── State ─────────────────────────────────────────────────────────────────────
 
@@ -173,15 +185,31 @@ function renderCourses(courses) {
     return;
   }
 
-  $coursesList.innerHTML = courses.map(c => `
-    <li class="course-card" data-id="${c.id}" data-name="${encodeURIComponent(c.name || c.course_code || "Course")}">
-      <span class="course-dot"></span>
-      <div class="course-info">
-        <div class="course-full-name">${c.name || "Unnamed Course"}</div>
-        <div class="course-code">${c.course_code || ""}</div>
-      </div>
-      <span class="course-arrow">›</span>
-    </li>`).join("");
+  $coursesList.innerHTML = courses.map(c => {
+    const teacher = c.teachers?.[0]?.display_name || "";
+    return `
+      <li class="course-card" data-id="${c.id}" data-name="${encodeURIComponent(c.name || c.course_code || "Course")}">
+        <span class="course-dot"></span>
+        <div class="course-info">
+          <div class="course-full-name">${c.name || "Unnamed Course"}</div>
+          <div class="course-meta">
+            <span class="course-code">${c.course_code || ""}</span>
+            ${teacher ? `<span class="course-teacher" data-prof="${teacher}"> • ${teacher}</span>` : ""}
+          </div>
+        </div>
+        <span class="course-arrow">›</span>
+      </li>`;
+  }).join("");
+
+  // Fetch ratings for each teacher
+  $coursesList.querySelectorAll(".course-teacher").forEach(span => {
+    const profName = span.dataset.prof;
+    getRmpRating(profName).then(rmp => {
+      if (rmp?.ok && rmp.rating) {
+        span.innerHTML += ` <span class="rating-badge">${rmp.rating.toFixed(1)}</span>`;
+      }
+    }).catch(() => {});
+  });
 
   $coursesList.querySelectorAll(".course-card").forEach(card => {
     card.addEventListener("click", () => {
@@ -199,6 +227,17 @@ function renderStars(rating) {
   return '★'.repeat(full) + (half ? '½' : '') + '☆'.repeat(empty);
 }
 
+function switchDetailTab(tabName) {
+  $detailTabs.forEach(t => t.classList.toggle("active", t.dataset.detailView === tabName));
+  $detailAssignments.classList.toggle("hidden", tabName !== "assignments");
+  $detailAnnouncements.classList.toggle("hidden", tabName !== "announcements");
+  $detailModules.classList.toggle("hidden", tabName !== "modules");
+}
+
+$detailTabs.forEach(tab => {
+  tab.addEventListener("click", () => switchDetailTab(tab.dataset.detailView));
+});
+
 // ── Render: Course Detail ─────────────────────────────────────────────────────
 
 async function openCourseDetail(courseId, courseName) {
@@ -209,10 +248,18 @@ async function openCourseDetail(courseId, courseName) {
 
   $detailName.textContent = courseName;
   $detailList.innerHTML = "";
+  $announcementsList.innerHTML = "";
+  $modulesList.innerHTML = "";
+  
   $detailLoading.classList.remove("hidden");
   $detailEmpty.classList.add("hidden");
+  $announcementsEmpty.classList.add("hidden");
+  $modulesEmpty.classList.add("hidden");
   $professorSection.classList.add("hidden");
   $professorSection.innerHTML = "";
+
+  // Reset to assignments tab
+  switchDetailTab("assignments");
 
   const course = allCourses.find(c => String(c.id) === String(courseId));
   const teacherName = course?.teachers?.[0]?.display_name || null;
@@ -238,41 +285,82 @@ async function openCourseDetail(courseId, courseName) {
   }
 
   try {
-    const res = await getCourseAssignments(courseId);
+    const [assignmentsRes, announcementsRes, modulesRes] = await Promise.all([
+      getCourseAssignments(courseId),
+      getCourseAnnouncements(courseId),
+      getCourseModules(courseId)
+    ]);
+
     $detailLoading.classList.add("hidden");
 
-    if (!res.ok) throw new Error(res.error || "Failed");
+    // Render Assignments
+    if (assignmentsRes.ok) {
+      const assignments = (assignmentsRes.data || []).filter(a => {
+        if (!a.due_at) return false;
+        return new Date(a.due_at) > new Date();
+      }).sort((a, b) => new Date(a.due_at) - new Date(b.due_at));
 
-    const assignments = (res.data || []).filter(a => {
-      if (!a.due_at) return false;
-      return new Date(a.due_at) > new Date();
-    }).sort((a, b) => new Date(a.due_at) - new Date(b.due_at));
-
-    if (!assignments.length) {
-      $detailEmpty.classList.remove("hidden");
-      return;
+      if (!assignments.length) {
+        $detailEmpty.classList.remove("hidden");
+      } else {
+        $detailList.innerHTML = assignments.map(a => {
+          const cls = urgencyClass(a.due_at);
+          return `
+            <li class="assignment-item ${cls}" data-id="${a.id}">
+              <div class="assignment-main">
+                <div class="assignment-name">${a.name || "Assignment"}</div>
+                <div class="due-date ${cls}">${formatDue(a.due_at)}</div>
+              </div>
+              <div class="assignment-actions">
+                <button class="open-btn" data-url="${a.html_url || ""}" title="Open in Canvas">→</button>
+              </div>
+            </li>`;
+        }).join("");
+      }
     }
 
-    $detailList.innerHTML = assignments.map(a => {
-      const cls = urgencyClass(a.due_at);
-      return `
-        <li class="assignment-item ${cls}" data-id="${a.id}">
-          <div class="assignment-main">
-            <div class="assignment-name">${a.name || "Assignment"}</div>
-            <div class="due-date ${cls}">${formatDue(a.due_at)}</div>
-          </div>
-          <div class="assignment-actions">
-            <button class="open-btn" data-url="${a.html_url || ""}" title="Open in Canvas">→</button>
-          </div>
-        </li>`;
-    }).join("");
+    // Render Announcements
+    if (announcementsRes.ok) {
+      const announcements = announcementsRes.data || [];
+      if (!announcements.length) {
+        $announcementsEmpty.classList.remove("hidden");
+      } else {
+        $announcementsList.innerHTML = announcements.map(a => `
+          <li class="assignment-item">
+            <div class="assignment-main">
+              <div class="assignment-name">${a.title || "Announcement"}</div>
+              <div class="due-date">${new Date(a.posted_at || a.created_at).toLocaleDateString()}</div>
+            </div>
+            <div class="assignment-actions">
+              <button class="open-btn" data-url="${a.html_url || ""}" title="Open in Canvas">→</button>
+            </div>
+          </li>`).join("");
+      }
+    }
 
-    $detailList.querySelectorAll(".open-btn").forEach(btn => {
+    // Render Modules
+    if (modulesRes.ok) {
+      const modules = modulesRes.data || [];
+      if (!modules.length) {
+        $modulesEmpty.classList.remove("hidden");
+      } else {
+        $modulesList.innerHTML = modules.map(m => `
+          <li class="assignment-item">
+            <div class="assignment-main">
+              <div class="assignment-name">${m.name || "Module"}</div>
+              <div class="due-date">${m.items_count || 0} items</div>
+            </div>
+          </li>`).join("");
+      }
+    }
+
+    $viewDetail.querySelectorAll(".open-btn").forEach(btn => {
       btn.addEventListener("click", () => {
         const url = btn.dataset.url;
         if (url) window.open(url, "_blank");
       });
     });
+
   } catch (err) {
     $detailLoading.classList.add("hidden");
     $detailList.innerHTML = `<li class="state-msg error">${err.message}</li>`;
@@ -374,39 +462,47 @@ function openSettings() {
   const panel = document.createElement("div");
   panel.id = "settings-panel";
   panel.innerHTML = `
-    <div style="max-width:340px;width:100%">
+    <div class="settings-container">
       <div class="settings-header">
         <div>
           <h2>Settings</h2>
-          <p>Canvas TUI companion preferences</p>
+          <p class="header-sub" style="color:var(--text-muted);opacity:1">Canvas Tracker Preferences</p>
         </div>
         <button id="close-settings" aria-label="Close settings">✕</button>
       </div>
       <div class="settings-body">
-        <label>
-          Canvas API Token
+        <div class="settings-group">
+          <label for="token-input">Canvas API Token</label>
           <input type="password" id="token-input" placeholder="Paste your Canvas API token…" />
           <small>canvas.vt.edu → Account → Settings → New Access Token</small>
-        </label>
-        <button id="save-token" class="primary-btn">Save Token</button>
+        </div>
+        
+        <button id="save-token" class="btn-primary" style="width:100%">Save Token</button>
         <div id="token-status"></div>
 
-        <label style="margin-top:16px;display:block">Appearance</label>
-        <div class="settings-row">
-          <span class="settings-row-label">Theme</span>
-          <div class="theme-toggle">
-            <button class="theme-opt ${prefs.theme === "light" ? "active" : ""}" data-theme="light">Light</button>
-            <button class="theme-opt ${prefs.theme === "dark" ? "active" : ""}" data-theme="dark">Dark</button>
+        <hr style="border:0;border-top:1px solid var(--border);margin:var(--space-lg) 0" />
+
+        <div class="settings-group">
+          <label>Appearance</label>
+          <div class="settings-row">
+            <span class="settings-row-label">Theme</span>
+            <div class="theme-toggle">
+              <button class="theme-opt ${prefs.theme === "light" ? "active" : ""}" data-theme="light">Light</button>
+              <button class="theme-opt ${prefs.theme === "dark" ? "active" : ""}" data-theme="dark">Dark</button>
+            </div>
           </div>
         </div>
 
-        <label style="margin-top:16px;display:block">
-          Days ahead to show
-          <input type="number" id="days-ahead-input" min="1" max="90" value="${prefs.daysAhead}" />
-          <small>Assignments due further away are hidden from the Upcoming list.</small>
-        </label>
+        <div class="settings-group">
+          <label for="days-ahead-input">Lookahead Window</label>
+          <div style="display:flex;align-items:center;gap:var(--space-sm)">
+            <input type="number" id="days-ahead-input" min="1" max="90" value="${prefs.daysAhead}" style="width:80px" />
+            <span style="font-size:var(--size-sm)">days</span>
+          </div>
+          <small>Hide assignments due beyond this window.</small>
+        </div>
 
-        <button id="save-prefs" class="primary-btn" style="width:100%;margin-top:12px">Save Preferences</button>
+        <button id="save-prefs" class="btn-secondary" style="width:100%;margin-top:var(--space-sm)">Save Preferences</button>
         <div id="prefs-status"></div>
       </div>
     </div>`;
