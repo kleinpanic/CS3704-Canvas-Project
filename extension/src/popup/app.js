@@ -847,10 +847,12 @@ document.getElementById("agent-input")?.addEventListener("keydown", (e) => {
   }
 });
 
-document.querySelectorAll(".agent-chip").forEach(chip => {
-  chip.addEventListener("click", () => {
+document.querySelectorAll(".agent-tool-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
     switchTab("agent");
-    sendAgentQuery(chip.dataset.query);
+    const $input = document.getElementById("agent-input");
+    if ($input) $input.value = btn.dataset.query || "";
+    sendAgentQuery(btn.dataset.query || "");
   });
 });
 

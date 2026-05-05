@@ -133,15 +133,129 @@
           <span class="agent-badge">BETA</span>
         </div>
 
-        <!-- Quick-action chips -->
-        <div class="agent-chips" id="agent-chips">
-          <button class="agent-chip" data-query="What assignments are due this week?">Due this week</button>
-          <button class="agent-chip" data-query="Prioritize my upcoming assignments by urgency">Prioritize tasks</button>
-          <button class="agent-chip" data-query="Create a spaced study plan for my next exam">Study plan</button>
-          <button class="agent-chip" data-query="What are my current grades?">My grades</button>
-          <button class="agent-chip" data-query="Any recent announcements from my courses?">Announcements</button>
-          <button class="agent-chip" data-query="What courses am I enrolled in?">My courses</button>
-        </div>
+        <!-- 18 tool buttons grouped by family (collapsible) -->
+        <details class="agent-tools-panel" id="agent-tools-panel" open>
+          <summary class="agent-tools-summary">
+            <span>18 tools</span>
+            <span class="agent-tools-toggle-hint">click to collapse</span>
+          </summary>
+          <div class="agent-tools-body">
+            <!-- canvas (8) -->
+            <div class="agent-tool-family">
+              <div class="agent-tool-family-label">canvas</div>
+              <div class="agent-tool-grid">
+                <button class="agent-tool-btn" data-query="What assignments are due this week?" aria-label="canvas.get_assignments">
+                  <span class="agent-tool-btn-icon">&#x1F4CB;</span>
+                  <span class="agent-tool-btn-name">Get Assignments</span>
+                  <span class="agent-tool-btn-id">canvas.get_assignments</span>
+                </button>
+                <button class="agent-tool-btn" data-query="Tell me about my CS 3704 course" aria-label="canvas.get_course">
+                  <span class="agent-tool-btn-icon">&#x1F393;</span>
+                  <span class="agent-tool-btn-name">Get Course</span>
+                  <span class="agent-tool-btn-id">canvas.get_course</span>
+                </button>
+                <button class="agent-tool-btn" data-query="What are my current grades?" aria-label="canvas.get_grades">
+                  <span class="agent-tool-btn-icon">&#x1F4CA;</span>
+                  <span class="agent-tool-btn-name">Get Grades</span>
+                  <span class="agent-tool-btn-id">canvas.get_grades</span>
+                </button>
+                <button class="agent-tool-btn" data-query="Show me the syllabus for ECE 3574" aria-label="canvas.get_syllabus">
+                  <span class="agent-tool-btn-icon">&#x1F4C4;</span>
+                  <span class="agent-tool-btn-name">Get Syllabus</span>
+                  <span class="agent-tool-btn-id">canvas.get_syllabus</span>
+                </button>
+                <button class="agent-tool-btn" data-query="What's on my Canvas todo list?" aria-label="canvas.get_todo">
+                  <span class="agent-tool-btn-icon">&#x2705;</span>
+                  <span class="agent-tool-btn-name">Get Todo</span>
+                  <span class="agent-tool-btn-id">canvas.get_todo</span>
+                </button>
+                <button class="agent-tool-btn" data-query="Any new announcements in my courses?" aria-label="canvas.list_announcements">
+                  <span class="agent-tool-btn-icon">&#x1F4E3;</span>
+                  <span class="agent-tool-btn-name">List Announcements</span>
+                  <span class="agent-tool-btn-id">canvas.list_announcements</span>
+                </button>
+                <button class="agent-tool-btn" data-query="List all my enrolled courses this term" aria-label="canvas.list_courses">
+                  <span class="agent-tool-btn-icon">&#x1F4DA;</span>
+                  <span class="agent-tool-btn-name">List Courses</span>
+                  <span class="agent-tool-btn-id">canvas.list_courses</span>
+                </button>
+                <button class="agent-tool-btn" data-query="Show me my planner for the next 7 days" aria-label="canvas.list_planner_items">
+                  <span class="agent-tool-btn-icon">&#x1F5D3;&#xFE0F;</span>
+                  <span class="agent-tool-btn-name">List Planner Items</span>
+                  <span class="agent-tool-btn-id">canvas.list_planner_items</span>
+                </button>
+              </div>
+            </div>
+            <!-- calendar (5) -->
+            <div class="agent-tool-family">
+              <div class="agent-tool-family-label">calendar</div>
+              <div class="agent-tool-grid">
+                <button class="agent-tool-btn" data-query="Create a study block tomorrow at 3pm for 90 minutes" aria-label="calendar.create_event">
+                  <span class="agent-tool-btn-icon">&#x2795;</span>
+                  <span class="agent-tool-btn-name">Create Event</span>
+                  <span class="agent-tool-btn-id">calendar.create_event</span>
+                </button>
+                <button class="agent-tool-btn" data-query="Cancel my Friday office hours visit" aria-label="calendar.delete_event">
+                  <span class="agent-tool-btn-icon">&#x1F5D1;&#xFE0F;</span>
+                  <span class="agent-tool-btn-name">Delete Event</span>
+                  <span class="agent-tool-btn-id">calendar.delete_event</span>
+                </button>
+                <button class="agent-tool-btn" data-query="Find me a 2-hour block to study tomorrow" aria-label="calendar.find_free_blocks">
+                  <span class="agent-tool-btn-icon">&#x1F50D;</span>
+                  <span class="agent-tool-btn-name">Find Free Blocks</span>
+                  <span class="agent-tool-btn-id">calendar.find_free_blocks</span>
+                </button>
+                <button class="agent-tool-btn" data-query="What's on my calendar this week?" aria-label="calendar.list_events">
+                  <span class="agent-tool-btn-icon">&#x1F4C5;</span>
+                  <span class="agent-tool-btn-name">List Events</span>
+                  <span class="agent-tool-btn-id">calendar.list_events</span>
+                </button>
+                <button class="agent-tool-btn" data-query="Move my CS office hours to Wednesday at 4pm" aria-label="calendar.modify_event">
+                  <span class="agent-tool-btn-icon">&#x270F;&#xFE0F;</span>
+                  <span class="agent-tool-btn-name">Modify Event</span>
+                  <span class="agent-tool-btn-id">calendar.modify_event</span>
+                </button>
+              </div>
+            </div>
+            <!-- reranker (1) -->
+            <div class="agent-tool-family">
+              <div class="agent-tool-family-label">reranker</div>
+              <div class="agent-tool-grid">
+                <button class="agent-tool-btn" data-query="Rank my todos by what I should do first" aria-label="reranker.priority_hint">
+                  <span class="agent-tool-btn-icon">&#x1F3C6;</span>
+                  <span class="agent-tool-btn-name">Priority Hint</span>
+                  <span class="agent-tool-btn-id">reranker.priority_hint</span>
+                </button>
+              </div>
+            </div>
+            <!-- study (4) -->
+            <div class="agent-tool-family">
+              <div class="agent-tool-family-label">study</div>
+              <div class="agent-tool-grid">
+                <button class="agent-tool-btn" data-query="Build me an exam-prep bracket for the May 12 final" aria-label="study.exam_bracket">
+                  <span class="agent-tool-btn-icon">&#x1F3D7;&#xFE0F;</span>
+                  <span class="agent-tool-btn-name">Exam Bracket</span>
+                  <span class="agent-tool-btn-id">study.exam_bracket</span>
+                </button>
+                <button class="agent-tool-btn" data-query="What study block size should I use for a 4-credit physics class?" aria-label="study.recommend_block_size">
+                  <span class="agent-tool-btn-icon">&#x23F1;&#xFE0F;</span>
+                  <span class="agent-tool-btn-name">Recommend Block Size</span>
+                  <span class="agent-tool-btn-id">study.recommend_block_size</span>
+                </button>
+                <button class="agent-tool-btn" data-query="Plan a study schedule for my whole semester" aria-label="study.semester_schedule">
+                  <span class="agent-tool-btn-icon">&#x1F5FA;&#xFE0F;</span>
+                  <span class="agent-tool-btn-name">Semester Schedule</span>
+                  <span class="agent-tool-btn-id">study.semester_schedule</span>
+                </button>
+                <button class="agent-tool-btn" data-query="Compute Cepeda spacing intervals for my exam in 12 days" aria-label="study.spaced_schedule">
+                  <span class="agent-tool-btn-icon">&#x1F9E0;</span>
+                  <span class="agent-tool-btn-name">Spaced Schedule</span>
+                  <span class="agent-tool-btn-id">study.spaced_schedule</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </details>
 
         <!-- Chat history -->
         <div id="agent-messages" class="agent-messages"></div>
@@ -149,15 +263,15 @@
         <!-- Tool trace (shown while thinking) -->
         <div id="agent-trace" class="agent-trace hidden"></div>
 
-        <!-- Input row -->
+        <!-- Input row (fixed at bottom) -->
         <div class="agent-input-row">
-          <input
-            type="text"
+          <textarea
             id="agent-input"
             class="agent-input"
+            rows="2"
             placeholder="Ask about assignments, grades, study plans…"
             aria-label="Ask the Canvas AI agent"
-          />
+          ></textarea>
           <button id="agent-send" class="agent-send-btn" aria-label="Send query">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
               <line x1="22" y1="2" x2="11" y2="13"></line>
