@@ -2,16 +2,18 @@
  * Production Chrome Extension API shim for GitHub Pages live demo.
  *
  * Serves data from pre-fetched static JSON files (no CORS needed).
- * CANVAS_TOKEN is injected by CI as __CANVAS_TOKEN__ → actual value at build time.
- * HF_TOKEN is injected by CI as __HF_TOKEN__ → actual value at build time.
- * DATA_BASE points to the pre-fetched JSON snapshots baked at CI time.
+ * NO secrets baked into this shim — Canvas data is pre-fetched at CI time
+ * and stored as static JSON; the popup never calls canvas.vt.edu at runtime
+ * in demo mode (the shim's handlers below intercept every message).
+ *
+ * AGENT_QUERY routes through a Cloudflare Worker proxy that holds the
+ * HF_TOKEN as a server-side secret. The browser only sees the proxy URL.
  */
 (function () {
   'use strict';
 
-  const TOKEN = '__CANVAS_TOKEN__';
-  const HF_TOKEN = '__HF_TOKEN__';
-  const HF_SPACE_URL = 'https://kleinpanic93-canvas-calendar-agent-demo.hf.space/api/predict';
+  const TOKEN = 'DEMO_MODE_NO_TOKEN'; // cosmetic only — no runtime canvas calls
+  const PROXY_URL = 'https://cs3704-demo-proxy.kleinpanic.workers.dev/chat';
   // Popup lives at extension/src/popup/ — data is 3 levels up at site root /data/
   const DATA_BASE = '../../../data/';
 
@@ -53,30 +55,19 @@
     AGENT_QUERY: async (msg) => {
       const userMsg = msg.query || '';
       try {
-        const headers = { 'Content-Type': 'application/json' };
-        if (HF_TOKEN && HF_TOKEN !== '__HF_TOKEN__') {
-          headers['Authorization'] = `Bearer ${HF_TOKEN}`;
-        }
-        let resp = await fetch(HF_SPACE_URL, {
+        const resp = await fetch(PROXY_URL, {
           method: 'POST',
-          headers,
-          body: JSON.stringify({ data: [userMsg] }),
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: userMsg }),
         });
-        if (resp.status === 503) {
-          const errJson = await resp.json().catch(() => ({}));
-          const eta = errJson.estimated_time ? Math.ceil(errJson.estimated_time) : 30;
-          return { ok: false, error: `Model warming up, ~${eta}s — please try again shortly.` };
-        }
         if (!resp.ok) {
-          return { ok: false, error: `HF Space error: HTTP ${resp.status}` };
+          return { ok: false, error: `Proxy error: HTTP ${resp.status}` };
         }
         const result = await resp.json();
-        const payload = result.data?.[0];
-        if (!payload) return { ok: false, error: 'Empty response from model.' };
-        const finalAnswer = payload.final_answer || payload.transcript || String(payload);
-        const rawCalls = Array.isArray(payload.tool_calls) ? payload.tool_calls : [];
-        const toolCalls = rawCalls.map(tc => ({
-          tool: tc.tool || tc.name || '(unknown)',
+        if (result.error) return { ok: false, error: result.error };
+        const finalAnswer = result.final_answer || '(empty response)';
+        const toolCalls = (result.tool_calls || []).map(tc => ({
+          tool: tc.tool || '(unknown)',
           label: tc.args ? JSON.stringify(tc.args).slice(0, 60) : '',
         }));
         return { ok: true, answer: finalAnswer, toolCalls };
