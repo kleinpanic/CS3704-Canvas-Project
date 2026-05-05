@@ -44,6 +44,7 @@ PAGES: list[tuple[str, list[tuple[str, str]]]] = [
             ("x", "Hide"),
             ("H", "ShowHid"),
             ("T", "Theme"),
+            ("E", "Settings"),
         ],
     ),
     (

@@ -1,3 +1,15 @@
+/**
+ * Canvas Deadline Tracker — Popup App
+ *
+ * Features:
+ * - Tab navigation: Upcoming assignments / All courses / Course detail
+ * - Course filter (dropdown to filter by course)
+ * - Stale-while-revalidate (instant load from cache, background refresh)
+ * - Dismiss/snooze assignments
+ * - Quick open in Canvas
+ * - Settings panel for token management and preferences (theme, days-ahead)
+ */
+
 import { getDismissed, dismissAssignment } from '../lib/cache.js';
 import {
   getCourses,
@@ -6,6 +18,8 @@ import {
   setToken,
   clearCache,
   refreshBadge,
+  getPreferences,
+  savePreferences,
 } from '../lib/extension-api.js';
 
 // ── DOM Refs ──────────────────────────────────────────────────────────────────
@@ -46,6 +60,8 @@ let allAssignments = [];
 let dismissedIds   = new Set();
 let allCourses     = [];
 let activeTab      = "upcoming";
+let settingsOpen   = false;
+let prefs          = { theme: "light", daysAhead: 7 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -72,13 +88,21 @@ function urgencyClass(dateStr) {
   return "";
 }
 
+function getDueDate(item) {
+  return item.all_day ? item.start_at : item.due_at;
+}
+
+function applyTheme(theme) {
+  document.body.classList.toggle("dark-theme", theme === "dark");
+}
+
 // ── Render: Upcoming ──────────────────────────────────────────────────────────
 
 function renderAssignmentItem(item, { showCourse = true } = {}) {
   const id = String(item.assignment?.id || item.id);
   if (dismissedIds.has(id)) return "";
   const courseName = item.context_course_name || item.course_name || "";
-  const dueDate    = item.all_day ? item.start_at : item.due_at;
+  const dueDate    = getDueDate(item);
   const cls        = urgencyClass(dueDate);
 
   return `
@@ -271,7 +295,11 @@ async function loadUpcoming() {
     const res = await getUpcomingAssignments();
     if (!res.ok) throw new Error(res.error || "Failed to fetch");
 
-    allAssignments = res.data.filter(e => e.type === "assignment");
+    const cutoff = Date.now() + prefs.daysAhead * 86400000;
+    allAssignments = (res.data || [])
+      .filter(e => e.type === "assignment")
+      .filter(e => { const d = getDueDate(e); return !d || new Date(d) <= cutoff; });
+
     populateCourseFilter();
     renderUpcoming(allAssignments);
 
@@ -307,13 +335,18 @@ async function loadCourses() {
 // ── Settings Panel ────────────────────────────────────────────────────────────
 
 function openSettings() {
+  settingsOpen = true;
+
   const panel = document.createElement("div");
   panel.id = "settings-panel";
   panel.innerHTML = `
     <div style="max-width:340px;width:100%">
       <div class="settings-header">
-        <h2>Settings</h2>
-        <button id="close-settings">✕</button>
+        <div>
+          <h2>Settings</h2>
+          <p>Canvas TUI companion preferences</p>
+        </div>
+        <button id="close-settings" aria-label="Close settings">✕</button>
       </div>
       <div class="settings-body">
         <label>
@@ -323,11 +356,35 @@ function openSettings() {
         </label>
         <button id="save-token" class="primary-btn">Save Token</button>
         <div id="token-status"></div>
+
+        <label style="margin-top:16px;display:block">Appearance</label>
+        <div class="settings-row">
+          <span class="settings-row-label">Theme</span>
+          <div class="theme-toggle">
+            <button class="theme-opt ${prefs.theme === "light" ? "active" : ""}" data-theme="light">Light</button>
+            <button class="theme-opt ${prefs.theme === "dark" ? "active" : ""}" data-theme="dark">Dark</button>
+          </div>
+        </div>
+
+        <label style="margin-top:16px;display:block">
+          Days ahead to show
+          <input type="number" id="days-ahead-input" min="1" max="90" value="${prefs.daysAhead}" />
+          <small>Assignments due further away are hidden from the Upcoming list.</small>
+        </label>
+
+        <button id="save-prefs" class="primary-btn" style="width:100%;margin-top:12px">Save Preferences</button>
+        <div id="prefs-status"></div>
       </div>
     </div>`;
+
   document.body.appendChild(panel);
 
-  document.getElementById("close-settings").onclick = () => panel.remove();
+  panel.addEventListener("click", (event) => {
+    if (event.target === panel) closeSettings();
+  });
+
+  document.getElementById("close-settings").onclick = closeSettings;
+
   document.getElementById("save-token").onclick = async () => {
     const token = document.getElementById("token-input").value.trim();
     if (!token) return;
@@ -335,8 +392,42 @@ function openSettings() {
     status.textContent = "Saving…";
     const res = await setToken(token);
     status.textContent = res.ok ? "Token saved!" : `Error: ${res.error}`;
-    if (res.ok) setTimeout(() => panel.remove(), 1000);
+    if (res.ok) setTimeout(() => closeSettings(), 1000);
   };
+
+  // Theme toggle
+  panel.querySelectorAll(".theme-opt").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      panel.querySelectorAll(".theme-opt").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+    });
+  });
+
+  // Prefs save
+  document.getElementById("save-prefs").onclick = async () => {
+    const activeThemeBtn = panel.querySelector(".theme-opt.active");
+    const newTheme = activeThemeBtn ? activeThemeBtn.dataset.theme : prefs.theme;
+    const daysInput = document.getElementById("days-ahead-input");
+    const newDays = Math.max(1, Math.min(90, parseInt(daysInput.value, 10) || 7));
+
+    const status = document.getElementById("prefs-status");
+    status.textContent = "Saving...";
+    const res = await savePreferences({ theme: newTheme, daysAhead: newDays });
+    if (res.ok) {
+      prefs.theme = newTheme;
+      prefs.daysAhead = newDays;
+      applyTheme(newTheme);
+      status.textContent = "Saved!";
+      setTimeout(() => closeSettings(), 800);
+    } else {
+      status.textContent = `Error: ${res.error}`;
+    }
+  };
+}
+
+function closeSettings() {
+  document.getElementById("settings-panel")?.remove();
+  settingsOpen = false;
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
@@ -351,9 +442,15 @@ $refreshBtn.addEventListener("click", async () => {
 });
 
 $settingsBtn.addEventListener("click", () => {
-  if (!document.getElementById("settings-panel")) openSettings();
+  if (settingsOpen) closeSettings();
+  else openSettings();
 });
 
 $courseFilter.addEventListener("change", () => renderUpcoming(allAssignments));
 
-loadUpcoming();
+// Load preferences before first render so theme and daysAhead are applied.
+getPreferences().then((p) => {
+  prefs = p;
+  applyTheme(prefs.theme);
+  loadUpcoming();
+}).catch(() => loadUpcoming());

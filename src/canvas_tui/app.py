@@ -43,6 +43,7 @@ from .screens import (
     HelpScreen,
     InputPrompt,
     LoadingScreen,
+    SettingsScreen,
     SyllabiScreen,
     WeekViewScreen,
 )
@@ -349,6 +350,7 @@ class CanvasTUI(App):
         ("right_square_bracket", "cmd_next", "Cmd >"),
         ("s", "cycle_sort", "Sort"),
         ("T", "toggle_theme", "Theme"),
+        ("E", "open_settings", "Settings"),
         ("question_mark", "show_help", "Help"),
     ]
 
@@ -382,7 +384,8 @@ class CanvasTUI(App):
         self._error_count = 0
         self._refresh_seq = 0
         self._grade_hydrating = False
-        self._theme: ThemeColors = set_theme("dark")
+        self._theme: ThemeColors = set_theme(self.cfg.theme)
+        self.dark = self.cfg.theme == "dark"
         self._sort_key = "due"  # "due", "course", "type", "title"
         self._notifier = DueNotifier(
             tz=self.cfg.user_tz,
@@ -735,6 +738,7 @@ class CanvasTUI(App):
 
     # ---------- mount / teardown ----------
     def on_mount(self) -> None:
+        self._apply_config_layout()
         self._setup_table()
         # Initialize graph panels
         self.banner_logo.update(get_logo(32))
@@ -847,6 +851,15 @@ class CanvasTUI(App):
         self.action_open_details()
 
     def on_key(self, event: Key) -> None:
+        # User-defined extra keybindings act as aliases for built-in actions.
+        for action, bound_key in self.cfg.keybindings.items():
+            if event.key == bound_key:
+                method = getattr(self, f"action_{action}", None)
+                if method is not None:
+                    event.stop()
+                    method()
+                    return
+
         if event.key in ("1", "2", "3", "0", "P", "p"):
             event.stop()
             if event.key == "1":
@@ -1314,7 +1327,43 @@ class CanvasTUI(App):
 
         threading.Thread(target=worker, daemon=True).start()
 
+    def _apply_config_layout(self) -> None:
+        """Apply config-driven layout and theme to live widgets."""
+        with contextlib.suppress(Exception):
+            self.query_one("#sidebar").styles.width = self.cfg.sidebar_width
+
     # ---------- actions ----------
+    def action_open_settings(self) -> None:
+        """Open the settings screen."""
+
+        def _on_dismiss(result: dict | None) -> None:
+            if not result:
+                return
+            cfg = self.cfg
+            cfg.theme = result["theme"]
+            cfg.sidebar_position = result["sidebar_position"]
+            cfg.sidebar_width = result["sidebar_width"]
+            cfg.days_ahead = result["days_ahead"]
+            cfg.past_hours = result["past_hours"]
+            cfg.auto_refresh_sec = result["auto_refresh_sec"]
+            cfg.keybindings = result["keybindings"]
+            cfg._validate()
+
+            # Apply immediately
+            self._theme = set_theme(cfg.theme)
+            self.dark = cfg.theme == "dark"
+            self._apply_config_layout()
+
+            with contextlib.suppress(Exception):
+                cfg.save()
+
+            self._render_info()
+            self._render_stats()
+            self._render_graphs()
+            self._update_status_bar("Settings saved")
+
+        self.push_screen(SettingsScreen(self), callback=_on_dismiss)
+
     def action_open(self) -> None:
         it = self._selected_item()
         if not it:
@@ -1588,8 +1637,11 @@ def main() -> None:
     if args.theme == "light":
         app._theme = set_theme("light")
         app.dark = False
-    else:
+        app.cfg.theme = "light"
+    elif args.theme == "dark":
         app._theme = set_theme("dark")
+        app.dark = True
+        app.cfg.theme = "dark"
 
     app.run(size=_console_size())
 
