@@ -131,6 +131,22 @@ const messageHandlers = {
     await updateBadge().catch(() => {});
     return {};
   },
+
+  [MESSAGE_TYPES.getRmpRating]: async (msg) => {
+    const lastName = (msg.professorName || '').split(' ').pop();
+    if (!lastName) return { rating: null, difficulty: null, numRatings: 0 };
+    const url = `https://www.ratemyprofessors.com/filter/teacher?institution_id=1346&query=${encodeURIComponent(lastName)}`;
+    const res = await fetch(url);
+    if (!res.ok) return { rating: null, difficulty: null, numRatings: 0 };
+    const json = await res.json();
+    const teacher = (json.data || [])[0];
+    if (!teacher) return { rating: null, difficulty: null, numRatings: 0 };
+    return {
+      rating: teacher.avg_rating ?? null,
+      difficulty: teacher.avg_difficulty ?? null,
+      numRatings: teacher.num_ratings ?? 0,
+    };
+  },
 };
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {

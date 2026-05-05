@@ -42,6 +42,10 @@ export async function refreshBadge() {
   return send(MESSAGE_TYPES.refreshBadge);
 }
 
+export async function getRmpRating(professorName) {
+  return send(MESSAGE_TYPES.getRmpRating, { professorName });
+}
+
 export async function dismissAssignmentRemote(assignmentId) {
   return send(MESSAGE_TYPES.dismiss, { assignmentId });
 }

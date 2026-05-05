@@ -20,6 +20,7 @@ import {
   refreshBadge,
   getPreferences,
   savePreferences,
+  getRmpRating,
 } from '../lib/extension-api.js';
 
 // ── DOM Refs ──────────────────────────────────────────────────────────────────
@@ -48,11 +49,12 @@ const $coursesLoading = document.getElementById("courses-loading");
 const $coursesError   = document.getElementById("courses-error");
 
 // Detail
-const $backBtn        = document.getElementById("back-btn");
-const $detailName     = document.getElementById("detail-course-name");
-const $detailList     = document.getElementById("detail-list");
-const $detailLoading  = document.getElementById("detail-loading");
-const $detailEmpty    = document.getElementById("detail-empty");
+const $backBtn          = document.getElementById("back-btn");
+const $detailName       = document.getElementById("detail-course-name");
+const $detailList       = document.getElementById("detail-list");
+const $detailLoading    = document.getElementById("detail-loading");
+const $detailEmpty      = document.getElementById("detail-empty");
+const $professorSection = document.getElementById("professor-section");
 
 // ── State ─────────────────────────────────────────────────────────────────────
 
@@ -190,6 +192,13 @@ function renderCourses(courses) {
   });
 }
 
+function renderStars(rating) {
+  const full  = Math.floor(rating);
+  const half  = rating - full >= 0.5 ? 1 : 0;
+  const empty = 5 - full - half;
+  return '★'.repeat(full) + (half ? '½' : '') + '☆'.repeat(empty);
+}
+
 // ── Render: Course Detail ─────────────────────────────────────────────────────
 
 async function openCourseDetail(courseId, courseName) {
@@ -202,6 +211,31 @@ async function openCourseDetail(courseId, courseName) {
   $detailList.innerHTML = "";
   $detailLoading.classList.remove("hidden");
   $detailEmpty.classList.add("hidden");
+  $professorSection.classList.add("hidden");
+  $professorSection.innerHTML = "";
+
+  const course = allCourses.find(c => String(c.id) === String(courseId));
+  const teacherName = course?.teachers?.[0]?.display_name || null;
+
+  if (teacherName) {
+    $professorSection.classList.remove("hidden");
+    $professorSection.innerHTML = `<div class="professor-section"><span class="prof-name">${teacherName}</span><span class="prof-rating">Loading rating…</span></div>`;
+    getRmpRating(teacherName).then(rmp => {
+      if (!rmp?.ok) return;
+      const { rating, difficulty, numRatings } = rmp;
+      if (rating == null) {
+        $professorSection.innerHTML = `<div class="professor-section"><span class="prof-name">${teacherName}</span><span class="prof-rating">No RMP rating found</span></div>`;
+        return;
+      }
+      const stars = renderStars(rating);
+      $professorSection.innerHTML = `
+        <div class="professor-section">
+          <span class="prof-name">${teacherName}</span>
+          <span class="prof-stars">${stars}</span>
+          <span class="prof-rating">${rating.toFixed(1)} / 5.0 · Difficulty ${difficulty?.toFixed(1) ?? '—'} · ${numRatings} rating${numRatings !== 1 ? 's' : ''}</span>
+        </div>`;
+    }).catch(() => {});
+  }
 
   try {
     const res = await getCourseAssignments(courseId);

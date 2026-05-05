@@ -14,4 +14,5 @@ export const MESSAGE_TYPES = {
   dismiss: 'DISMISS',
   clearCache: 'CLEAR_CACHE',
   refreshBadge: 'REFRESH_BADGE',
+  getRmpRating: 'GET_RMP_RATING',
 };

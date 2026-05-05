@@ -585,6 +585,34 @@ body.dark-theme .course-card {
   color: var(--text-muted);
 }
 
+/* ── Professor Section ───────────────────────────────────── */
+
+.professor-section {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 14px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.prof-name {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.prof-stars {
+  font-size: 0.88rem;
+  color: #f4a020;
+  letter-spacing: 1px;
+}
+
+.prof-rating {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
 /* ── Utilities ───────────────────────────────────────────── */
 
 .hidden { display: none !important; }
