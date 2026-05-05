@@ -1,4 +1,5 @@
 """PM4 tests for Canvas API: token validation and planner fetch."""
+
 from unittest.mock import MagicMock, patch
 
 from canvas_tui.api import CanvasAPI
@@ -43,6 +44,7 @@ class TestTokenValidation:
     @patch("canvas_tui.api.requests.Session")
     def test_network_error_returns_false(self, mock_session_cls):
         import requests
+
         session = MagicMock()
         session.get.side_effect = requests.ConnectionError("unreachable")
         mock_session_cls.return_value = session

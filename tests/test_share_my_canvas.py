@@ -4,6 +4,7 @@ Tests for scripts/share_my_canvas.py
 Verifies the anonymization logic, output format, and error handling
 without making any real Canvas API calls.
 """
+
 from __future__ import annotations
 
 import json
@@ -18,6 +19,7 @@ import share_my_canvas  # noqa: E402
 
 
 # ── Anonymization ─────────────────────────────────────────────────────────────
+
 
 def test_hash_is_deterministic():
     h1 = share_my_canvas._hash("salt", "12345678")
@@ -79,6 +81,7 @@ def test_anonymize_preserves_dates():
 
 # ── CLI / env guard ───────────────────────────────────────────────────────────
 
+
 def test_missing_token_exits(monkeypatch):
     monkeypatch.delenv("CANVAS_TOKEN", raising=False)
     with pytest.raises(SystemExit) as exc:
@@ -94,17 +97,23 @@ def test_token_returned_from_env(monkeypatch):
 # ── collect() — mocked HTTP ───────────────────────────────────────────────────
 
 FAKE_COURSES = [
-    {"id": 98765432, "name": "CS 3704 Software Engineering", "course_code": "CS3704",
-     "term": {"name": "Spring 2026"}},
+    {"id": 98765432, "name": "CS 3704 Software Engineering", "course_code": "CS3704", "term": {"name": "Spring 2026"}},
 ]
 FAKE_ASSIGNMENTS = [
-    {"name": "Homework 1", "due_at": "2026-05-15T23:59:00Z",
-     "points_possible": 100, "submission_types": ["online_upload"],
-     "submission": {"submitted_at": None, "graded_at": None, "workflow_state": "unsubmitted"}},
+    {
+        "name": "Homework 1",
+        "due_at": "2026-05-15T23:59:00Z",
+        "points_possible": 100,
+        "submission_types": ["online_upload"],
+        "submission": {"submitted_at": None, "graded_at": None, "workflow_state": "unsubmitted"},
+    },
 ]
 FAKE_TODOS = [
-    {"type": "submitting", "assignment": {"name": "Homework 1", "due_at": "2026-05-15T23:59:00Z"},
-     "course_id": 98765432},
+    {
+        "type": "submitting",
+        "assignment": {"name": "Homework 1", "due_at": "2026-05-15T23:59:00Z"},
+        "course_id": 98765432,
+    },
 ]
 
 

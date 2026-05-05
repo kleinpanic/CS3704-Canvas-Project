@@ -5,6 +5,7 @@ acceptance criteria from the upstream phase plan. They do NOT load any
 GGUF model; LocalReranker is exercised at the constructor/SHA-check
 level only.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -104,12 +105,14 @@ class TestSHAAntiDrift:
         # SHA will fail loudly. Update this constant only when the
         # model is also retrained on the new template.
         import hashlib
+
         expected = hashlib.sha256(RANK_PROMPT_TEMPLATE.encode("utf-8")).hexdigest()
         assert RANK_PROMPT_FORMAT_SHA == expected
 
     def test_sha_changes_on_template_change(self):
         # Sanity: a single-character change must produce a different hash.
         import hashlib
+
         modified = RANK_PROMPT_TEMPLATE + "."
         sha2 = hashlib.sha256(modified.encode("utf-8")).hexdigest()
         assert sha2 != RANK_PROMPT_FORMAT_SHA
@@ -134,6 +137,7 @@ class TestSerializeItemBridge:
         # from canvas_tui.models — the same import path the training
         # pipeline uses.
         from canvas_tui.models import serialize_item as si
+
         assert si is serialize_item
 
     def test_serialize_anonymizes_course_code(self):
@@ -150,7 +154,10 @@ class TestSerializeItemBridge:
         # serializer ignores status_flags. Submitted/missing items are
         # the consumer's responsibility to filter pre-rank.
         item = CanvasItem(
-            ptype="quiz", title="q", course_code="CS 1", points=10,
+            ptype="quiz",
+            title="q",
+            course_code="CS 1",
+            points=10,
             status_flags=["submitted"],
         )
         out = serialize_item(item)
@@ -166,7 +173,10 @@ class TestSerializeItemBridge:
     def test_serialize_overdue_item(self):
         # An item due in the past (1 year ago) → OVERDUE token.
         item = CanvasItem(
-            ptype="assignment", title="HW", course_code="CS 1", points=50,
+            ptype="assignment",
+            title="HW",
+            course_code="CS 1",
+            points=50,
             due_iso="2025-05-01T12:00:00Z",
         )
         out = serialize_item(item)
@@ -178,8 +188,11 @@ class TestSerializeItemBridge:
         # this test fails loudly so the consumer-side and the trained
         # format don't silently drift apart.
         item = CanvasItem(
-            ptype="assignment", title="Test HW", course_code="CS 3704",
-            points=100, due_iso="2025-05-01T12:00:00Z",
+            ptype="assignment",
+            title="Test HW",
+            course_code="CS 3704",
+            points=100,
+            due_iso="2025-05-01T12:00:00Z",
         )
         out = serialize_item(item)
         # Components: badge, title, anonymized course, OVERDUE (past), points

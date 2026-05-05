@@ -55,10 +55,15 @@ class TestUniversityRegistry:
 
     def test_user_overrides(self):
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-            json.dump([{
-                "name": "Virginia Tech",
-                "rmp_school_id": 9999,
-            }], f)
+            json.dump(
+                [
+                    {
+                        "name": "Virginia Tech",
+                        "rmp_school_id": 9999,
+                    }
+                ],
+                f,
+            )
             f.flush()
             path = Path(f.name)
 
@@ -71,11 +76,16 @@ class TestUniversityRegistry:
 
     def test_user_new_entry(self):
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-            json.dump([{
-                "name": "Test University",
-                "canvas_url": "https://canvas.test.edu",
-                "rmp_school_id": 1234,
-            }], f)
+            json.dump(
+                [
+                    {
+                        "name": "Test University",
+                        "canvas_url": "https://canvas.test.edu",
+                        "rmp_school_id": 1234,
+                    }
+                ],
+                f,
+            )
             f.flush()
             path = Path(f.name)
 
@@ -88,11 +98,13 @@ class TestUniversityRegistry:
 
     def test_add_university(self):
         reg = UniversityRegistry()
-        reg.add_university({
-            "name": "New University",
-            "canvas_url": "https://canvas.new.edu",
-            "rmp_school_id": 5555,
-        })
+        reg.add_university(
+            {
+                "name": "New University",
+                "canvas_url": "https://canvas.new.edu",
+                "rmp_school_id": 5555,
+            }
+        )
         nu = reg.find_by_name("New University")
         assert nu is not None
         assert nu["rmp_school_id"] == 5555

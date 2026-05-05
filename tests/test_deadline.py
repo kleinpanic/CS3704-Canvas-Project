@@ -35,8 +35,8 @@ class TestDeadlineFilterBehavior:
     def setup_method(self):
         self.items = [
             _make_item(key="a1", title="Homework 1", course_code="CS3704", ptype="assignment"),
-            _make_item(key="a2", title="Lab Report",  course_code="CS4234", ptype="assignment"),
-            _make_item(key="a3", title="Quiz 1",      course_code="CS3704", ptype="quiz"),
+            _make_item(key="a2", title="Lab Report", course_code="CS4234", ptype="assignment"),
+            _make_item(key="a3", title="Quiz 1", course_code="CS3704", ptype="quiz"),
             _make_item(
                 key="a4",
                 title="Submitted HW",
