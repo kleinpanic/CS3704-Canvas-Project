@@ -7,7 +7,7 @@ import os
 
 import pytest
 
-from canvas_tui.config import Config, load_config
+from canvas_tui.config import Config, _config_to_toml, load_config
 
 
 class TestConfig:
@@ -84,6 +84,145 @@ class TestLoadConfig:
         cfg.config_dir = cfg_dir
         config_mod._overlay_file_config(cfg)
         assert cfg.ann_future_days == 21
+
+
+class TestAppearanceConfig:
+    def test_theme_defaults_to_dark(self):
+        cfg = Config(token="x")
+        assert cfg.theme == "dark"
+
+    def test_invalid_theme_falls_back_to_dark(self):
+        cfg = Config(token="x", theme="solarized")
+        assert cfg.theme == "dark"
+
+    def test_light_theme_accepted(self):
+        cfg = Config(token="x", theme="light")
+        assert cfg.theme == "light"
+
+    def test_sidebar_position_defaults_to_right(self):
+        cfg = Config(token="x")
+        assert cfg.sidebar_position == "right"
+
+    def test_invalid_sidebar_position_falls_back_to_right(self):
+        cfg = Config(token="x", sidebar_position="center")
+        assert cfg.sidebar_position == "right"
+
+    def test_sidebar_width_clamped(self):
+        too_narrow = Config(token="x", sidebar_width=5)
+        assert too_narrow.sidebar_width == 20
+        too_wide = Config(token="x", sidebar_width=999)
+        assert too_wide.sidebar_width == 80
+
+    def test_keybindings_default_empty(self):
+        cfg = Config(token="x")
+        assert cfg.keybindings == {}
+
+
+class TestConfigToToml:
+    def test_scalar_roundtrip(self):
+        cfg = Config(token="x", theme="light", sidebar_position="left", sidebar_width=30)
+        toml_text = _config_to_toml(cfg)
+        assert 'theme = "light"' in toml_text
+        assert 'sidebar_position = "left"' in toml_text
+        assert "sidebar_width = 30" in toml_text
+
+    def test_keybindings_section(self):
+        cfg = Config(token="x", keybindings={"quit": "ctrl+q", "refresh": "f5"})
+        toml_text = _config_to_toml(cfg)
+        assert "[keybindings]" in toml_text
+        assert 'quit = "ctrl+q"' in toml_text
+        assert 'refresh = "f5"' in toml_text
+
+    def test_no_keybindings_section_when_empty(self):
+        cfg = Config(token="x")
+        toml_text = _config_to_toml(cfg)
+        assert "[keybindings]" not in toml_text
+
+    def test_string_values_are_quoted(self):
+        cfg = Config(token="x")
+        toml_text = _config_to_toml(cfg)
+        # theme and sidebar_position are strings — must be quoted
+        assert 'theme = "dark"' in toml_text
+
+    def test_numeric_values_are_not_quoted(self):
+        cfg = Config(token="x", sidebar_width=44)
+        toml_text = _config_to_toml(cfg)
+        assert 'sidebar_width = 44' in toml_text
+        assert '"44"' not in toml_text
+
+
+class TestConfigSave:
+    def test_save_creates_toml_file(self, tmp_dir):
+        cfg = Config(token="x", config_dir=tmp_dir)
+        cfg.save()
+        assert os.path.exists(os.path.join(tmp_dir, "config.toml"))
+
+    def test_saved_file_is_valid_toml(self, tmp_dir):
+        import tomllib
+
+        cfg = Config(token="x", config_dir=tmp_dir, theme="light", sidebar_width=36)
+        cfg.save()
+        with open(os.path.join(tmp_dir, "config.toml"), "rb") as f:
+            data = tomllib.load(f)
+        assert data["theme"] == "light"
+        assert data["sidebar_width"] == 36
+
+    def test_save_roundtrip_with_keybindings(self, tmp_dir):
+        import tomllib
+
+        cfg = Config(token="x", config_dir=tmp_dir, keybindings={"quit": "q", "refresh": "r"})
+        cfg.save()
+        with open(os.path.join(tmp_dir, "config.toml"), "rb") as f:
+            data = tomllib.load(f)
+        assert data["keybindings"]["quit"] == "q"
+        assert data["keybindings"]["refresh"] == "r"
+
+    def test_overlay_reads_saved_appearance(self, tmp_dir, sample_config_env):
+        import canvas_tui.config as config_mod
+
+        cfg = Config(token="x", config_dir=tmp_dir, theme="light", sidebar_width=50)
+        cfg.save()
+
+        loaded = load_config()
+        loaded.config_dir = tmp_dir
+        config_mod._overlay_file_config(loaded)
+        assert loaded.theme == "light"
+        assert loaded.sidebar_width == 50
+
+    def test_overlay_reads_saved_keybindings(self, tmp_dir, sample_config_env):
+        import canvas_tui.config as config_mod
+
+        cfg = Config(token="x", config_dir=tmp_dir, keybindings={"refresh": "f5"})
+        cfg.save()
+
+        loaded = load_config()
+        loaded.config_dir = tmp_dir
+        config_mod._overlay_file_config(loaded)
+        assert loaded.keybindings.get("refresh") == "f5"
+
+
+class TestKeybindingConflicts:
+    def test_no_conflict_returns_empty_string(self):
+        from canvas_tui.screens.settings import _find_conflicts
+
+        assert _find_conflicts({"quit": "q", "refresh": "r"}) == ""
+
+    def test_duplicate_key_detected(self):
+        from canvas_tui.screens.settings import _find_conflicts
+
+        msg = _find_conflicts({"quit": "q", "refresh": "q"})
+        assert msg != ""
+        assert "q" in msg
+
+    def test_empty_bindings_no_conflict(self):
+        from canvas_tui.screens.settings import _find_conflicts
+
+        assert _find_conflicts({}) == ""
+
+    def test_single_binding_no_conflict(self):
+        from canvas_tui.screens.settings import _find_conflicts
+
+        assert _find_conflicts({"quit": "ctrl+q"}) == ""
 
 
 class TestDotEnv:
