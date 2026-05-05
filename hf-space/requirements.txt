@@ -1,14 +1,5 @@
-<<<<<<< Updated upstream
-gradio>=4.0,<5
-transformers>=4.47
-||||||| Stash base
-gradio>=4.0
-transformers>=4.47
-=======
-gradio==4.44.0
-huggingface-hub>=0.24,<1.0
-transformers>=4.47,<5.0
->>>>>>> Stashed changes
+gradio>=5.0
+transformers @ git+https://github.com/huggingface/transformers.git
 torch>=2.1
 accelerate>=0.25
-audioop-lts; python_version >= "3.13"
+spaces
