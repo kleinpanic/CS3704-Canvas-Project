@@ -2,13 +2,16 @@
  * Production Chrome Extension API shim for GitHub Pages live demo.
  *
  * Serves data from pre-fetched static JSON files (no CORS needed).
- * TOKEN is injected by CI as __CANVAS_TOKEN__ → actual value at build time.
+ * CANVAS_TOKEN is injected by CI as __CANVAS_TOKEN__ → actual value at build time.
+ * HF_TOKEN is injected by CI as __HF_TOKEN__ → actual value at build time.
  * DATA_BASE points to the pre-fetched JSON snapshots baked at CI time.
  */
 (function () {
   'use strict';
 
   const TOKEN = '__CANVAS_TOKEN__';
+  const HF_TOKEN = '__HF_TOKEN__';
+  const HF_SPACE_URL = 'https://kleinpanic93-canvas-calendar-agent-demo.hf.space/api/predict';
   // Popup lives at extension/src/popup/ — data is 3 levels up at site root /data/
   const DATA_BASE = '../../../data/';
 
@@ -48,27 +51,38 @@
     GET_ASSIGNMENT_GROUPS: async (msg) => fetchJson(`course_${msg.courseId}_assignment_groups.json`),
     GET_SUBMISSION: async () => ({ ok: false, error: 'Not available in demo' }),
     AGENT_QUERY: async (msg) => {
-      const q = (msg.query || '').toLowerCase();
-      const toolCalls = [];
-      let answer = '';
-      if (/due|upcoming|assign/.test(q)) {
-        toolCalls.push({ tool: 'canvas.get_assignments', label: 'Fetching upcoming' });
-        const r = await fetchJson('upcoming.json');
-        const items = ((r.data || r) || []).filter(e => e.type === 'assignment');
-        const lines = items.slice(0, 8).map(e => `• **${e.title}** — ${new Date(e.due_at).toLocaleDateString()}`);
-        answer = lines.length ? `Upcoming assignments:\n\n${lines.join('\n')}` : 'No upcoming assignments!';
-      } else if (/grade|score/.test(q)) {
-        answer = 'Check the Grades tab for your current scores.';
-      } else if (/course|class/.test(q)) {
-        toolCalls.push({ tool: 'canvas.list_courses', label: 'Fetching courses' });
-        const r = await fetchJson('courses.json');
-        const courses = r.data || r || [];
-        const lines = courses.map(c => `• **${c.course_code}** — ${c.name}`);
-        answer = lines.length ? `Your courses:\n\n${lines.join('\n')}` : 'No courses found.';
-      } else {
-        answer = 'I can help with:\n\n• "What\'s due?" — upcoming deadlines\n• "My courses" — enrolled courses\n• "My grades" — current scores';
+      const userMsg = msg.query || '';
+      try {
+        const headers = { 'Content-Type': 'application/json' };
+        if (HF_TOKEN && HF_TOKEN !== '__HF_TOKEN__') {
+          headers['Authorization'] = `Bearer ${HF_TOKEN}`;
+        }
+        let resp = await fetch(HF_SPACE_URL, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ data: [userMsg] }),
+        });
+        if (resp.status === 503) {
+          const errJson = await resp.json().catch(() => ({}));
+          const eta = errJson.estimated_time ? Math.ceil(errJson.estimated_time) : 30;
+          return { ok: false, error: `Model warming up, ~${eta}s — please try again shortly.` };
+        }
+        if (!resp.ok) {
+          return { ok: false, error: `HF Space error: HTTP ${resp.status}` };
+        }
+        const result = await resp.json();
+        const payload = result.data?.[0];
+        if (!payload) return { ok: false, error: 'Empty response from model.' };
+        const finalAnswer = payload.final_answer || payload.transcript || String(payload);
+        const rawCalls = Array.isArray(payload.tool_calls) ? payload.tool_calls : [];
+        const toolCalls = rawCalls.map(tc => ({
+          tool: tc.tool || tc.name || '(unknown)',
+          label: tc.args ? JSON.stringify(tc.args).slice(0, 60) : '',
+        }));
+        return { ok: true, answer: finalAnswer, toolCalls };
+      } catch (e) {
+        return { ok: false, error: `Network error: ${e.message}` };
       }
-      return { ok: true, answer, toolCalls };
     },
     DISMISS: async (msg) => { dismissed.add(msg.assignmentId); return { ok: true }; },
     GET_DISMISSED: async () => ({ ok: true, data: [...dismissed] }),

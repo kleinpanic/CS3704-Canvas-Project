@@ -811,11 +811,20 @@ body.dark-theme header {
 
 /* ── Agent View ──────────────────────────────────────────── */
 
+/* Agent view uses flex column so input row sticks to bottom */
+#view-agent.active {
+  display: flex;
+  flex-direction: column;
+  height: 480px;
+  overflow: hidden;
+}
+
 .agent-header {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
   padding-right: var(--space-md);
+  flex: 0 0 auto;
 }
 
 .agent-badge {
@@ -829,28 +838,88 @@ body.dark-theme header {
   margin-top: 14px;
 }
 
-.agent-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-xs);
-  padding: var(--space-xs) var(--space-md) var(--space-sm);
+/* ── 18-tool collapsible panel ───────────────────────────── */
+
+.agent-tools-panel {
+  flex: 0 0 auto;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
 }
 
-.agent-chip {
+.agent-tools-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-xs) var(--space-md);
   font-size: var(--size-xs);
-  font-weight: var(--weight-medium);
-  color: var(--canvas-red);
-  background: rgba(214, 62, 54, 0.08);
-  border: 1px solid rgba(214, 62, 54, 0.25);
-  border-radius: 99px;
-  padding: 3px 10px;
+  font-weight: var(--weight-semibold);
+  color: var(--text-muted);
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
-  white-space: nowrap;
+  list-style: none;
+  user-select: none;
 }
-.agent-chip:hover {
-  background: rgba(214, 62, 54, 0.15);
+.agent-tools-summary::-webkit-details-marker { display: none; }
+
+.agent-tools-toggle-hint {
+  font-size: 0.6rem;
+  font-weight: var(--weight-normal);
+  color: var(--border-strong);
+}
+
+.agent-tools-body {
+  padding: var(--space-xs) var(--space-md) var(--space-sm);
+  max-height: 200px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.agent-tool-family-label {
+  font-size: 0.6rem;
+  font-weight: var(--weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--canvas-red);
+  margin-bottom: 3px;
+}
+
+.agent-tool-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 4px;
+}
+
+.agent-tool-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  padding: 5px 7px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.12s, background 0.12s;
+}
+.agent-tool-btn:hover {
   border-color: var(--canvas-red);
+  background: rgba(214, 62, 54, 0.06);
+}
+
+.agent-tool-btn-icon { font-size: 0.9rem; line-height: 1; }
+.agent-tool-btn-name {
+  font-size: 0.68rem;
+  font-weight: var(--weight-semibold);
+  color: var(--text);
+  line-height: 1.2;
+}
+.agent-tool-btn-id {
+  font-size: 0.58rem;
+  font-family: monospace;
+  color: var(--text-muted);
+  line-height: 1.2;
 }
 
 .agent-messages {
@@ -860,8 +929,7 @@ body.dark-theme header {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
-  min-height: 120px;
-  max-height: 260px;
+  min-height: 60px;
 }
 
 .agent-msg {
@@ -976,13 +1044,15 @@ body.dark-theme header {
   flex: 1;
   padding: var(--space-sm) var(--space-md);
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   font-size: var(--size-sm);
   font-family: var(--font-main);
   background: var(--bg);
   color: var(--text);
   outline: none;
   transition: border-color 0.15s;
+  resize: none;
+  line-height: 1.4;
 }
 .agent-input:focus { border-color: var(--canvas-red); }
 
