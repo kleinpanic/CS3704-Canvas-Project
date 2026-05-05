@@ -90,6 +90,27 @@ let gradesLoaded   = false;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+function esc(s) {
+  return String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function showErrorWithRetry($el, message, retryFn) {
+  $el.innerHTML = "";
+  const msg = document.createElement("span");
+  msg.textContent = message;
+  const btn = document.createElement("button");
+  btn.className = "btn-secondary retry-btn";
+  btn.style.cssText = "margin-top:var(--space-sm);font-size:var(--size-xs)";
+  btn.textContent = "Try again";
+  btn.addEventListener("click", retryFn);
+  $el.append(msg, btn);
+  $el.classList.remove("hidden");
+}
+
 function formatDue(dateStr) {
   if (!dateStr) return "No due date";
   const d = new Date(dateStr);
@@ -133,13 +154,13 @@ function renderAssignmentItem(item, { showCourse = true } = {}) {
   return `
     <li class="assignment-item ${cls}" data-id="${id}">
       <div class="assignment-main">
-        ${showCourse && courseName ? `<div class="course-name">${courseName}</div>` : ""}
-        <div class="assignment-name">${item.title || item.assignment?.name || "Assignment"}</div>
+        ${showCourse && courseName ? `<div class="course-name">${esc(courseName)}</div>` : ""}
+        <div class="assignment-name">${esc(item.title || item.assignment?.name || "Assignment")}</div>
         <div class="due-date ${cls}">${formatDue(dueDate)}</div>
       </div>
       <div class="assignment-actions">
-        <button class="dismiss-btn" data-id="${id}" title="Mark done">✓</button>
-        <button class="open-btn" data-url="${item.html_url || ""}" title="Open in Canvas">→</button>
+        <button class="dismiss-btn" data-id="${esc(id)}" title="Mark done" aria-label="Mark done">✓</button>
+        <button class="open-btn" data-url="${esc(item.html_url || "")}" title="Open in Canvas" aria-label="Open in Canvas">→</button>
       </div>
     </li>`;
 }
@@ -223,10 +244,10 @@ function renderCourses(courses) {
       <li class="course-card" data-id="${c.id}" data-name="${encodeURIComponent(c.name || c.course_code || "Course")}">
         <span class="course-dot"></span>
         <div class="course-info">
-          <div class="course-full-name">${c.name || "Unnamed Course"}</div>
+          <div class="course-full-name">${esc(c.name || "Unnamed Course")}</div>
           <div class="course-meta">
-            <span class="course-code">${c.course_code || ""}</span>
-            ${teacher ? `<span class="course-teacher" data-prof="${teacher}"> • ${teacher}</span>` : ""}
+            <span class="course-code">${esc(c.course_code || "")}</span>
+            ${teacher ? `<span class="course-teacher" data-prof="${esc(teacher)}"> • ${esc(teacher)}</span>` : ""}
           </div>
         </div>
         <span class="course-arrow">›</span>
@@ -237,7 +258,7 @@ function renderCourses(courses) {
   $coursesList.querySelectorAll(".course-teacher").forEach(span => {
     const profName = span.dataset.prof;
     getRmpRating(profName).then(rmp => {
-      if (rmp?.ok && rmp.rating) {
+      if (rmp?.ok && rmp.rating != null) {
         span.innerHTML += ` <span class="rating-badge">${rmp.rating.toFixed(1)}</span>`;
       }
     }).catch(() => {});
@@ -298,22 +319,24 @@ async function openCourseDetail(courseId, courseName) {
 
   if (teacherName) {
     $professorSection.classList.remove("hidden");
-    $professorSection.innerHTML = `<div class="professor-section"><span class="prof-name">${teacherName}</span><span class="prof-rating">Loading rating…</span></div>`;
+    $professorSection.innerHTML = `<div class="professor-section"><span class="prof-name">${esc(teacherName)}</span><span class="prof-rating">Loading rating…</span></div>`;
     getRmpRating(teacherName).then(rmp => {
       if (!rmp?.ok) return;
       const { rating, difficulty, numRatings } = rmp;
       if (rating == null) {
-        $professorSection.innerHTML = `<div class="professor-section"><span class="prof-name">${teacherName}</span><span class="prof-rating">No RMP rating found</span></div>`;
+        $professorSection.innerHTML = `<div class="professor-section"><span class="prof-name">${esc(teacherName)}</span><span class="prof-rating">No RMP rating found</span></div>`;
         return;
       }
       const stars = renderStars(rating);
       $professorSection.innerHTML = `
         <div class="professor-section">
-          <span class="prof-name">${teacherName}</span>
+          <span class="prof-name">${esc(teacherName)}</span>
           <span class="prof-stars">${stars}</span>
           <span class="prof-rating">${rating.toFixed(1)} / 5.0 · Difficulty ${difficulty?.toFixed(1) ?? '—'} · ${numRatings} rating${numRatings !== 1 ? 's' : ''}</span>
         </div>`;
-    }).catch(() => {});
+    }).catch(() => {
+      $professorSection.innerHTML = `<div class="professor-section"><span class="prof-name">${esc(teacherName)}</span><span class="prof-rating">Rating unavailable</span></div>`;
+    });
   }
 
   try {
@@ -340,11 +363,11 @@ async function openCourseDetail(courseId, courseName) {
           return `
             <li class="assignment-item ${cls}" data-id="${a.id}">
               <div class="assignment-main">
-                <div class="assignment-name">${a.name || "Assignment"}</div>
+                <div class="assignment-name">${esc(a.name || "Assignment")}</div>
                 <div class="due-date ${cls}">${formatDue(a.due_at)}</div>
               </div>
               <div class="assignment-actions">
-                <button class="open-btn" data-url="${a.html_url || ""}" title="Open in Canvas">→</button>
+                <button class="open-btn" data-url="${esc(a.html_url || "")}" title="Open in Canvas" aria-label="Open in Canvas">→</button>
               </div>
             </li>`;
         }).join("");
@@ -360,11 +383,11 @@ async function openCourseDetail(courseId, courseName) {
         $announcementsList.innerHTML = announcements.map(a => `
           <li class="assignment-item">
             <div class="assignment-main">
-              <div class="assignment-name">${a.title || "Announcement"}</div>
+              <div class="assignment-name">${esc(a.title || "Announcement")}</div>
               <div class="due-date">${new Date(a.posted_at || a.created_at).toLocaleDateString()}</div>
             </div>
             <div class="assignment-actions">
-              <button class="open-btn" data-url="${a.html_url || ""}" title="Open in Canvas">→</button>
+              <button class="open-btn" data-url="${esc(a.html_url || "")}" title="Open in Canvas" aria-label="Open in Canvas">→</button>
             </div>
           </li>`).join("");
       }
@@ -379,7 +402,7 @@ async function openCourseDetail(courseId, courseName) {
         $modulesList.innerHTML = modules.map(m => `
           <li class="assignment-item">
             <div class="assignment-main">
-              <div class="assignment-name">${m.name || "Module"}</div>
+              <div class="assignment-name">${esc(m.name || "Module")}</div>
               <div class="due-date">${m.items_count || 0} items</div>
             </div>
           </li>`).join("");
@@ -395,7 +418,10 @@ async function openCourseDetail(courseId, courseName) {
 
   } catch (err) {
     $detailLoading.classList.add("hidden");
-    $detailList.innerHTML = `<li class="state-msg error">${err.message}</li>`;
+    const li = document.createElement("li");
+    li.className = "state-msg error";
+    li.textContent = err.message;
+    $detailList.appendChild(li);
   }
 }
 
@@ -440,6 +466,7 @@ $backBtn.addEventListener("click", () => {
 // ── Data Loading ──────────────────────────────────────────────────────────────
 
 async function loadUpcoming() {
+  $noTokenState.classList.add("hidden");
   $loading.classList.remove("hidden");
   $error.classList.add("hidden");
   $upcomingList.innerHTML = "";
@@ -471,9 +498,7 @@ async function loadUpcoming() {
     }
   } catch (err) {
     $loading.classList.add("hidden");
-    $error.innerHTML = `${err.message} <button class="btn-secondary retry-btn" style="margin-top:var(--space-sm);font-size:var(--size-xs)">Try again</button>`;
-    $error.classList.remove("hidden");
-    $error.querySelector(".retry-btn")?.addEventListener("click", loadUpcoming);
+    showErrorWithRetry($error, "Could not load assignments. Check your connection.", loadUpcoming);
   }
 }
 
@@ -489,9 +514,7 @@ async function loadCourses() {
     renderCourses(allCourses);
   } catch (err) {
     $coursesLoading.classList.add("hidden");
-    $coursesError.innerHTML = `${err.message} <button class="btn-secondary retry-btn" style="margin-top:var(--space-sm);font-size:var(--size-xs)">Try again</button>`;
-    $coursesError.classList.remove("hidden");
-    $coursesError.querySelector(".retry-btn")?.addEventListener("click", loadCourses);
+    showErrorWithRetry($coursesError, "Could not load courses. Check your connection.", loadCourses);
   }
 }
 
@@ -528,7 +551,6 @@ function renderGrades(courses, gradesData) {
     const score       = grades.current_score != null ? grades.current_score : null;
     const letter      = grades.current_grade || null;
     const scoreLabel  = score != null ? `${score.toFixed(1)}%` : "—";
-    const letterLabel = letter || "—";
     const barWidth    = score != null ? Math.min(100, Math.max(0, score)) : 0;
     const cls         = gradeClass(score);
     const numGraded   = enrollment?.unread_count ?? null;
@@ -536,10 +558,10 @@ function renderGrades(courses, gradesData) {
     return `
       <li class="grade-card ${cls}">
         <div class="grade-card-header">
-          <span class="grade-course-name">${course.name || "Unnamed Course"}</span>
+          <span class="grade-course-name">${esc(course.name || "Unnamed Course")}</span>
           <div class="grade-scores">
             <span class="grade-score">${scoreLabel}</span>
-            <span class="grade-letter">${letterLabel}</span>
+            ${letter ? `<span class="grade-letter">${esc(letter)}</span>` : ""}
           </div>
         </div>
         ${numGraded != null ? `<div class="grade-meta">${numGraded} assignments graded</div>` : ""}
@@ -570,8 +592,10 @@ async function loadGrades() {
     renderGrades(allCourses, gradesData);
   } catch (err) {
     $gradesLoading.classList.add("hidden");
-    $gradesError.textContent = err.message;
-    $gradesError.classList.remove("hidden");
+    showErrorWithRetry($gradesError, "Could not load grades. Check your connection.", () => {
+      gradesLoaded = false;
+      loadGrades();
+    });
   }
 }
 
@@ -681,18 +705,23 @@ function closeSettings() {
   settingsOpen = false;
 }
 
-// ── Init ──────────────────────────────────────────────────────────────────────
+// ── Event Wiring ──────────────────────────────────────────────────────────────
 
 $refreshBtn.addEventListener("click", async () => {
-  await clearCache();
-  if (activeTab === "upcoming") {
-    await loadUpcoming();
-  } else if (activeTab === "courses") {
-    await loadCourses();
-  } else if (activeTab === "grades") {
-    gradesLoaded = false;
-    await loadGrades();
-    gradesLoaded = true;
+  $refreshBtn.disabled = true;
+  try {
+    await clearCache();
+    if (activeTab === "upcoming") {
+      await loadUpcoming();
+    } else if (activeTab === "courses") {
+      await loadCourses();
+    } else if (activeTab === "grades") {
+      gradesLoaded = false;
+      await loadGrades();
+      gradesLoaded = true;
+    }
+  } finally {
+    $refreshBtn.disabled = false;
   }
 });
 
