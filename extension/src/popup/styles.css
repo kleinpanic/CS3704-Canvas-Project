@@ -442,6 +442,128 @@ button:hover { background: var(--bg); }
   color: var(--text-muted);
 }
 
+/* ── Dark Theme ─────────────────────────────────────────── */
+
+body.dark-theme {
+  --bg: #0d1117;
+  --surface: #161b22;
+  --surface-soft: #21262d;
+  --text: #c9d1d9;
+  --text-muted: #8b949e;
+  --border: #30363d;
+  --border-strong: #444c56;
+  background: var(--bg);
+  color: var(--text);
+}
+
+body.dark-theme .app-header {
+  background: linear-gradient(135deg, #b92d26 0%, #8b1c17 100%);
+}
+
+body.dark-theme .panel,
+body.dark-theme .toolbar {
+  background: rgba(22, 27, 34, 0.92);
+  border-color: var(--border);
+}
+
+body.dark-theme .assignment-item {
+  background: linear-gradient(180deg, #161b22 0%, #0d1117 100%);
+  border-color: var(--border);
+}
+
+body.dark-theme .settings-modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+body.dark-theme .settings-body input {
+  background: var(--surface-soft);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+body.dark-theme .btn-secondary {
+  background: var(--surface-soft);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+body.dark-theme .count-pill {
+  background: #1f2d3d;
+  border-color: #2a3f5a;
+  color: #58a6ff;
+}
+
+body.dark-theme .course-name {
+  background: #1f2d3d;
+  color: #58a6ff;
+}
+
+body.dark-theme .due-date {
+  background: #21262d;
+  color: var(--text-muted);
+}
+
+body.dark-theme .dismiss-btn,
+body.dark-theme .open-btn {
+  background: var(--surface-soft);
+  border-color: var(--border);
+  color: var(--text-muted);
+}
+
+body.dark-theme .course-card {
+  background: linear-gradient(180deg, #161b22 0%, #0d1117 100%);
+  border-color: var(--border);
+}
+
+/* ── Settings Row (theme toggle etc.) ───────────────────── */
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.settings-row-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.theme-toggle {
+  display: flex;
+  gap: 4px;
+}
+
+.theme-opt {
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  background: var(--surface-soft, #f6f8fa);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+  box-shadow: none;
+}
+
+.theme-opt.active {
+  background: var(--canvas-red);
+  border-color: var(--canvas-red);
+  color: white;
+}
+
+#prefs-status {
+  margin-top: 10px;
+  min-height: 18px;
+  font-size: 0.78rem;
+  text-align: center;
+  color: var(--text-muted);
+}
+
 /* ── Utilities ───────────────────────────────────────────── */
 
 .hidden { display: none !important; }

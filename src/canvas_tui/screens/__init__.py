@@ -10,6 +10,7 @@ from .files import FileManagerScreen
 from .grades import GradesScreen
 from .help import HelpScreen
 from .modals import ConfirmPath, InputPrompt, LoadingScreen
+from .settings import SettingsScreen
 from .syllabi import SyllabiScreen
 from .weekview import WeekViewScreen
 
@@ -27,6 +28,7 @@ __all__ = [
     "HelpScreen",
     "InputPrompt",
     "LoadingScreen",
+    "SettingsScreen",
     "SyllabiScreen",
     "WeekViewScreen",
 ]
