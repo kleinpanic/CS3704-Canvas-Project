@@ -10,12 +10,16 @@
   <div id="app">
     <header>
       <div class="header-main">
-        <span class="header-logo">C</span>
+        <span class="header-logo" aria-hidden="true">C</span>
         <div class="header-text">
           <span class="header-title">Canvas Tracker</span>
           <span id="user-info" class="header-sub"></span>
         </div>
         <span class="cache-badge hidden">cached</span>
+        <div class="header-actions">
+          <button id="refresh-btn" class="btn-icon btn-secondary" aria-label="Refresh data">↻</button>
+          <button id="settings-btn" class="btn-icon" aria-label="Open settings">⚙</button>
+        </div>
       </div>
     </header>
 
@@ -44,6 +48,7 @@
         <ul id="courses-list" class="item-list"></ul>
         <div id="courses-loading" class="state-msg">Loading…</div>
         <div id="courses-error" class="state-msg error hidden"></div>
+        <div id="professor-panel" class="hidden"></div>
       </section>
 
       <!-- Course Detail View -->
@@ -58,10 +63,6 @@
       </section>
     </main>
 
-    <footer class="app-footer">
-      <button id="refresh-btn" class="btn btn-secondary">Refresh</button>
-      <button id="settings-btn" class="btn btn-primary">Settings</button>
-    </footer>
   </div>
   <script src="app.js" type="module"></script>
 </body>

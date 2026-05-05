@@ -84,6 +84,31 @@ header {
   flex-shrink: 0;
 }
 
+.header-actions {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.btn-icon {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.25);
+  color: white;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.btn-icon:hover { background: rgba(255,255,255,0.3); }
+
 /* ── Tab Navigation ──────────────────────────────────────── */
 
 #tab-bar {
@@ -146,8 +171,16 @@ header {
 /* ── Item List ───────────────────────────────────────────── */
 
 main {
-  max-height: 420px;
+  max-height: 480px;
   overflow-y: auto;
+}
+
+.view-title {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  padding: 8px 12px 4px;
 }
 
 .item-list {
@@ -330,18 +363,6 @@ main {
 }
 
 .state-msg.error { color: var(--canvas-red); }
-
-/* ── Footer ──────────────────────────────────────────────── */
-
-footer {
-  border-top: 1px solid var(--border);
-  padding: 8px 12px;
-  display: flex;
-  gap: 8px;
-  background: var(--surface);
-  position: sticky;
-  bottom: 0;
-}
 
 button {
   background: var(--surface);
@@ -567,3 +588,12 @@ body.dark-theme .course-card {
 /* ── Utilities ───────────────────────────────────────────── */
 
 .hidden { display: none !important; }
+
+/* ── Responsive ──────────────────────────────────────────── */
+
+@media (max-width: 400px) {
+  body { min-width: 320px; }
+  .item-list { padding: 6px 8px; }
+  .assignment-item { padding: 8px 10px; }
+  header { padding: 8px 12px; }
+}
