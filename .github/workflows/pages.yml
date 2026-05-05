@@ -75,6 +75,12 @@ jobs:
       - name: Install homepage
         run: cp docs-site/index.html site/index.html
 
+      # Copy the standalone Gemini-backed agent demo (no untrusted input)
+      - name: Install agent demo
+        run: |
+          mkdir -p site/agent-demo
+          cp docs-site/agent-demo/index.html site/agent-demo/index.html
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site

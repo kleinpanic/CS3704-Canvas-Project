@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Canvas Calendar Agent — Live Demo</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: { canvas: { red: '#d63e36', dark: '#b83830' } },
+          fontFamily: {
+            sans: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    .tool-card { background: #1f1f23; border: 1px solid #2e2e34; border-radius: 12px; }
+    .chat-bubble-user { background: #d63e36; color: white; }
+    .chat-bubble-agent { background: #1f1f23; border: 1px solid #2e2e34; }
+    pre { white-space: pre-wrap; word-break: break-word; }
+    details summary { cursor: pointer; user-select: none; }
+    details[open] summary svg { transform: rotate(90deg); }
+    details summary svg { transition: transform 0.15s ease; }
+    .typing-dot { animation: typing 1.4s infinite; }
+    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes typing {
+      0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
+      30% { opacity: 1; transform: translateY(-3px); }
+    }
+  </style>
+</head>
+<body class="bg-gray-950 text-gray-100 font-sans min-h-screen">
+
+  <nav class="sticky top-0 z-40 bg-gray-950/95 backdrop-blur border-b border-gray-800">
+    <div class="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
+      <a href="../index.html" class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-canvas-red flex items-center justify-center font-bold text-white text-sm">C</div>
+        <span class="font-semibold">Canvas Calendar Agent</span>
+      </a>
+      <div class="flex items-center gap-6 text-sm text-gray-400">
+        <a href="../index.html" class="hover:text-white">Home</a>
+        <a href="../docs/architecture/" class="hover:text-white">Architecture</a>
+        <a href="https://github.com/kleinpanic/CS3704-Canvas-Project" target="_blank" rel="noopener" class="hover:text-white">GitHub</a>
+      </div>
+    </div>
+  </nav>
+
+  <header class="max-w-4xl mx-auto px-6 pt-12 pb-6">
+    <div class="inline-flex items-center gap-2 bg-canvas-red/10 border border-canvas-red/30 rounded-full px-3 py-1 text-canvas-red text-xs font-medium mb-4">
+      <span class="w-2 h-2 rounded-full bg-canvas-red animate-pulse"></span>
+      Live agent demo &mdash; runs in your browser
+    </div>
+    <h1 class="text-4xl md:text-5xl font-bold mb-4 leading-tight">
+      Talk to the Canvas<br/>Calendar Agent
+    </h1>
+    <p class="text-gray-400 text-lg leading-relaxed mb-2">
+      The Canvas Calendar Agent is a tutor-style assistant that knows about your Canvas
+      assignments, calendar, and study schedule. It speaks an 18-tool function-calling
+      protocol that the SDK parses and dispatches against live data.
+    </p>
+    <p class="text-gray-500 text-sm">
+      This page wires Gemini up as a fallback brain so you can experience the same protocol
+      without running the fine-tuned Gemma4 weights locally.
+      <strong class="text-gray-300">Mock Canvas data only.</strong> Tool calls return
+      pre-baked sample results.
+    </p>
+  </header>
+
+  <section class="max-w-4xl mx-auto px-6 pb-6">
+    <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5 mb-4">
+      <details>
+        <summary class="flex items-center gap-2 text-sm font-medium text-gray-300">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          Setup &mdash; paste your Gemini API key
+        </summary>
+        <div class="mt-3 space-y-3">
+          <p class="text-xs text-gray-400 leading-relaxed">
+            Get a free API key at
+            <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" class="text-canvas-red hover:underline">aistudio.google.com/apikey</a>.
+            The key is stored only in your browser's localStorage and never sent anywhere
+            except <code>generativelanguage.googleapis.com</code>.
+          </p>
+          <div class="flex gap-2">
+            <input
+              id="api-key"
+              type="password"
+              autocomplete="off"
+              placeholder="AIza..."
+              class="flex-1 bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-canvas-red"
+            />
+            <select id="model-pick" class="bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-canvas-red">
+              <option value="gemini-2.5-flash">gemini-2.5-flash (fast)</option>
+              <option value="gemini-2.5-pro">gemini-2.5-pro (smart)</option>
+              <option value="gemini-1.5-flash">gemini-1.5-flash (legacy)</option>
+            </select>
+          </div>
+          <p class="text-xs text-gray-500" id="key-status">No key stored.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="bg-gray-900 border border-gray-800 rounded-2xl mb-4">
+      <div class="px-5 py-3 border-b border-gray-800 flex items-center justify-between">
+        <div class="text-sm font-medium text-gray-300">Sample questions</div>
+        <button id="clear-btn" class="text-xs text-gray-500 hover:text-gray-300">Clear chat</button>
+      </div>
+      <div class="px-5 py-4 flex flex-wrap gap-2" id="samples"></div>
+    </div>
+
+    <div id="chat" class="bg-gray-900 border border-gray-800 rounded-2xl min-h-[280px] p-5 space-y-4 mb-4">
+      <div class="text-gray-500 text-sm text-center py-8" id="chat-empty">
+        Try a sample question above, or ask anything about Canvas / your schedule.
+      </div>
+    </div>
+
+    <form id="chat-form" class="flex gap-2">
+      <textarea
+        id="input"
+        rows="2"
+        placeholder="Ask the agent &mdash; e.g. 'plan study blocks for finals week'"
+        class="flex-1 bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-canvas-red resize-none"
+      ></textarea>
+      <button type="submit" id="send-btn"
+              class="bg-canvas-red hover:bg-canvas-dark text-white font-semibold px-6 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed">
+        Send
+      </button>
+    </form>
+  </section>
+
+  <section class="max-w-4xl mx-auto px-6 py-12 border-t border-gray-800">
+    <h2 class="text-2xl font-bold mb-4">How it works</h2>
+    <pre class="text-xs text-gray-400 bg-gray-900 border border-gray-800 rounded-xl p-5 overflow-x-auto">
++---------------------+   user msg    +-----------------------+
+|  Browser (this UI)  | ------------> |  GeminiBackend (web)  |
+|  + chat history     |               |  injects Gemma4 proto |
++----------+----------+               +-----------+-----------+
+           ^                                      | content
+           | rendered final answer                v
+           |                            +-----------------+
+           |                            | Gemini API call |
+           |                            +--------+--------+
+           |                                     |
+           |        &lt;|tool_call&gt;call:NAME{...}&lt;tool_call|&gt;
+           |                                     v
+           |                       +---------------------------+
+           +---------------------- |  parseToolCalls()         |
+                                   |  dispatchMock(name, args) |
+                                   +---------------------------+
+</pre>
+    <p class="text-gray-400 text-sm leading-relaxed mt-4">
+      In production, the Python SDK swaps the browser-side Gemini call for a local
+      <code>vLLM</code> server hosting the fine-tuned <code>gemma-4-e2b-it</code> weights
+      (auto-downloaded from HuggingFace on first run). Same parser, same 18 tools, same
+      contract &mdash; only the brain swaps.
+    </p>
+    <p class="text-gray-400 text-sm leading-relaxed mt-3">
+      Run it yourself:
+    </p>
+    <pre class="text-xs text-gray-300 bg-gray-900 border border-gray-800 rounded-xl p-5 mt-2 overflow-x-auto">pip install canvas-sdk[gemini]
+export GOOGLE_API_KEY=...
+
+python -c "from canvas_sdk import CanvasAgent; print(CanvasAgent.auto().run('what is due this week?'))"</pre>
+  </section>
+
+  <footer class="border-t border-gray-900 py-8 text-center text-gray-600 text-sm">
+    <p>CS3704 Canvas Calendar Agent &mdash; demo runs entirely in your browser.</p>
+  </footer>
+
+  <script>
+  // -----------------------------------------------------------------
+  // Tool catalog (mirrors src/sdk/canvas_sdk/agent_tools/)
+  // -----------------------------------------------------------------
+  const TOOL_CATALOG = [
+    {n:"canvas.list_courses",d:"List all enrolled courses for the current term."},
+    {n:"canvas.get_assignments",d:"Get upcoming assignments for one course or all active courses."},
+    {n:"canvas.get_course",d:"Get one course's metadata: name, code, credits, term, instructors."},
+    {n:"canvas.get_syllabus",d:"Fetch a course's syllabus (HTML stripped to plain text)."},
+    {n:"canvas.get_todo",d:"Fetch the student's Canvas todo/upcoming-events feed."},
+    {n:"canvas.get_grades",d:"Get the student's current grade per active course."},
+    {n:"canvas.list_announcements",d:"List recent course announcements (exam reschedules, extensions)."},
+    {n:"canvas.list_planner_items",d:"List Canvas planner items (student-created notes / overrides)."},
+    {n:"calendar.list_events",d:"List calendar events in a window (default next 14 days)."},
+    {n:"calendar.find_free_blocks",d:"Find free blocks matching constraints. Always call BEFORE create_event."},
+    {n:"calendar.create_event",d:"Create a calendar event (study block, deadline reminder, etc.)."},
+    {n:"calendar.modify_event",d:"Modify start/end/title of an existing event."},
+    {n:"calendar.delete_event",d:"Delete a calendar event by id."},
+    {n:"study.spaced_schedule",d:"Build a spaced-repetition schedule between today and an exam date."},
+    {n:"study.semester_schedule",d:"Lay out study blocks across a whole semester from a syllabus."},
+    {n:"study.recommend_block_size",d:"Recommend a deep-work block length given task difficulty."},
+    {n:"study.exam_bracket",d:"Bracket pre-exam study time + cooldown around an exam slot."},
+    {n:"reranker.priority_hint",d:"Rerank a list of upcoming items by urgency / weight / grade."}
+  ];
+
+  const TOOL_PROTOCOL = `\
+You are bridging into a Gemma4-trained tool-calling harness. The harness can
+ONLY parse tool calls in the exact Gemma4 textual format below. Do NOT use
+Google's native function-calling — emit the tool call as plain text inside
+your reply.
+
+Tool-call format (literal characters, no markdown fences):
+<|tool_call>call:tool.name{arg1: value, arg2: <|"|>quoted string<|"|>}<tool_call|>
+
+After execution the harness will replay the result to you wrapped in:
+<|tool_response>response:tool.name{value:<|"|>{...json...}<|"|>}<tool_response|>
+
+Rules:
+- Quote every string argument with the <|"|>...<|"|> sentinel.
+- Issue independent calls in the same turn when possible.
+- Once you have enough information, write the final answer in plain prose
+  with NO <|tool_call> blocks remaining.
+- Never invent assignment names, due dates, course IDs, or grades — every
+  fact must trace back to a tool result.
+
+Available tools:
+${TOOL_CATALOG.map(t => `- ${t.n} — ${t.d}`).join("\n")}
+`;
+
+  const AGENT_SYSTEM = `You are the Canvas Calendar Agent, a tutor-style assistant that helps a college student manage their Canvas LMS coursework and weekly study schedule. Tone: concise, friendly, action-oriented. Prefer short bullet lists.`;
+
+  // -----------------------------------------------------------------
+  // Mock Canvas data (week of 2026-05-04)
+  // -----------------------------------------------------------------
+  const MOCK_DATA = {
+    "canvas.list_courses": [
+      {id: 101, name: "CS 3704 Intermediate Software Design", course_code: "CS3704", credits: 3},
+      {id: 102, name: "STAT 3704 Statistics for CS", course_code: "STAT3704", credits: 3},
+      {id: 103, name: "ENGL 1106 Composition", course_code: "ENGL1106", credits: 3}
+    ],
+    "canvas.get_assignments": [
+      {id: 9001, title: "Midterm 2", course_id: 101, due_iso: "2026-05-12T17:00:00-04:00", points_possible: 100, submitted: false, late: false, missing: false},
+      {id: 9002, title: "Midterm", course_id: 102, due_iso: "2026-05-13T15:00:00-04:00", points_possible: 100, submitted: false, late: false, missing: false},
+      {id: 9003, title: "Essay 4 draft", course_id: 103, due_iso: "2026-05-09T23:59:00-04:00", points_possible: 50, submitted: false, late: false, missing: false}
+    ],
+    "canvas.get_todo": [
+      {type: "submitting", course_id: 101, title: "Midterm 2", due_iso: "2026-05-12T17:00:00-04:00", points_possible: 100},
+      {type: "submitting", course_id: 102, title: "Midterm", due_iso: "2026-05-13T15:00:00-04:00", points_possible: 100}
+    ],
+    "canvas.get_grades": [
+      {course_id: 101, current_score: 87.4},
+      {course_id: 102, current_score: 92.1},
+      {course_id: 103, current_score: 79.8}
+    ],
+    "canvas.list_announcements": [
+      {id: 5001, title: "Midterm 2 covers chapters 6-9", course_id: 101, posted_iso: "2026-05-03T10:00:00-04:00", message_preview: "Reminder: midterm 2 will cover graphs, DP, and the chapter 9 review problems..."}
+    ],
+    "calendar.find_free_blocks": [
+      {start: "2026-05-06T09:00", end: "2026-05-06T11:30", duration_min: 150},
+      {start: "2026-05-07T13:00", end: "2026-05-07T16:00", duration_min: 180},
+      {start: "2026-05-09T10:00", end: "2026-05-09T12:00", duration_min: 120},
+      {start: "2026-05-10T14:00", end: "2026-05-10T17:00", duration_min: 180},
+      {start: "2026-05-11T19:00", end: "2026-05-11T21:00", duration_min: 120}
+    ],
+    "calendar.list_events": [
+      {id: "ev1", summary: "CS 3704 lecture", start: "2026-05-06T11:30", end: "2026-05-06T12:45"},
+      {id: "ev2", summary: "Lunch with Sam", start: "2026-05-07T12:00", end: "2026-05-07T13:00"}
+    ],
+    "study.spaced_schedule": [
+      {date: "2026-05-06", topic: "review", minutes: 60},
+      {date: "2026-05-08", topic: "practice problems", minutes: 90},
+      {date: "2026-05-10", topic: "mock exam", minutes: 120},
+      {date: "2026-05-11", topic: "formula sheet + light review", minutes: 60}
+    ]
+  };
+
+  function dispatchMock(name, args) {
+    if (name in MOCK_DATA) return MOCK_DATA[name];
+    if (name === "calendar.create_event") return {ok: true, id: "ev_new_" + Math.random().toString(36).slice(2,8)};
+    if (name === "study.recommend_block_size") return {minutes: 90, rationale: "Deep work block for complex material"};
+    if (name === "study.exam_bracket") return {pre_minutes: 240, cooldown_minutes: 30};
+    if (name === "reranker.priority_hint") return Array.isArray(args.items) ? args.items.slice().reverse() : [];
+    return {note: "(mock data not configured for this tool in the demo)"};
+  }
+
+  // -----------------------------------------------------------------
+  // Gemma4 tool-call parser (mirrors src/sdk/canvas_sdk/tool_parser.py)
+  // -----------------------------------------------------------------
+  const TOOL_CALL_RE = /<\|tool_call>(.*?)<tool_call\|>/gs;
+  const FUNC_RE = /^call:([\w.]+)\{(.*)\}$/s;
+
+  function argsToObj(s) {
+    const strings = [];
+    let sanitized = s.replace(/<\|"\|>([\s\S]*?)<\|"\|>/g, (_, inner) => {
+      strings.push(inner);
+      return `"__S${strings.length-1}__"`;
+    });
+    sanitized = sanitized.replace(/(?:^|(?<=,)|(?<=\{))(\s*\w+):/g, '"$1":');
+    let obj;
+    try { obj = JSON.parse("{" + sanitized + "}"); }
+    catch { return {}; }
+    const restore = v => {
+      if (typeof v === "string") {
+        const m = v.match(/^__S(\d+)__$/);
+        return m ? strings[parseInt(m[1])] : v;
+      }
+      if (Array.isArray(v)) return v.map(restore);
+      if (v && typeof v === "object") return Object.fromEntries(Object.entries(v).map(([k,vv]) => [k, restore(vv)]));
+      return v;
+    };
+    return restore(obj);
+  }
+
+  function parseToolCalls(text) {
+    const calls = [];
+    for (const m of text.matchAll(TOOL_CALL_RE)) {
+      const body = m[1].trim();
+      const fm = body.match(FUNC_RE);
+      if (!fm) continue;
+      try {
+        calls.push({tool: fm[1], args: argsToObj(fm[2])});
+      } catch {}
+    }
+    return calls;
+  }
+
+  function stripToolCalls(text) {
+    return text.replace(/<\|tool_call>[\s\S]*?<tool_call\|>/g, "").trim();
+  }
+
+  // -----------------------------------------------------------------
+  // Gemini API call
+  // -----------------------------------------------------------------
+  async function callGemini(apiKey, model, history) {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
+    const systemInstruction = AGENT_SYSTEM + "\n\n" + TOOL_PROTOCOL;
+
+    const body = {
+      systemInstruction: { parts: [{ text: systemInstruction }] },
+      contents: history.map(m => ({
+        role: m.role === "assistant" ? "model" : "user",
+        parts: [{ text: m.content }]
+      })),
+      generationConfig: { temperature: 0.2, maxOutputTokens: 1024 }
+    };
+
+    const resp = await fetch(url, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(body)
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error?.message || `HTTP ${resp.status}`);
+    return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+  }
+
+  // -----------------------------------------------------------------
+  // UI (no innerHTML for untrusted content — use createElement / textContent)
+  // -----------------------------------------------------------------
+  const apiKeyInput = document.getElementById("api-key");
+  const modelPick = document.getElementById("model-pick");
+  const keyStatus = document.getElementById("key-status");
+  const chat = document.getElementById("chat");
+  const chatEmpty = document.getElementById("chat-empty");
+  const form = document.getElementById("chat-form");
+  const input = document.getElementById("input");
+  const sendBtn = document.getElementById("send-btn");
+  const samplesEl = document.getElementById("samples");
+  const clearBtn = document.getElementById("clear-btn");
+
+  apiKeyInput.value = localStorage.getItem("cca-gemini-key") || "";
+  modelPick.value = localStorage.getItem("cca-gemini-model") || "gemini-2.5-flash";
+  function syncKeyStatus() {
+    keyStatus.textContent = apiKeyInput.value
+      ? `Key stored locally (${apiKeyInput.value.slice(0,6)}...).`
+      : "No key stored.";
+  }
+  syncKeyStatus();
+  apiKeyInput.addEventListener("change", () => {
+    localStorage.setItem("cca-gemini-key", apiKeyInput.value);
+    syncKeyStatus();
+  });
+  modelPick.addEventListener("change", () => {
+    localStorage.setItem("cca-gemini-model", modelPick.value);
+  });
+
+  const SAMPLES = [
+    "What's due this week?",
+    "Plan study blocks for my CS 3704 and STAT 3704 midterms.",
+    "Which course am I doing worst in?",
+    "Schedule a 90-minute deep-work block tomorrow morning.",
+    "Summarize the last week of announcements across all my courses."
+  ];
+  for (const s of SAMPLES) {
+    const btn = document.createElement("button");
+    btn.className = "text-xs px-3 py-1.5 rounded-full bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-700";
+    btn.textContent = s;
+    btn.addEventListener("click", () => { input.value = s; input.focus(); });
+    samplesEl.appendChild(btn);
+  }
+
+  let history = [];
+
+  function clearEmptyState() {
+    if (chatEmpty && chatEmpty.parentNode === chat) chat.removeChild(chatEmpty);
+  }
+
+  function makeToolCard(tc) {
+    const card = document.createElement("details");
+    card.className = "tool-card text-xs";
+
+    const summary = document.createElement("summary");
+    summary.className = "px-3 py-2 flex items-center gap-2 text-gray-300";
+
+    // chevron
+    const sumIcon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    sumIcon.setAttribute("class", "w-3 h-3 text-canvas-red");
+    sumIcon.setAttribute("fill", "none");
+    sumIcon.setAttribute("viewBox", "0 0 24 24");
+    sumIcon.setAttribute("stroke", "currentColor");
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("stroke-linecap", "round");
+    path.setAttribute("stroke-linejoin", "round");
+    path.setAttribute("stroke-width", "2");
+    path.setAttribute("d", "M9 5l7 7-7 7");
+    sumIcon.appendChild(path);
+    summary.appendChild(sumIcon);
+
+    const nameSpan = document.createElement("span");
+    nameSpan.className = "font-mono";
+    nameSpan.textContent = tc.tool;
+    summary.appendChild(nameSpan);
+
+    const argsLabel = document.createElement("span");
+    argsLabel.className = "text-gray-500";
+    argsLabel.textContent = `(${Object.keys(tc.args).length} args)`;
+    summary.appendChild(argsLabel);
+
+    card.appendChild(summary);
+
+    const body = document.createElement("div");
+    body.className = "px-3 py-2 border-t border-gray-800 space-y-2";
+
+    const argsRow = document.createElement("div");
+    const argsLab = document.createElement("span");
+    argsLab.className = "text-gray-500";
+    argsLab.textContent = "args: ";
+    const argsCode = document.createElement("code");
+    argsCode.className = "text-gray-300";
+    argsCode.textContent = JSON.stringify(tc.args);
+    argsRow.appendChild(argsLab);
+    argsRow.appendChild(argsCode);
+    body.appendChild(argsRow);
+
+    const resRow = document.createElement("div");
+    const resLab = document.createElement("span");
+    resLab.className = "text-gray-500";
+    resLab.textContent = "result:";
+    resRow.appendChild(resLab);
+    const resPre = document.createElement("pre");
+    resPre.className = "text-gray-300 mt-1";
+    resPre.textContent = JSON.stringify(tc.result, null, 2);
+    resRow.appendChild(resPre);
+    body.appendChild(resRow);
+
+    card.appendChild(body);
+    return card;
+  }
+
+  function renderMessage(role, content, toolCalls = null) {
+    clearEmptyState();
+    const wrap = document.createElement("div");
+    wrap.className = role === "user" ? "flex justify-end" : "flex justify-start";
+
+    const bubble = document.createElement("div");
+    bubble.className = role === "user"
+      ? "chat-bubble-user max-w-[75%] rounded-2xl px-4 py-2.5"
+      : "chat-bubble-agent max-w-[85%] rounded-2xl px-4 py-3 text-gray-100";
+
+    if (toolCalls && toolCalls.length) {
+      const toolWrap = document.createElement("div");
+      toolWrap.className = "space-y-2 mb-2";
+      for (const tc of toolCalls) toolWrap.appendChild(makeToolCard(tc));
+      bubble.appendChild(toolWrap);
+    }
+
+    if (content) {
+      const text = document.createElement("div");
+      text.className = "text-sm leading-relaxed whitespace-pre-wrap";
+      text.textContent = content;
+      bubble.appendChild(text);
+    }
+
+    wrap.appendChild(bubble);
+    chat.appendChild(wrap);
+    chat.scrollTop = chat.scrollHeight;
+    return bubble;
+  }
+
+  function showTyping() {
+    const wrap = document.createElement("div");
+    wrap.className = "flex justify-start";
+    wrap.id = "typing";
+    const bubble = document.createElement("div");
+    bubble.className = "chat-bubble-agent rounded-2xl px-4 py-3 text-sm flex gap-1.5";
+    for (let i = 0; i < 3; i++) {
+      const dot = document.createElement("span");
+      dot.className = "typing-dot w-2 h-2 rounded-full bg-gray-500";
+      bubble.appendChild(dot);
+    }
+    wrap.appendChild(bubble);
+    chat.appendChild(wrap);
+    chat.scrollTop = chat.scrollHeight;
+  }
+  function hideTyping() {
+    const t = document.getElementById("typing");
+    if (t) t.remove();
+  }
+
+  async function runAgent(userMsg) {
+    if (!apiKeyInput.value) {
+      renderMessage("agent", "Paste a Gemini API key in the setup panel above first.");
+      return;
+    }
+    history.push({role: "user", content: userMsg});
+    renderMessage("user", userMsg);
+    sendBtn.disabled = true;
+
+    try {
+      for (let turn = 0; turn < 6; turn++) {
+        showTyping();
+        let raw;
+        try {
+          raw = await callGemini(apiKeyInput.value, modelPick.value, history);
+        } catch (err) {
+          hideTyping();
+          renderMessage("agent", `Error calling Gemini: ${err.message}`);
+          return;
+        }
+        hideTyping();
+
+        const calls = parseToolCalls(raw);
+        if (!calls.length) {
+          const final = stripToolCalls(raw) || raw;
+          renderMessage("agent", final);
+          history.push({role: "assistant", content: raw});
+          return;
+        }
+
+        const calledWithResults = calls.map(c => ({...c, result: dispatchMock(c.tool, c.args)}));
+        renderMessage("agent", stripToolCalls(raw), calledWithResults);
+        history.push({role: "assistant", content: raw});
+
+        const resultBlock = calledWithResults.map(c =>
+          `<|tool_response>response:${c.tool}{value:<|"|>${JSON.stringify(c.result)}<|"|>}<tool_response|>`
+        ).join("\n");
+        history.push({role: "user", content: resultBlock});
+      }
+      renderMessage("agent", "[turn budget exhausted]");
+    } finally {
+      sendBtn.disabled = false;
+    }
+  }
+
+  form.addEventListener("submit", e => {
+    e.preventDefault();
+    const msg = input.value.trim();
+    if (!msg) return;
+    input.value = "";
+    runAgent(msg);
+  });
+  input.addEventListener("keydown", e => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      form.requestSubmit();
+    }
+  });
+  clearBtn.addEventListener("click", () => {
+    history = [];
+    while (chat.firstChild) chat.removeChild(chat.firstChild);
+    const empty = document.createElement("div");
+    empty.className = "text-gray-500 text-sm text-center py-8";
+    empty.id = "chat-empty";
+    empty.textContent = "Chat cleared. Try a sample question above.";
+    chat.appendChild(empty);
+  });
+  </script>
+</body>
+</html>
