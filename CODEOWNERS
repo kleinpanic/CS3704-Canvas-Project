@@ -1,0 +1,19 @@
+# Canvas TUI ownership
+
+# Code owner review required for these paths
+/.github/workflows/       @kleinpanic
+/pyproject.toml           @kleinpanic
+/CHANGELOG.md             @kleinpanic
+
+# Extension
+/extension/               @Williammm23
+
+# SDK
+/sdk/                     @kleinpanic
+
+# Docs
+/docs-site/               @pjie22
+/docs/                    @pjie22
+
+# Tests
+/tests/                   @802797liu
