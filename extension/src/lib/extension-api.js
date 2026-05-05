@@ -74,6 +74,26 @@ export async function dismissAssignmentRemote(assignmentId) {
   return send(MESSAGE_TYPES.dismiss, { assignmentId });
 }
 
+export async function getDashboardCards() {
+  return send(MESSAGE_TYPES.getDashboardCards);
+}
+
+export async function getCourseSyllabus(courseId) {
+  return send(MESSAGE_TYPES.getSyllabus, { courseId });
+}
+
+export async function getAssignmentGroups(courseId) {
+  return send(MESSAGE_TYPES.getAssignmentGroups, { courseId });
+}
+
+export async function getSubmission(courseId, assignmentId) {
+  return send(MESSAGE_TYPES.getSubmission, { courseId, assignmentId });
+}
+
+export async function agentQuery(query) {
+  return send(MESSAGE_TYPES.agentQuery, { query });
+}
+
 // ── Local preferences (stored directly in chrome.storage.local) ──────────────
 // Preferences that only affect popup rendering don't need a background round-trip.
 

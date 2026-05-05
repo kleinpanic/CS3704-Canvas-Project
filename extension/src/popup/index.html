@@ -27,6 +27,7 @@
       <button class="tab active" data-view="upcoming">Upcoming</button>
       <button class="tab" data-view="courses">Courses</button>
       <button class="tab" data-view="grades">Grades</button>
+      <button class="tab" data-view="agent">Ask AI</button>
     </nav>
 
     <main>
@@ -122,6 +123,47 @@
         <div id="detail-loading" class="state-msg">
           <div class="loader"></div>
           <span>Loading details…</span>
+        </div>
+      </section>
+
+      <!-- Agent View -->
+      <section id="view-agent" class="view hidden">
+        <div class="agent-header">
+          <p class="view-title">Canvas AI Agent</p>
+          <span class="agent-badge">BETA</span>
+        </div>
+
+        <!-- Quick-action chips -->
+        <div class="agent-chips" id="agent-chips">
+          <button class="agent-chip" data-query="What assignments are due this week?">Due this week</button>
+          <button class="agent-chip" data-query="Prioritize my upcoming assignments by urgency">Prioritize tasks</button>
+          <button class="agent-chip" data-query="Create a spaced study plan for my next exam">Study plan</button>
+          <button class="agent-chip" data-query="What are my current grades?">My grades</button>
+          <button class="agent-chip" data-query="Any recent announcements from my courses?">Announcements</button>
+          <button class="agent-chip" data-query="What courses am I enrolled in?">My courses</button>
+        </div>
+
+        <!-- Chat history -->
+        <div id="agent-messages" class="agent-messages"></div>
+
+        <!-- Tool trace (shown while thinking) -->
+        <div id="agent-trace" class="agent-trace hidden"></div>
+
+        <!-- Input row -->
+        <div class="agent-input-row">
+          <input
+            type="text"
+            id="agent-input"
+            class="agent-input"
+            placeholder="Ask about assignments, grades, study plans…"
+            aria-label="Ask the Canvas AI agent"
+          />
+          <button id="agent-send" class="agent-send-btn" aria-label="Send query">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <line x1="22" y1="2" x2="11" y2="13"></line>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
+          </button>
         </div>
       </section>
     </main>

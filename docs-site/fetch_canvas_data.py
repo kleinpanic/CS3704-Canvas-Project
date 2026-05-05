@@ -78,6 +78,10 @@ def main():
     todo = fetch("/users/self/todo", {"per_page": "50"})
     save(out_dir, "todo.json", todo)
 
+    print("Fetching dashboard cards...")
+    cards = fetch("/dashboard/dashboard_cards")
+    save(out_dir, "dashboard_cards.json", cards if isinstance(cards, list) else [])
+
     print("Fetching planner notes...")
     notes = fetch("/planner/items", {"per_page": "50"})
     save(out_dir, "planner_notes.json", notes)
@@ -108,6 +112,14 @@ def main():
             files = fetch(f"/courses/{cid}/files",
                           {"sort": "updated_at", "order": "desc", "per_page": "20"})
             save(out_dir, f"course_{cid}_files.json", files)
+
+            groups = fetch(f"/courses/{cid}/assignment_groups",
+                           {"include[]": "assignments", "per_page": "20"})
+            save(out_dir, f"course_{cid}_assignment_groups.json", groups)
+
+            syllabus = fetch(f"/courses/{cid}", {"include[]": "syllabus_body"})
+            save(out_dir, f"course_{cid}_syllabus.json",
+                 syllabus if isinstance(syllabus, dict) else {})
 
     print(f"\nDone. Data written to {out_dir}/")
 

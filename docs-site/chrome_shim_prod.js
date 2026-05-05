@@ -42,6 +42,33 @@
     GET_PLANNER_NOTES: async () => fetchJson('planner_notes.json'),
 
     GET_RMP_RATING: async () => ({ ok: false, error: 'Not available in demo' }),
+    GET_DASHBOARD_CARDS: async () => fetchJson('dashboard_cards.json'),
+    GET_COURSE_SYLLABUS: async (msg) => fetchJson(`course_${msg.courseId}_syllabus.json`),
+    GET_ASSIGNMENT_GROUPS: async (msg) => fetchJson(`course_${msg.courseId}_assignment_groups.json`),
+    GET_SUBMISSION: async () => ({ ok: false, error: 'Not available in demo' }),
+    AGENT_QUERY: async (msg) => {
+      const q = (msg.query || '').toLowerCase();
+      const toolCalls = [];
+      let answer = '';
+      if (/due|upcoming|assign/.test(q)) {
+        toolCalls.push({ tool: 'canvas.get_assignments', label: 'Fetching upcoming' });
+        const r = await fetchJson('upcoming.json');
+        const items = ((r.data || r) || []).filter(e => e.type === 'assignment');
+        const lines = items.slice(0, 8).map(e => `• **${e.title}** — ${new Date(e.due_at).toLocaleDateString()}`);
+        answer = lines.length ? `Upcoming assignments:\n\n${lines.join('\n')}` : 'No upcoming assignments!';
+      } else if (/grade|score/.test(q)) {
+        answer = 'Check the Grades tab for your current scores.';
+      } else if (/course|class/.test(q)) {
+        toolCalls.push({ tool: 'canvas.list_courses', label: 'Fetching courses' });
+        const r = await fetchJson('courses.json');
+        const courses = r.data || r || [];
+        const lines = courses.map(c => `• **${c.course_code}** — ${c.name}`);
+        answer = lines.length ? `Your courses:\n\n${lines.join('\n')}` : 'No courses found.';
+      } else {
+        answer = 'I can help with:\n\n• "What\'s due?" — upcoming deadlines\n• "My courses" — enrolled courses\n• "My grades" — current scores';
+      }
+      return { ok: true, answer, toolCalls };
+    },
     DISMISS: async (msg) => { dismissed.add(msg.assignmentId); return { ok: true }; },
     CLEAR_CACHE: async () => ({ ok: true }),
     REFRESH_BADGE: async () => ({ ok: true }),

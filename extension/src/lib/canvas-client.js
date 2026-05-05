@@ -137,6 +137,30 @@ export class CanvasClient {
       },
     });
   }
+
+  async getCourseGrades(courseId) {
+    return this.request(`/courses/${courseId}/enrollments`, {
+      params: { type: 'StudentEnrollment', include: 'grades', per_page: 1 },
+    });
+  }
+
+  async getCourseSyllabus(courseId) {
+    return this.request(`/courses/${courseId}`, {
+      params: { 'include[]': 'syllabus_body' },
+    });
+  }
+
+  async getAssignmentGroups(courseId, { perPage = 50 } = {}) {
+    return this.request(`/courses/${courseId}/assignment_groups`, {
+      params: { per_page: perPage, 'include[]': 'assignments' },
+    });
+  }
+
+  async getSubmission(courseId, assignmentId) {
+    return this.request(
+      `/courses/${courseId}/assignments/${assignmentId}/submissions/self`
+    );
+  }
 }
 
 export function createCanvasClient(options = {}) {

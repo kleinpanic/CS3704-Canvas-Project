@@ -25,6 +25,7 @@ import {
   getRmpRating,
   getCourseGrades,
   getToken,
+  agentQuery,
 } from '../lib/extension-api.js';
 
 // ── DOM Refs ──────────────────────────────────────────────────────────────────
@@ -41,6 +42,7 @@ const $tabs           = document.querySelectorAll(".tab");
 const $viewUpcoming   = document.getElementById("view-upcoming");
 const $viewCourses    = document.getElementById("view-courses");
 const $viewDetail     = document.getElementById("view-course-detail");
+const $viewAgent      = document.getElementById("view-agent");
 
 // Upcoming
 const $upcomingList   = document.getElementById("upcoming-list");
@@ -439,6 +441,8 @@ function switchTab(tabName) {
   $viewCourses.classList.toggle("hidden",   tabName !== "courses");
   $viewGrades.classList.toggle("active",    tabName === "grades");
   $viewGrades.classList.toggle("hidden",    tabName !== "grades");
+  $viewAgent.classList.toggle("active",     tabName === "agent");
+  $viewAgent.classList.toggle("hidden",     tabName !== "agent");
   $viewDetail.classList.add("hidden");
   $viewDetail.classList.remove("active");
 
@@ -732,7 +736,117 @@ $settingsBtn.addEventListener("click", () => {
 
 $courseFilter.addEventListener("change", () => renderUpcoming(allAssignments));
 
-// ── Init ──────────────────────────────────────────────────────────────────────
+// ── Agent View ────────────────────────────────────────────────────────────────
+
+function renderMarkdown(text) {
+  return esc(text)
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/_(.+?)_/g, '<em>$1</em>')
+    .replace(/\n/g, '<br>');
+}
+
+function appendAgentMessage(role, content) {
+  const $msgs = document.getElementById("agent-messages");
+  const div = document.createElement("div");
+  div.className = `agent-msg agent-msg--${role}`;
+  const bubble = document.createElement("div");
+  bubble.className = "agent-bubble";
+  if (role === "user") {
+    bubble.textContent = content;
+  } else {
+    bubble.innerHTML = renderMarkdown(content);
+  }
+  div.appendChild(bubble);
+  $msgs.appendChild(div);
+  $msgs.scrollTop = $msgs.scrollHeight;
+  return bubble;
+}
+
+function showThinking() {
+  const $msgs = document.getElementById("agent-messages");
+  const div = document.createElement("div");
+  div.id = "agent-thinking";
+  div.className = "agent-msg agent-msg--agent";
+  div.innerHTML = `<div class="agent-bubble agent-bubble--thinking">
+    <div class="agent-thinking-dots">
+      <span></span><span></span><span></span>
+    </div>
+    <span>Thinking…</span>
+  </div>`;
+  $msgs.appendChild(div);
+  $msgs.scrollTop = $msgs.scrollHeight;
+}
+
+function hideThinking() {
+  document.getElementById("agent-thinking")?.remove();
+}
+
+function showToolTrace(toolCalls) {
+  const $trace = document.getElementById("agent-trace");
+  if (!toolCalls?.length) { $trace.classList.add("hidden"); return; }
+  $trace.classList.remove("hidden");
+  $trace.innerHTML = `<div class="agent-trace-title">Tools used</div>` +
+    toolCalls.map(tc => `
+      <div class="agent-tool-item">
+        <span class="agent-tool-icon">✓</span>
+        <span class="agent-tool-name">${esc(tc.tool)}</span>
+        <span class="agent-tool-label">— ${esc(tc.label || '')}</span>
+      </div>`).join('');
+}
+
+async function sendAgentQuery(query) {
+  if (!query.trim()) return;
+
+  const $input = document.getElementById("agent-input");
+  const $send  = document.getElementById("agent-send");
+  const $trace = document.getElementById("agent-trace");
+
+  $input.value = "";
+  $input.disabled = true;
+  $send.disabled = true;
+  $trace.classList.add("hidden");
+
+  appendAgentMessage("user", query);
+  showThinking();
+
+  try {
+    const res = await agentQuery(query);
+    hideThinking();
+    if (res?.ok) {
+      showToolTrace(res.toolCalls);
+      appendAgentMessage("agent", res.answer || "No response.");
+    } else {
+      appendAgentMessage("agent", `Error: ${res?.error || "Unknown error"}`);
+    }
+  } catch (err) {
+    hideThinking();
+    appendAgentMessage("agent", `Failed to reach agent: ${err.message}`);
+  } finally {
+    $input.disabled = false;
+    $send.disabled = false;
+    $input.focus();
+  }
+}
+
+document.getElementById("agent-send")?.addEventListener("click", () => {
+  sendAgentQuery(document.getElementById("agent-input")?.value || "");
+});
+
+document.getElementById("agent-input")?.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    sendAgentQuery(e.target.value);
+  }
+});
+
+document.querySelectorAll(".agent-chip").forEach(chip => {
+  chip.addEventListener("click", () => {
+    switchTab("agent");
+    sendAgentQuery(chip.dataset.query);
+  });
+});
+
+// ── Init ──────────────────────────────────────────────���───────────────────────
 
 async function initApp() {
   try {
