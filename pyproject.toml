@@ -42,6 +42,7 @@ ai = [
 dev = [
     "black",
     "build",
+    "gradio-client>=1.3",
     "mkdocs",
     "mkdocs-material",
     "mypy",
@@ -75,6 +76,12 @@ name = "cz_conventional_commits"
 version = "1.1.1"
 tag_format = "v$version"
 version_source = "commitizen"
+
+[tool.pytest.ini_options]
+markers = [
+    "network: marks tests that require live network access (deselect with '-m \"not network\"')",
+    "slow: marks tests with long timeouts (deselect with '-m \"not slow\"')",
+]
 
 [tool.coverage.run]
 omit = [

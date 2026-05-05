@@ -9,7 +9,8 @@ A maintainable, team-ready **Canvas LMS productivity client** with a Textual TUI
 [![Python](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![HF Model](https://img.shields.io/badge/🤗_Model-canvas--calendar--agent--v7--dpo-yellow)](https://huggingface.co/kleinpanic93/canvas-calendar-agent-v7-dpo)
 [![HF Dataset](https://img.shields.io/badge/🤗_Dataset-canvas--calendar--preferences--v7-blue)](https://huggingface.co/datasets/kleinpanic93/canvas-calendar-preferences-v7)
-[![HF Space](https://img.shields.io/badge/🤗_Demo-Live_HF_Space-purple)](https://huggingface.co/spaces/kleinpanic93/canvas-calendar-agent-demo)
+[![HF Collection](https://img.shields.io/badge/🤗_Collection-Canvas_Calendar_Agent_v3.0-yellow)](https://huggingface.co/collections/kleinpanic93/canvas-calendar-agent-v30-69fa6462f697e0342b21dfe0)
+[![HF Space](https://img.shields.io/badge/🤗_Space-Live_Demo-purple)](https://huggingface.co/spaces/kleinpanic93/canvas-calendar-agent-demo)
 
 ## Live demo
 
