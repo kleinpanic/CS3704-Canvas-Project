@@ -22,9 +22,12 @@ def _args_to_dict(args_str: str) -> dict:
         if isinstance(v, str):
             m = re.fullmatch(r"__S(\d+)__", v)
             return strings[int(m.group(1))] if m else v
-        if isinstance(v, dict): return {k: _restore(val) for k, val in v.items()}
-        if isinstance(v, list): return [_restore(x) for x in v]
+        if isinstance(v, dict):
+            return {k: _restore(val) for k, val in v.items()}
+        if isinstance(v, list):
+            return [_restore(x) for x in v]
         return v
+
     return _restore(obj)
 
 
@@ -34,7 +37,8 @@ def parse_tool_calls(text: str) -> list[dict]:
     for match in _TOOL_CALL_RE.finditer(text):
         body = match.group(1).strip()
         m = _FUNC_RE.match(body)
-        if not m: continue
+        if not m:
+            continue
         try:
             arguments = _args_to_dict(m.group(2))
         except (json.JSONDecodeError, IndexError, KeyError):
