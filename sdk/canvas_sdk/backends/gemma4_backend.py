@@ -12,9 +12,7 @@ from typing import Any
 try:
     import httpx
 except ImportError as exc:  # pragma: no cover - import-time guard
-    raise ImportError(
-        "Gemma4Backend requires httpx. Install with: pip install httpx"
-    ) from exc
+    raise ImportError("Gemma4Backend requires httpx. Install with: pip install httpx") from exc
 
 
 class Gemma4Backend:
