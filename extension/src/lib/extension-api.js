@@ -45,3 +45,32 @@ export async function refreshBadge() {
 export async function dismissAssignmentRemote(assignmentId) {
   return send(MESSAGE_TYPES.dismiss, { assignmentId });
 }
+
+// ── Local preferences (stored directly in chrome.storage.local) ──────────────
+// Preferences that only affect popup rendering don't need a background round-trip.
+
+const PREFS_KEY = "canvas_tui_prefs";
+
+const DEFAULT_PREFS = {
+  theme: "light",
+  daysAhead: 7,
+};
+
+export async function getPreferences() {
+  try {
+    const result = await chrome.storage.local.get(PREFS_KEY);
+    return { ...DEFAULT_PREFS, ...(result[PREFS_KEY] || {}) };
+  } catch {
+    return { ...DEFAULT_PREFS };
+  }
+}
+
+export async function savePreferences(prefs) {
+  try {
+    const current = await getPreferences();
+    await chrome.storage.local.set({ [PREFS_KEY]: { ...current, ...prefs } });
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+}
