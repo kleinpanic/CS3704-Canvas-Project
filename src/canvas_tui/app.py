@@ -1330,7 +1330,9 @@ class CanvasTUI(App):
     def _apply_config_layout(self) -> None:
         """Apply config-driven layout and theme to live widgets."""
         with contextlib.suppress(Exception):
-            self.query_one("#sidebar").styles.width = self.cfg.sidebar_width
+            sidebar = self.query_one("#sidebar")
+            sidebar.styles.width = self.cfg.sidebar_width
+            sidebar.styles.dock = self.cfg.sidebar_position
 
     # ---------- actions ----------
     def action_open_settings(self) -> None:
@@ -1339,28 +1341,39 @@ class CanvasTUI(App):
         def _on_dismiss(result: dict | None) -> None:
             if not result:
                 return
+            # Build and validate on a scratch copy so background threads never
+            # observe a partially-updated Config object.
+            from dataclasses import replace as _dc_replace
             cfg = self.cfg
-            cfg.theme = result["theme"]
-            cfg.sidebar_position = result["sidebar_position"]
-            cfg.sidebar_width = result["sidebar_width"]
-            cfg.days_ahead = result["days_ahead"]
-            cfg.past_hours = result["past_hours"]
-            cfg.auto_refresh_sec = result["auto_refresh_sec"]
-            cfg.keybindings = result["keybindings"]
-            cfg._validate()
+            candidate = _dc_replace(
+                cfg,
+                theme=result["theme"],
+                sidebar_position=result["sidebar_position"],
+                sidebar_width=result["sidebar_width"],
+                days_ahead=result["days_ahead"],
+                past_hours=result["past_hours"],
+                auto_refresh_sec=result["auto_refresh_sec"],
+                download_dir=result.get("download_dir", cfg.download_dir),
+                keybindings=result["keybindings"],
+            )
+            candidate._validate()
+            self.cfg = candidate  # atomic swap
 
             # Apply immediately
-            self._theme = set_theme(cfg.theme)
-            self.dark = cfg.theme == "dark"
+            self._theme = set_theme(candidate.theme)
+            self.dark = candidate.theme == "dark"
             self._apply_config_layout()
 
-            with contextlib.suppress(Exception):
-                cfg.save()
+            save_status = "Settings saved"
+            try:
+                candidate.save()
+            except Exception as e:
+                save_status = f"[red]Save failed: {e}[/red]"
 
             self._render_info()
             self._render_stats()
             self._render_graphs()
-            self._update_status_bar("Settings saved")
+            self._update_status_bar(save_status)
 
         self.push_screen(SettingsScreen(self), callback=_on_dismiss)
 
