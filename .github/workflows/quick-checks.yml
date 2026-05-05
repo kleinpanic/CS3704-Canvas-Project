@@ -29,13 +29,13 @@ jobs:
           cache: pip
           cache-dependency-paths: |
             pyproject.toml
-            sdk/pyproject.toml
+            src/sdk/pyproject.toml
 
       - name: Install ruff
         run: pip install ruff --quiet
 
       - name: Run ruff check
-        run: ruff check src/ sdk/
+        run: ruff check src/ src/sdk/
         continue-on-error: true
 
   format-check:
@@ -53,7 +53,7 @@ jobs:
         run: pip install ruff --quiet
 
       - name: Check formatting
-        run: ruff format src/ sdk/ --check --diff
+        run: ruff format src/ src/sdk/ --check --diff
 
   typecheck:
     name: Mypy Type Check
