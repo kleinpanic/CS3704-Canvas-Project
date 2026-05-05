@@ -9,13 +9,53 @@ A maintainable, team-ready **Canvas LMS productivity client** with a Textual TUI
 [![Python](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 <!-- HF model + dataset badges added after v2.0 release -->
 
+## Live demo
+
+Try the fine-tuned Canvas Calendar Agent in your browser — no install required:
+
+- **Browser chat UI** (mock Canvas data): https://kleinpanic.github.io/CS3704-Canvas-Project/demo/
+- **HF Space (full model, mock tools)**: https://huggingface.co/spaces/kleinpanic93/canvas-calendar-agent-demo
+
 ## ML/AI components
 
 The v2 milestone adds a **specialized calendar+study agent** that combines
 Canvas API tool calls with neuroscience-grounded study planning heuristics
 (spaced repetition, deep-work block sizing, exam bracketing).
 
-Model weights will be published to HuggingFace and the accompanying paper will be published on Zenodo once v2 training is complete.
+The v7-DPO model is published on HuggingFace and the accompanying paper is
+on Zenodo.
+
+### Use the SDK in Python
+
+```bash
+pip install -e src/sdk
+pip install canvas-sdk[autodownload]   # auto-pulls the v7-dpo model from HF on first use
+python -m canvas_sdk.demo "What's due this week?"
+```
+
+```python
+import os
+from canvas_sdk import CanvasAgent
+
+os.environ["CANVAS_TOKEN"] = "..."
+os.environ["CANVAS_BASE_URL"] = "https://canvas.vt.edu"
+
+agent = CanvasAgent.auto()             # auto-resolves: env -> local cache -> HF -> Gemini
+print(agent.run("What's due this week?"))
+```
+
+`CanvasAgent.auto()` resolution order:
+1. `CANVAS_LLM_ENDPOINT` env (skip auto-download, use your own server)
+2. Local cache at `~/.cache/canvas-agent/v7-dpo/` (spawns vLLM on `:8765`)
+3. Download `kleinpanic93/canvas-calendar-agent-v7-dpo` from HF, then (2)
+4. Fall back to Gemini (`gemini-2.5-flash` by default)
+
+### Try the fine-tuned model
+
+- **Model card:** [huggingface.co/kleinpanic93/canvas-calendar-agent-v7-dpo](https://huggingface.co/kleinpanic93/canvas-calendar-agent-v7-dpo)
+- **Preference dataset:** [huggingface.co/datasets/kleinpanic93/canvas-calendar-preferences-v7](https://huggingface.co/datasets/kleinpanic93/canvas-calendar-preferences-v7)
+- **Training pipeline (paper + code):** [github.com/kleinpanic/CS3704-DPO-SSOT](https://github.com/kleinpanic/CS3704-DPO-SSOT)
+- **Bench comparison (SFT vs DPO):** [docs/bench_v7_comparison.md](https://github.com/kleinpanic/CS3704-DPO-SSOT/blob/main/docs/bench_v7_comparison.md)
 
 ### Try the agent right now
 
@@ -71,6 +111,33 @@ This is the **CS3704 team project repository** for a Canvas LMS productivity too
 ---
 
 ## Architecture
+
+### v2 ML stack — agent runtime
+
+```mermaid
+flowchart LR
+  USER[User]
+  EXT[Browser Extension<br/>presentation only]
+  NH[Native Messaging Host<br/>stdio bridge]
+  SDK[canvas_sdk<br/>Python]
+  AGENT[CanvasAgent<br/>agent loop]
+  G4[Gemma4Backend<br/>vLLM /v1/chat]
+  GEM[GeminiBackend<br/>fallback]
+  VLLM[(vLLM serving<br/>v7-dpo)]
+  GAPI[(Gemini API)]
+
+  USER --> EXT
+  EXT -- AGENT_QUERY --> NH
+  NH --> SDK
+  SDK --> AGENT
+  AGENT --> G4
+  AGENT --> GEM
+  G4 --> VLLM
+  GEM --> GAPI
+```
+
+Contract: **the extension is GUI; the SDK is the only agent. Never duplicate tool parsing or
+agent loops in the extension.** See [`REVIEW-extension-sdk.md`](REVIEW-extension-sdk.md).
 
 ### High-level system design
 
@@ -176,17 +243,18 @@ python -m build           # build package
 .github/                  CI/CD workflows and governance
 src/canvas_tui/           Application source code
   agent/                  v2 CalendarAgent (tool calls + study planning)
+src/sdk/canvas_sdk/       Python SDK — single source of agent logic
+hf-space/                 HuggingFace Space (Gradio app loading v7-dpo)
 tests/                    Test suite
 scripts/                  Data contribution utilities (see scripts/README.md)
 docs/                     Architecture and research docs
-docs-site/                GitHub Pages documentation
+docs-site/                GitHub Pages documentation + browser demo
 data/
   trajectories/           v2 SFT training data
     collab/               Teammate-contributed trajectory JSONL files
     seeds/                Canonical seed examples
   v1-reranker/            Legacy v1 preference pair data
-extension/                Browser extension source
-sdk/                      Python SDK experiments and support code
+extension/                Browser extension source (presentation only)
 ```
 
 ---
@@ -235,7 +303,8 @@ All commits to protected branches must be **GPG signed**.
 ## Documentation
 
 - **[Docs site](https://kleinpanic.github.io/CS3704-Canvas-Project/)** — live project docs
-- **[Agent demo](https://kleinpanic.github.io/CS3704-Canvas-Project/agent-demo/)** — chat with the Canvas Calendar Agent in your browser (Gemini-backed)
+- **[Agent demo](https://kleinpanic.github.io/CS3704-Canvas-Project/agent-demo/)** — chat with the Canvas Calendar Agent in your browser
+- **[HF Space](https://huggingface.co/spaces/kleinpanic93/canvas-calendar-agent-demo)** — full v7-dpo model behind a Gradio chat UI
 - **[Architecture docs](docs-site/architecture.md)** — system design decisions
 - **[Browser extension docs](docs-site/extension.md)** — shared client/runtime architecture
 - **[Workflow guide](docs-site/workflow.md)** — how the team works
