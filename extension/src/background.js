@@ -22,9 +22,27 @@ import {
 } from './lib/cache.js';
 import { createCanvasClient } from './lib/canvas-client.js';
 import { MESSAGE_TYPES } from './lib/extension-contract.js';
+import { nativeCall, isNativeHostAvailable } from './lib/native-host.js';
 
 const NOTIFY_BEFORE = [24 * 3600, 3600]; // 24h and 1h before deadline
 const canvasClient = createCanvasClient();
+
+// ── Native Host Helper ────────────────────────────────────────────────────────
+
+/**
+ * Attempt a call via the native messaging host.
+ * Returns the response data on success, or null if unavailable / errored.
+ */
+async function tryNative(method, params = {}) {
+  if (!isNativeHostAvailable()) return null;
+  try {
+    const token = await canvasClient.getToken().catch(() => null);
+    if (!token) return null;
+    return await nativeCall(method, token, canvasClient.baseUrl, params);
+  } catch {
+    return null;
+  }
+}
 
 // ── Badge Update ─────────────────────────────────────────────────────────────
 
@@ -85,6 +103,176 @@ function sendOk(sendResponse, payload = {}) {
 
 function sendError(sendResponse, error) {
   sendResponse({ ok: false, error: error?.message || String(error) });
+}
+
+// ── Lightweight Local Agent ───────────────────────────────────────────────────
+// Deterministic query handler that uses extension tools as "agent tools".
+// Falls through to native host (Gemma4) if installed and query is complex.
+
+function eventDate(e) {
+  const raw = e.due_at || e.start_at || e.end_at || null;
+  if (!raw) return null;
+  const d = new Date(raw);
+  return isNaN(d) ? null : d;
+}
+
+function fmtDate(d) {
+  if (!d) return 'No due date';
+  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
+async function runLocalAgent(query = '') {
+  const q = query.toLowerCase();
+  const toolCalls = [];
+  let answer = '';
+
+  const track = (name, label) => toolCalls.push({ tool: name, label, status: 'done' });
+
+  // Intent: grades
+  if (/grade|score|gpa|point/.test(q)) {
+    track('canvas.get_courses', 'Fetching courses');
+    const cRes = await getCourses(() => canvasClient.getCourses());
+    const courses = cRes.data || [];
+
+    track('canvas.get_grades', `Fetching grades for ${courses.length} courses`);
+    const gradesResults = await Promise.all(
+      courses.slice(0, 10).map(c =>
+        canvasClient.getCourseGrades(c.id)
+          .then(d => ({ course: c, enrollments: Array.isArray(d) ? d : [] }))
+          .catch(() => ({ course: c, enrollments: [] }))
+      )
+    );
+
+    const lines = gradesResults.flatMap(({ course, enrollments }) => {
+      const enr = enrollments[0];
+      const score = enr?.grades?.current_score;
+      const grade = enr?.grades?.current_grade;
+      if (score == null) return [];
+      return [`• ${course.course_code || course.name}: **${grade || '—'}** (${score}%)`];
+    });
+
+    answer = lines.length
+      ? `Your current grades:\n\n${lines.join('\n')}`
+      : 'No grade data available yet — Canvas may not have published scores.';
+
+  // Intent: prioritize / rank / what first
+  } else if (/prioriti|rank|first|urgent|important|focus/.test(q)) {
+    track('canvas.get_assignments', 'Fetching upcoming assignments');
+    const uRes = await getUpcomingAssignments(() => canvasClient.getUpcomingAssignments());
+    const items = (uRes.data || []).filter(e => e.type === 'assignment');
+
+    const now = Date.now();
+    const sorted = [...items].sort((a, b) => {
+      const da = eventDate(a), db = eventDate(b);
+      if (!da && !db) return 0;
+      if (!da) return 1;
+      if (!db) return -1;
+      return da - db;
+    });
+
+    const lines = sorted.slice(0, 8).map(e => {
+      const due = eventDate(e);
+      const diffH = due ? (due - now) / 3600000 : null;
+      const tag = diffH === null ? '⚪' : diffH < 0 ? '🔴 OVERDUE' : diffH < 24 ? '🟠 Due today' : diffH < 72 ? '🟡 Due soon' : '🟢';
+      const pts = e.assignment?.points_possible;
+      return `${tag} **${e.title}** — ${fmtDate(due)}${pts ? ` (${pts}pts)` : ''}`;
+    });
+
+    answer = lines.length
+      ? `Here's your priority order by deadline:\n\n${lines.join('\n')}`
+      : 'No upcoming assignments found.';
+
+  // Intent: study plan / schedule
+  } else if (/study|plan|schedule|exam|spaced|review/.test(q)) {
+    track('canvas.get_assignments', 'Searching for upcoming exams');
+    const uRes = await getUpcomingAssignments(() => canvasClient.getUpcomingAssignments());
+    const items = (uRes.data || []).filter(e =>
+      /exam|midterm|final|quiz|test/.test((e.title || '').toLowerCase())
+    );
+
+    if (!items.length) {
+      answer = 'No upcoming exams found in your Canvas calendar. Try asking about specific assignments.';
+    } else {
+      const exam = items.find(e => eventDate(e)) || items[0];
+      const examDate = eventDate(exam);
+      const now = Date.now();
+      const daysUntil = examDate ? (examDate - now) / 86400000 : 7;
+
+      const gaps = daysUntil > 10 ? [10, 5, 2, 1] : daysUntil > 6 ? [5, 3, 1] : [Math.max(1, Math.floor(daysUntil / 2)), 1];
+      const sessions = gaps.map(g => {
+        const base = examDate ? new Date(examDate.getTime() - g * 86400000) : new Date(Date.now() + g * 86400000);
+        base.setHours(9, 0, 0, 0);
+        return `• ${base.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} — 90 min review (${g}d before)`;
+      });
+
+      answer = `Spaced study plan for **${exam.title}** (${fmtDate(examDate)}):\n\n${sessions.join('\n')}\n\nStart early, short sessions beat cramming.`;
+    }
+
+  // Intent: announcements
+  } else if (/announce|news|update|post/.test(q)) {
+    track('canvas.get_courses', 'Fetching courses');
+    const cRes = await getCourses(() => canvasClient.getCourses());
+    const courses = (cRes.data || []).slice(0, 5);
+
+    track('canvas.list_announcements', `Checking ${courses.length} courses`);
+    const annResults = await Promise.all(
+      courses.map(c =>
+        canvasClient.getCourseAnnouncements(c.id)
+          .then(d => (Array.isArray(d) ? d : []).slice(0, 2).map(a => ({ ...a, courseName: c.course_code || c.name })))
+          .catch(() => [])
+      )
+    );
+    const all = annResults.flat().sort((a, b) => new Date(b.posted_at) - new Date(a.posted_at)).slice(0, 6);
+
+    const lines = all.map(a => {
+      const d = new Date(a.posted_at).toLocaleDateString();
+      return `• **[${a.courseName}]** ${a.title} — _${d}_`;
+    });
+
+    answer = lines.length
+      ? `Recent announcements:\n\n${lines.join('\n')}`
+      : 'No recent announcements found.';
+
+  // Intent: what's due / upcoming
+  } else if (/due|upcoming|deadline|assignm|homework|hw/.test(q)) {
+    track('canvas.get_assignments', 'Fetching upcoming assignments');
+    const uRes = await getUpcomingAssignments(() => canvasClient.getUpcomingAssignments());
+    const items = (uRes.data || []).filter(e => e.type === 'assignment');
+    const now = Date.now();
+
+    const lines = items.slice(0, 10).map(e => {
+      const due = eventDate(e);
+      const diffH = due ? (due - now) / 3600000 : null;
+      const when = diffH !== null && diffH < 24
+        ? `Today ${due.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+        : fmtDate(due);
+      return `• **${e.title}** — ${when}`;
+    });
+
+    answer = lines.length
+      ? `You have ${items.length} upcoming assignment${items.length !== 1 ? 's' : ''}:\n\n${lines.join('\n')}`
+      : 'No upcoming assignments — nice!';
+
+  // Intent: courses / what am I taking
+  } else if (/course|class|taking|enrolled/.test(q)) {
+    track('canvas.list_courses', 'Fetching enrolled courses');
+    const cRes = await getCourses(() => canvasClient.getCourses());
+    const courses = cRes.data || [];
+    const lines = courses.map(c => `• **${c.course_code}** — ${c.name}`);
+    answer = lines.length
+      ? `You're enrolled in ${lines.length} course${lines.length !== 1 ? 's' : ''}:\n\n${lines.join('\n')}`
+      : 'No active courses found.';
+
+  } else {
+    // Fall through to native host (Gemma4) if available
+    const nativeRes = await tryNative('agentQuery', { query });
+    if (nativeRes !== null) {
+      return { ok: true, answer: nativeRes.answer || nativeRes, toolCalls: nativeRes.toolCalls || [] };
+    }
+    answer = `I can help with:\n\n• **"What's due?"** — upcoming deadlines\n• **"Prioritize my week"** — ranked by urgency\n• **"Study plan"** — spaced review schedule\n• **"My grades"** — current scores\n• **"Any announcements?"** — recent course posts\n\nTry one of those!`;
+  }
+
+  return { ok: true, answer, toolCalls };
 }
 
 // ── Message Handlers ──────────────────────────────────────────────────────────
@@ -154,6 +342,63 @@ const messageHandlers = {
       difficulty: teacher.avg_difficulty ?? null,
       numRatings: teacher.num_ratings ?? 0,
     };
+  },
+
+  [MESSAGE_TYPES.getCourseGrades]: async (msg) => {
+    // Try native host first; fall back to Canvas enrollments endpoint
+    const nativeData = await tryNative('getCourseGrades', { courseId: msg.courseId });
+    if (nativeData !== null) return { data: nativeData };
+
+    // Direct Canvas API fallback: enrollments with grades
+    const data = await canvasClient.request(
+      `/courses/${msg.courseId}/enrollments`,
+      { params: { type: 'StudentEnrollment', include: 'grades', per_page: 1 } }
+    );
+    return { data };
+  },
+
+  [MESSAGE_TYPES.getTodo]: async () => {
+    // Native host only; return empty array fallback if unavailable
+    const nativeData = await tryNative('getTodo');
+    return { data: nativeData ?? [] };
+  },
+
+  [MESSAGE_TYPES.getCourseFiles]: async (msg) => {
+    // Try native host first; fall back to canvasClient.getCourseFiles
+    const nativeData = await tryNative('getCourseFiles', { courseId: msg.courseId });
+    if (nativeData !== null) return { data: nativeData };
+
+    const data = await canvasClient.getCourseFiles(msg.courseId);
+    return { data };
+  },
+
+  [MESSAGE_TYPES.getPlannerNotes]: async () => {
+    const nativeData = await tryNative('getPlannerNotes');
+    return { data: nativeData ?? [] };
+  },
+
+  [MESSAGE_TYPES.getDashboardCards]: async () => {
+    const data = await canvasClient.getDashboardCards();
+    return { data };
+  },
+
+  [MESSAGE_TYPES.getSyllabus]: async (msg) => {
+    const data = await canvasClient.getCourseSyllabus(msg.courseId);
+    return { data };
+  },
+
+  [MESSAGE_TYPES.getAssignmentGroups]: async (msg) => {
+    const data = await canvasClient.getAssignmentGroups(msg.courseId);
+    return { data };
+  },
+
+  [MESSAGE_TYPES.getSubmission]: async (msg) => {
+    const data = await canvasClient.getSubmission(msg.courseId, msg.assignmentId);
+    return { data };
+  },
+
+  [MESSAGE_TYPES.agentQuery]: async (msg) => {
+    return runLocalAgent(msg.query);
   },
 };
 

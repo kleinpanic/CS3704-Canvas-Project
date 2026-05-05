@@ -23,10 +23,15 @@ import {
   getPreferences,
   savePreferences,
   getRmpRating,
+  getCourseGrades,
+  getToken,
+  agentQuery,
 } from '../lib/extension-api.js';
 
 // ── DOM Refs ──────────────────────────────────────────────────────────────────
 
+const $summaryBanner  = document.getElementById("summary-banner");
+const $noTokenState   = document.getElementById("no-token-state");
 const $userInfo       = document.getElementById("user-info");
 const $cacheBadge     = document.querySelector(".cache-badge");
 const $refreshBtn     = document.getElementById("refresh-btn");
@@ -37,6 +42,7 @@ const $tabs           = document.querySelectorAll(".tab");
 const $viewUpcoming   = document.getElementById("view-upcoming");
 const $viewCourses    = document.getElementById("view-courses");
 const $viewDetail     = document.getElementById("view-course-detail");
+const $viewAgent      = document.getElementById("view-agent");
 
 // Upcoming
 const $upcomingList   = document.getElementById("upcoming-list");
@@ -49,6 +55,12 @@ const $courseFilter   = document.getElementById("course-filter");
 const $coursesList    = document.getElementById("courses-list");
 const $coursesLoading = document.getElementById("courses-loading");
 const $coursesError   = document.getElementById("courses-error");
+
+// Grades
+const $gradesList    = document.getElementById("grades-list");
+const $gradesLoading = document.getElementById("grades-loading");
+const $gradesError   = document.getElementById("grades-error");
+const $viewGrades    = document.getElementById("view-grades");
 
 // Detail
 const $backBtn          = document.getElementById("back-btn");
@@ -76,8 +88,30 @@ let allCourses     = [];
 let activeTab      = "upcoming";
 let settingsOpen   = false;
 let prefs          = { theme: "light", daysAhead: 7 };
+let gradesLoaded   = false;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+function esc(s) {
+  return String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function showErrorWithRetry($el, message, retryFn) {
+  $el.innerHTML = "";
+  const msg = document.createElement("span");
+  msg.textContent = message;
+  const btn = document.createElement("button");
+  btn.className = "btn-secondary retry-btn";
+  btn.style.cssText = "margin-top:var(--space-sm);font-size:var(--size-xs)";
+  btn.textContent = "Try again";
+  btn.addEventListener("click", retryFn);
+  $el.append(msg, btn);
+  $el.classList.remove("hidden");
+}
 
 function formatDue(dateStr) {
   if (!dateStr) return "No due date";
@@ -122,13 +156,13 @@ function renderAssignmentItem(item, { showCourse = true } = {}) {
   return `
     <li class="assignment-item ${cls}" data-id="${id}">
       <div class="assignment-main">
-        ${showCourse && courseName ? `<div class="course-name">${courseName}</div>` : ""}
-        <div class="assignment-name">${item.title || item.assignment?.name || "Assignment"}</div>
+        ${showCourse && courseName ? `<div class="course-name">${esc(courseName)}</div>` : ""}
+        <div class="assignment-name">${esc(item.title || item.assignment?.name || "Assignment")}</div>
         <div class="due-date ${cls}">${formatDue(dueDate)}</div>
       </div>
       <div class="assignment-actions">
-        <button class="dismiss-btn" data-id="${id}" title="Mark done">✓</button>
-        <button class="open-btn" data-url="${item.html_url || ""}" title="Open in Canvas">→</button>
+        <button class="dismiss-btn" data-id="${esc(id)}" title="Mark done" aria-label="Mark done">✓</button>
+        <button class="open-btn" data-url="${esc(item.html_url || "")}" title="Open in Canvas" aria-label="Open in Canvas">→</button>
       </div>
     </li>`;
 }
@@ -158,8 +192,29 @@ function renderUpcoming(assignments) {
     ? assignments.filter(a => (a.context_course_name || a.course_name) === $courseFilter.value)
     : assignments;
 
+  // Summary banner
+  const urgentCount = filtered.filter(a => {
+    const d = getDueDate(a);
+    if (!d) return false;
+    const diff = new Date(d) - new Date();
+    return diff < 86400000;
+  }).length;
+
+  if (filtered.length > 0) {
+    $summaryBanner.classList.remove("hidden");
+    if (urgentCount > 0) {
+      $summaryBanner.className = "summary-banner urgent";
+      $summaryBanner.textContent = `⚠️ ${urgentCount} due within 24h`;
+    } else {
+      $summaryBanner.className = "summary-banner ok";
+      $summaryBanner.textContent = "✓ No urgent deadlines";
+    }
+  } else {
+    $summaryBanner.classList.add("hidden");
+  }
+
   if (filtered.length === 0) {
-    $upcomingList.innerHTML = `<li class="assignment-item"><div class="assignment-main"><div class="assignment-name">No upcoming assignments</div></div></li>`;
+    $upcomingList.innerHTML = `<li class="assignment-item"><div class="assignment-main"><div class="assignment-name">📚 All caught up! No upcoming assignments.</div></div></li>`;
     return;
   }
 
@@ -180,7 +235,7 @@ function populateCourseFilter() {
 function renderCourses(courses) {
   $coursesLoading.classList.add("hidden");
   if (!courses.length) {
-    $coursesError.textContent = "No active courses found.";
+    $coursesError.innerHTML = `🎓 No active courses found.`;
     $coursesError.classList.remove("hidden");
     return;
   }
@@ -191,10 +246,10 @@ function renderCourses(courses) {
       <li class="course-card" data-id="${c.id}" data-name="${encodeURIComponent(c.name || c.course_code || "Course")}">
         <span class="course-dot"></span>
         <div class="course-info">
-          <div class="course-full-name">${c.name || "Unnamed Course"}</div>
+          <div class="course-full-name">${esc(c.name || "Unnamed Course")}</div>
           <div class="course-meta">
-            <span class="course-code">${c.course_code || ""}</span>
-            ${teacher ? `<span class="course-teacher" data-prof="${teacher}"> • ${teacher}</span>` : ""}
+            <span class="course-code">${esc(c.course_code || "")}</span>
+            ${teacher ? `<span class="course-teacher" data-prof="${esc(teacher)}"> • ${esc(teacher)}</span>` : ""}
           </div>
         </div>
         <span class="course-arrow">›</span>
@@ -205,7 +260,7 @@ function renderCourses(courses) {
   $coursesList.querySelectorAll(".course-teacher").forEach(span => {
     const profName = span.dataset.prof;
     getRmpRating(profName).then(rmp => {
-      if (rmp?.ok && rmp.rating) {
+      if (rmp?.ok && rmp.rating != null) {
         span.innerHTML += ` <span class="rating-badge">${rmp.rating.toFixed(1)}</span>`;
       }
     }).catch(() => {});
@@ -266,22 +321,24 @@ async function openCourseDetail(courseId, courseName) {
 
   if (teacherName) {
     $professorSection.classList.remove("hidden");
-    $professorSection.innerHTML = `<div class="professor-section"><span class="prof-name">${teacherName}</span><span class="prof-rating">Loading rating…</span></div>`;
+    $professorSection.innerHTML = `<div class="professor-section"><span class="prof-name">${esc(teacherName)}</span><span class="prof-rating">Loading rating…</span></div>`;
     getRmpRating(teacherName).then(rmp => {
       if (!rmp?.ok) return;
       const { rating, difficulty, numRatings } = rmp;
       if (rating == null) {
-        $professorSection.innerHTML = `<div class="professor-section"><span class="prof-name">${teacherName}</span><span class="prof-rating">No RMP rating found</span></div>`;
+        $professorSection.innerHTML = `<div class="professor-section"><span class="prof-name">${esc(teacherName)}</span><span class="prof-rating">No RMP rating found</span></div>`;
         return;
       }
       const stars = renderStars(rating);
       $professorSection.innerHTML = `
         <div class="professor-section">
-          <span class="prof-name">${teacherName}</span>
+          <span class="prof-name">${esc(teacherName)}</span>
           <span class="prof-stars">${stars}</span>
           <span class="prof-rating">${rating.toFixed(1)} / 5.0 · Difficulty ${difficulty?.toFixed(1) ?? '—'} · ${numRatings} rating${numRatings !== 1 ? 's' : ''}</span>
         </div>`;
-    }).catch(() => {});
+    }).catch(() => {
+      $professorSection.innerHTML = `<div class="professor-section"><span class="prof-name">${esc(teacherName)}</span><span class="prof-rating">Rating unavailable</span></div>`;
+    });
   }
 
   try {
@@ -308,11 +365,11 @@ async function openCourseDetail(courseId, courseName) {
           return `
             <li class="assignment-item ${cls}" data-id="${a.id}">
               <div class="assignment-main">
-                <div class="assignment-name">${a.name || "Assignment"}</div>
+                <div class="assignment-name">${esc(a.name || "Assignment")}</div>
                 <div class="due-date ${cls}">${formatDue(a.due_at)}</div>
               </div>
               <div class="assignment-actions">
-                <button class="open-btn" data-url="${a.html_url || ""}" title="Open in Canvas">→</button>
+                <button class="open-btn" data-url="${esc(a.html_url || "")}" title="Open in Canvas" aria-label="Open in Canvas">→</button>
               </div>
             </li>`;
         }).join("");
@@ -328,11 +385,11 @@ async function openCourseDetail(courseId, courseName) {
         $announcementsList.innerHTML = announcements.map(a => `
           <li class="assignment-item">
             <div class="assignment-main">
-              <div class="assignment-name">${a.title || "Announcement"}</div>
+              <div class="assignment-name">${esc(a.title || "Announcement")}</div>
               <div class="due-date">${new Date(a.posted_at || a.created_at).toLocaleDateString()}</div>
             </div>
             <div class="assignment-actions">
-              <button class="open-btn" data-url="${a.html_url || ""}" title="Open in Canvas">→</button>
+              <button class="open-btn" data-url="${esc(a.html_url || "")}" title="Open in Canvas" aria-label="Open in Canvas">→</button>
             </div>
           </li>`).join("");
       }
@@ -347,7 +404,7 @@ async function openCourseDetail(courseId, courseName) {
         $modulesList.innerHTML = modules.map(m => `
           <li class="assignment-item">
             <div class="assignment-main">
-              <div class="assignment-name">${m.name || "Module"}</div>
+              <div class="assignment-name">${esc(m.name || "Module")}</div>
               <div class="due-date">${m.items_count || 0} items</div>
             </div>
           </li>`).join("");
@@ -363,7 +420,10 @@ async function openCourseDetail(courseId, courseName) {
 
   } catch (err) {
     $detailLoading.classList.add("hidden");
-    $detailList.innerHTML = `<li class="state-msg error">${err.message}</li>`;
+    const li = document.createElement("li");
+    li.className = "state-msg error";
+    li.textContent = err.message;
+    $detailList.appendChild(li);
   }
 }
 
@@ -379,11 +439,20 @@ function switchTab(tabName) {
   $viewUpcoming.classList.toggle("hidden",  tabName !== "upcoming");
   $viewCourses.classList.toggle("active",   tabName === "courses");
   $viewCourses.classList.toggle("hidden",   tabName !== "courses");
+  $viewGrades.classList.toggle("active",    tabName === "grades");
+  $viewGrades.classList.toggle("hidden",    tabName !== "grades");
+  $viewAgent.classList.toggle("active",     tabName === "agent");
+  $viewAgent.classList.toggle("hidden",     tabName !== "agent");
   $viewDetail.classList.add("hidden");
   $viewDetail.classList.remove("active");
 
   if (tabName === "courses" && $coursesList.innerHTML === "") {
     loadCourses();
+  }
+
+  if (tabName === "grades" && !gradesLoaded) {
+    gradesLoaded = true;
+    loadGrades();
   }
 }
 
@@ -401,6 +470,7 @@ $backBtn.addEventListener("click", () => {
 // ── Data Loading ──────────────────────────────────────────────────────────────
 
 async function loadUpcoming() {
+  $noTokenState.classList.add("hidden");
   $loading.classList.remove("hidden");
   $error.classList.add("hidden");
   $upcomingList.innerHTML = "";
@@ -432,8 +502,7 @@ async function loadUpcoming() {
     }
   } catch (err) {
     $loading.classList.add("hidden");
-    $error.textContent = err.message;
-    $error.classList.remove("hidden");
+    showErrorWithRetry($error, "Could not load assignments. Check your connection.", loadUpcoming);
   }
 }
 
@@ -449,8 +518,88 @@ async function loadCourses() {
     renderCourses(allCourses);
   } catch (err) {
     $coursesLoading.classList.add("hidden");
-    $coursesError.textContent = err.message;
-    $coursesError.classList.remove("hidden");
+    showErrorWithRetry($coursesError, "Could not load courses. Check your connection.", loadCourses);
+  }
+}
+
+// ── Render: Grades ────────────────────────────────────────────────────────────
+
+function gradeClass(score) {
+  if (score == null) return "grade-none";
+  if (score >= 90)   return "grade-a";
+  if (score >= 80)   return "grade-b";
+  if (score >= 70)   return "grade-c";
+  if (score >= 60)   return "grade-d";
+  return "grade-f";
+}
+
+function renderGrades(courses, gradesData) {
+  $gradesLoading.classList.add("hidden");
+  if (!courses.length) {
+    $gradesError.innerHTML = `📊 No grade data available yet.`;
+    $gradesError.classList.remove("hidden");
+    return;
+  }
+
+  const hasAnyGrade = gradesData.some(g => (g?.data || []).length > 0);
+  if (!hasAnyGrade) {
+    $gradesError.innerHTML = `📊 No grade data available yet.`;
+    $gradesError.classList.remove("hidden");
+    return;
+  }
+
+  $gradesList.innerHTML = courses.map((course, index) => {
+    const enrollments = gradesData[index]?.data || [];
+    const enrollment  = enrollments[0] || null;
+    const grades      = enrollment?.grades || {};
+    const score       = grades.current_score != null ? grades.current_score : null;
+    const letter      = grades.current_grade || null;
+    const scoreLabel  = score != null ? `${score.toFixed(1)}%` : "—";
+    const barWidth    = score != null ? Math.min(100, Math.max(0, score)) : 0;
+    const cls         = gradeClass(score);
+    const numGraded   = enrollment?.unread_count ?? null;
+
+    return `
+      <li class="grade-card ${cls}">
+        <div class="grade-card-header">
+          <span class="grade-course-name">${esc(course.name || "Unnamed Course")}</span>
+          <div class="grade-scores">
+            <span class="grade-score">${scoreLabel}</span>
+            ${letter ? `<span class="grade-letter">${esc(letter)}</span>` : ""}
+          </div>
+        </div>
+        ${numGraded != null ? `<div class="grade-meta">${numGraded} assignments graded</div>` : ""}
+        <div class="grade-bar-track">
+          <div class="grade-bar-fill" style="width:${barWidth}%"></div>
+        </div>
+      </li>`;
+  }).join("");
+}
+
+async function loadGrades() {
+  $gradesLoading.classList.remove("hidden");
+  $gradesError.classList.add("hidden");
+  $gradesList.innerHTML = "";
+
+  try {
+    // Ensure courses are loaded
+    if (!allCourses.length) {
+      const res = await getCourses();
+      if (!res.ok) throw new Error(res.error || "Failed to fetch courses");
+      allCourses = res.data || [];
+    }
+
+    const gradesData = await Promise.all(
+      allCourses.map(c => getCourseGrades(c.id).catch(() => ({ ok: false, data: [] })))
+    );
+
+    renderGrades(allCourses, gradesData);
+  } catch (err) {
+    $gradesLoading.classList.add("hidden");
+    showErrorWithRetry($gradesError, "Could not load grades. Check your connection.", () => {
+      gradesLoaded = false;
+      loadGrades();
+    });
   }
 }
 
@@ -560,14 +709,23 @@ function closeSettings() {
   settingsOpen = false;
 }
 
-// ── Init ──────────────────────────────────────────────────────────────────────
+// ── Event Wiring ──────────────────────────────────────────────────────────────
 
 $refreshBtn.addEventListener("click", async () => {
-  await clearCache();
-  if (activeTab === "upcoming") {
-    await loadUpcoming();
-  } else if (activeTab === "courses") {
-    await loadCourses();
+  $refreshBtn.disabled = true;
+  try {
+    await clearCache();
+    if (activeTab === "upcoming") {
+      await loadUpcoming();
+    } else if (activeTab === "courses") {
+      await loadCourses();
+    } else if (activeTab === "grades") {
+      gradesLoaded = false;
+      await loadGrades();
+      gradesLoaded = true;
+    }
+  } finally {
+    $refreshBtn.disabled = false;
   }
 });
 
@@ -578,9 +736,146 @@ $settingsBtn.addEventListener("click", () => {
 
 $courseFilter.addEventListener("change", () => renderUpcoming(allAssignments));
 
-// Load preferences before first render so theme and daysAhead are applied.
-getPreferences().then((p) => {
-  prefs = p;
-  applyTheme(prefs.theme);
+// ── Agent View ────────────────────────────────────────────────────────────────
+
+function renderMarkdown(text) {
+  return esc(text)
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/_(.+?)_/g, '<em>$1</em>')
+    .replace(/\n/g, '<br>');
+}
+
+function appendAgentMessage(role, content) {
+  const $msgs = document.getElementById("agent-messages");
+  const div = document.createElement("div");
+  div.className = `agent-msg agent-msg--${role}`;
+  const bubble = document.createElement("div");
+  bubble.className = "agent-bubble";
+  if (role === "user") {
+    bubble.textContent = content;
+  } else {
+    bubble.innerHTML = renderMarkdown(content);
+  }
+  div.appendChild(bubble);
+  $msgs.appendChild(div);
+  $msgs.scrollTop = $msgs.scrollHeight;
+  return bubble;
+}
+
+function showThinking() {
+  const $msgs = document.getElementById("agent-messages");
+  const div = document.createElement("div");
+  div.id = "agent-thinking";
+  div.className = "agent-msg agent-msg--agent";
+  div.innerHTML = `<div class="agent-bubble agent-bubble--thinking">
+    <div class="agent-thinking-dots">
+      <span></span><span></span><span></span>
+    </div>
+    <span>Thinking…</span>
+  </div>`;
+  $msgs.appendChild(div);
+  $msgs.scrollTop = $msgs.scrollHeight;
+}
+
+function hideThinking() {
+  document.getElementById("agent-thinking")?.remove();
+}
+
+function showToolTrace(toolCalls) {
+  const $trace = document.getElementById("agent-trace");
+  if (!toolCalls?.length) { $trace.classList.add("hidden"); return; }
+  $trace.classList.remove("hidden");
+  $trace.innerHTML = `<div class="agent-trace-title">Tools used</div>` +
+    toolCalls.map(tc => `
+      <div class="agent-tool-item">
+        <span class="agent-tool-icon">✓</span>
+        <span class="agent-tool-name">${esc(tc.tool)}</span>
+        <span class="agent-tool-label">— ${esc(tc.label || '')}</span>
+      </div>`).join('');
+}
+
+async function sendAgentQuery(query) {
+  if (!query.trim()) return;
+
+  const $input = document.getElementById("agent-input");
+  const $send  = document.getElementById("agent-send");
+  const $trace = document.getElementById("agent-trace");
+
+  $input.value = "";
+  $input.disabled = true;
+  $send.disabled = true;
+  $trace.classList.add("hidden");
+
+  appendAgentMessage("user", query);
+  showThinking();
+
+  try {
+    const res = await agentQuery(query);
+    hideThinking();
+    if (res?.ok) {
+      showToolTrace(res.toolCalls);
+      appendAgentMessage("agent", res.answer || "No response.");
+    } else {
+      appendAgentMessage("agent", `Error: ${res?.error || "Unknown error"}`);
+    }
+  } catch (err) {
+    hideThinking();
+    appendAgentMessage("agent", `Failed to reach agent: ${err.message}`);
+  } finally {
+    $input.disabled = false;
+    $send.disabled = false;
+    $input.focus();
+  }
+}
+
+document.getElementById("agent-send")?.addEventListener("click", () => {
+  sendAgentQuery(document.getElementById("agent-input")?.value || "");
+});
+
+document.getElementById("agent-input")?.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    sendAgentQuery(e.target.value);
+  }
+});
+
+document.querySelectorAll(".agent-chip").forEach(chip => {
+  chip.addEventListener("click", () => {
+    switchTab("agent");
+    sendAgentQuery(chip.dataset.query);
+  });
+});
+
+// ── Init ──────────────────────────────────────────────���───────────────────────
+
+async function initApp() {
+  try {
+    const p = await getPreferences();
+    prefs = p;
+    applyTheme(prefs.theme);
+  } catch (_) {
+    // use defaults
+  }
+
+  try {
+    const tokenRes = await getToken();
+    const hasToken = tokenRes?.ok && tokenRes?.data;
+    if (!hasToken) {
+      $loading.classList.add("hidden");
+      $noTokenState.classList.remove("hidden");
+      return;
+    }
+  } catch (_) {
+    $loading.classList.add("hidden");
+    $noTokenState.classList.remove("hidden");
+    return;
+  }
+
   loadUpcoming();
-}).catch(() => loadUpcoming());
+}
+
+document.getElementById("open-settings-btn")?.addEventListener("click", () => {
+  openSettings();
+});
+
+initApp();
