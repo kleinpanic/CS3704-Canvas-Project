@@ -799,14 +799,22 @@ async function sendAgentQuery(query) {
 
   const $input = document.getElementById("agent-input");
   const $send  = document.getElementById("agent-send");
+  const $msgs  = document.getElementById("agent-messages");
   const $trace = document.getElementById("agent-trace");
 
+  // Stateless: wipe previous result so context never accumulates across queries
+  $msgs.innerHTML = "";
+  $trace.classList.add("hidden");
   $input.value = "";
   $input.disabled = true;
   $send.disabled = true;
-  $trace.classList.add("hidden");
 
-  appendAgentMessage("user", query);
+  // Show query label above the result
+  const $queryLabel = document.createElement("div");
+  $queryLabel.className = "agent-query-label";
+  $queryLabel.textContent = query;
+  $msgs.appendChild($queryLabel);
+
   showThinking();
 
   try {

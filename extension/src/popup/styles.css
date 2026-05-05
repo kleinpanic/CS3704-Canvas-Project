@@ -1004,6 +1004,19 @@ body.dark-theme header {
 .agent-send-btn:active { transform: scale(0.92); }
 .agent-send-btn:disabled { opacity: 0.5; cursor: default; }
 
+/* Query label shown above each fresh result (stateless — one result at a time) */
+.agent-query-label {
+  font-size: var(--size-xs);
+  color: var(--text-muted);
+  padding: var(--space-xs) var(--space-sm);
+  margin-bottom: var(--space-xs);
+  border-left: 2px solid var(--border-strong);
+  font-style: italic;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* ── Utilities ───────────────────────────────────────────── */
 
 .hidden { display: none !important; }
