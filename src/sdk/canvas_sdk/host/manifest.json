@@ -1,0 +1,9 @@
+{
+  "name": "com.cs3704.canvas_tracker",
+  "description": "Canvas Tracker native messaging host — Python SDK bridge",
+  "path": "REPLACED_BY_INSTALL_SCRIPT",
+  "type": "stdio",
+  "allowed_origins": [
+    "chrome-extension://REPLACED_BY_INSTALL_SCRIPT/"
+  ]
+}

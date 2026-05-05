@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Canvas Tracker — Live Demo</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            canvas: { red: '#d63e36', dark: '#b83830' },
+          },
+          fontFamily: {
+            sans: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    .popup-frame { box-shadow: 0 25px 60px rgba(0,0,0,0.35); border-radius: 12px; overflow: hidden; }
+    .popup-frame iframe { display: block; border: none; border-radius: 12px; }
+    .phone-notch { height: 28px; background: #1a1a1a; border-radius: 12px 12px 0 0;
+                   display: flex; align-items: center; justify-content: center; }
+    .phone-notch::after { content: ''; width: 80px; height: 6px; background: #333;
+                          border-radius: 3px; }
+  </style>
+</head>
+<body class="bg-gray-950 text-white font-sans">
+
+  <!-- Nav -->
+  <nav class="sticky top-0 z-50 bg-gray-950/90 backdrop-blur border-b border-gray-800">
+    <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-canvas-red flex items-center justify-center font-bold text-white text-sm">C</div>
+        <span class="font-semibold text-white">Canvas Tracker</span>
+      </div>
+      <div class="flex items-center gap-6 text-sm text-gray-400">
+        <a href="#demo" class="hover:text-white transition-colors">Live Demo</a>
+        <a href="docs/index.html" class="hover:text-white transition-colors">Docs</a>
+        <a href="https://github.com/kleinpanic/CS3704-Canvas-Project"
+           class="hover:text-white transition-colors flex items-center gap-1.5" target="_blank" rel="noopener">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+          </svg>
+          GitHub
+        </a>
+        <a href="https://github.com/kleinpanic/CS3704-Canvas-Project/releases"
+           class="bg-canvas-red hover:bg-canvas-dark px-4 py-1.5 rounded-full text-white text-sm font-medium transition-colors" target="_blank" rel="noopener">
+          Install
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="max-w-6xl mx-auto px-6 pt-24 pb-16 text-center">
+    <div class="inline-flex items-center gap-2 bg-canvas-red/10 border border-canvas-red/30 rounded-full px-4 py-1.5 text-canvas-red text-sm font-medium mb-8">
+      <span class="relative flex h-2 w-2">
+        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-canvas-red opacity-75"></span>
+        <span class="relative inline-flex rounded-full h-2 w-2 bg-canvas-red"></span>
+      </span>
+      Live Demo &#8212; Real Canvas Data
+    </div>
+    <h1 class="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-br from-white to-gray-400 bg-clip-text text-transparent leading-tight">
+      Never miss a<br/>Canvas deadline again
+    </h1>
+    <p class="text-gray-400 text-xl max-w-2xl mx-auto mb-10 leading-relaxed">
+      Canvas Tracker is a Chrome extension that puts your upcoming assignments, course grades,
+      and professor ratings one click away &#8212; right in your browser toolbar.
+    </p>
+    <div class="flex items-center justify-center gap-4 flex-wrap">
+      <a href="#demo" class="bg-canvas-red hover:bg-canvas-dark text-white font-semibold px-8 py-3 rounded-full transition-colors text-base">
+        Try the demo &#8594;
+      </a>
+      <a href="https://github.com/kleinpanic/CS3704-Canvas-Project"
+         class="border border-gray-700 hover:border-gray-500 text-gray-300 hover:text-white px-8 py-3 rounded-full transition-colors text-base" target="_blank" rel="noopener">
+        View on GitHub
+      </a>
+    </div>
+  </section>
+
+  <!-- Feature pills -->
+  <section class="max-w-4xl mx-auto px-6 pb-20">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-4 text-center">
+        <div class="text-2xl mb-2">&#128197;</div>
+        <div class="text-sm font-medium text-white">Upcoming</div>
+        <div class="text-xs text-gray-500 mt-1">Due dates at a glance</div>
+      </div>
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-4 text-center">
+        <div class="text-2xl mb-2">&#128202;</div>
+        <div class="text-sm font-medium text-white">Grades</div>
+        <div class="text-xs text-gray-500 mt-1">Live grade tracking</div>
+      </div>
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-4 text-center">
+        <div class="text-2xl mb-2">&#11088;</div>
+        <div class="text-sm font-medium text-white">Prof Ratings</div>
+        <div class="text-xs text-gray-500 mt-1">RateMyProfessors data</div>
+      </div>
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-4 text-center">
+        <div class="text-2xl mb-2">&#128276;</div>
+        <div class="text-sm font-medium text-white">Announcements</div>
+        <div class="text-xs text-gray-500 mt-1">Per-course updates</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Live Demo -->
+  <section id="demo" class="max-w-6xl mx-auto px-6 pb-32">
+    <div class="text-center mb-16">
+      <h2 class="text-3xl md:text-4xl font-bold mb-4">Running the real extension</h2>
+      <p class="text-gray-400 text-lg max-w-xl mx-auto">
+        This is the actual Chrome extension popup &#8212; same codebase, real data from
+        Canvas VT, rendered live in your browser.
+      </p>
+    </div>
+
+    <div class="flex flex-col lg:flex-row items-center justify-center gap-16">
+
+      <!-- Phone mockup with extension iframe -->
+      <div class="relative flex-shrink-0">
+        <div class="bg-gray-900 rounded-[40px] p-3 shadow-2xl border border-gray-700"
+             style="width:380px">
+          <div class="phone-notch mb-0"></div>
+          <div class="popup-frame" style="height:580px;width:354px">
+            <iframe
+              src="extension/src/popup/index.html"
+              width="354"
+              height="580"
+              title="Canvas Tracker Extension Popup"
+              sandbox="allow-scripts allow-same-origin allow-forms"
+            ></iframe>
+          </div>
+          <div class="h-8 bg-gray-900 rounded-b-[28px] flex items-center justify-center mt-0">
+            <div class="w-24 h-1 bg-gray-700 rounded-full"></div>
+          </div>
+        </div>
+        <div class="absolute inset-0 bg-canvas-red/5 rounded-[40px] blur-3xl -z-10 scale-110"></div>
+      </div>
+
+      <!-- Feature list -->
+      <div class="max-w-sm space-y-8">
+        <div class="flex gap-4">
+          <div class="flex-shrink-0 w-10 h-10 bg-canvas-red/10 rounded-xl flex items-center justify-center text-canvas-red font-bold">1</div>
+          <div>
+            <h3 class="font-semibold text-white mb-1">Upcoming assignments</h3>
+            <p class="text-gray-400 text-sm leading-relaxed">Color-coded by urgency. Filter by course. Dismiss or snooze with one click.</p>
+          </div>
+        </div>
+        <div class="flex gap-4">
+          <div class="flex-shrink-0 w-10 h-10 bg-canvas-red/10 rounded-xl flex items-center justify-center text-canvas-red font-bold">2</div>
+          <div>
+            <h3 class="font-semibold text-white mb-1">Course deep-dive</h3>
+            <p class="text-gray-400 text-sm leading-relaxed">Tap any course: assignments, announcements, modules, and professor ratings all in one place.</p>
+          </div>
+        </div>
+        <div class="flex gap-4">
+          <div class="flex-shrink-0 w-10 h-10 bg-canvas-red/10 rounded-xl flex items-center justify-center text-canvas-red font-bold">3</div>
+          <div>
+            <h3 class="font-semibold text-white mb-1">Real-time grade tracking</h3>
+            <p class="text-gray-400 text-sm leading-relaxed">Visual grade bars with letter grades. Know exactly where you stand before finals week.</p>
+          </div>
+        </div>
+        <div class="flex gap-4">
+          <div class="flex-shrink-0 w-10 h-10 bg-canvas-red/10 rounded-xl flex items-center justify-center text-canvas-red font-bold">4</div>
+          <div>
+            <h3 class="font-semibold text-white mb-1">Install in 30 seconds</h3>
+            <p class="text-gray-400 text-sm leading-relaxed">Load the extension in Chrome developer mode and paste your Canvas API token. That&#8217;s it.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Install guide -->
+  <section class="bg-gray-900 border-t border-gray-800 py-24">
+    <div class="max-w-3xl mx-auto px-6 text-center">
+      <h2 class="text-3xl font-bold mb-4">Install it yourself</h2>
+      <p class="text-gray-400 mb-10">Takes less than a minute. Works on any Canvas LMS instance.</p>
+      <div class="grid md:grid-cols-3 gap-6 text-left mb-10">
+        <div class="bg-gray-950 rounded-xl p-5 border border-gray-800">
+          <div class="text-canvas-red font-bold text-lg mb-2">01</div>
+          <h3 class="font-semibold mb-1">Clone &amp; load</h3>
+          <p class="text-gray-400 text-sm">Clone the repo, open <code class="bg-gray-800 px-1 rounded text-xs">chrome://extensions</code>, enable developer mode, and load the <code class="bg-gray-800 px-1 rounded text-xs">extension/</code> folder.</p>
+        </div>
+        <div class="bg-gray-950 rounded-xl p-5 border border-gray-800">
+          <div class="text-canvas-red font-bold text-lg mb-2">02</div>
+          <h3 class="font-semibold mb-1">Add your token</h3>
+          <p class="text-gray-400 text-sm">Generate a Canvas API token in <strong>Account &#8594; Settings &#8594; New Access Token</strong>, then paste it in the extension settings.</p>
+        </div>
+        <div class="bg-gray-950 rounded-xl p-5 border border-gray-800">
+          <div class="text-canvas-red font-bold text-lg mb-2">03</div>
+          <h3 class="font-semibold mb-1">Click the badge</h3>
+          <p class="text-gray-400 text-sm">The toolbar badge shows upcoming assignment count. Click to open the full dashboard.</p>
+        </div>
+      </div>
+      <a href="https://github.com/kleinpanic/CS3704-Canvas-Project#readme"
+         class="bg-canvas-red hover:bg-canvas-dark text-white font-semibold px-8 py-3 rounded-full transition-colors" target="_blank" rel="noopener">
+        Read the full guide &#8594;
+      </a>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="border-t border-gray-900 py-8 text-center text-gray-600 text-sm">
+    <p>CS3704 Canvas Tracker &#8212; built by the CS3704 team &#8212;
+      <a href="https://github.com/kleinpanic/CS3704-Canvas-Project" class="hover:text-gray-400 transition-colors" target="_blank" rel="noopener">GitHub</a>
+    </p>
+  </footer>
+
+</body>
+</html>
