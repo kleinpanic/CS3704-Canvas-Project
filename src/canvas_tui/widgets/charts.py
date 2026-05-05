@@ -283,12 +283,22 @@ def multi_line_chart(
     x_labels = f"[dim]{' ' * (y_width + 1)}1{' ' * (chart_w - len(str(x_max)) - 1)}{x_max}[/dim]"
     lines.append(x_labels)
 
-    # Legend
-    legend_parts = []
-    for label, color in color_map.items():
-        legend_parts.append(f"[{color}]■ {label}[/{color}]")
-    if legend_parts:
-        lines.append("  " + "  ".join(legend_parts))
+    # Legend — wrap long legend across multiple lines to fit within the chart width
+    if color_map:
+        line_w = y_width + 1 + chart_w
+        row: list[str] = []
+        row_vis = 2  # "  " indent
+        for label, color in color_map.items():
+            entry_vis = 2 + len(label) + 2  # "■ " + label + "  " separator
+            if row and row_vis + entry_vis > line_w:
+                lines.append("  " + "  ".join(row))
+                row = [f"[{color}]■ {label}[/{color}]"]
+                row_vis = 2 + 2 + len(label)
+            else:
+                row.append(f"[{color}]■ {label}[/{color}]")
+                row_vis += entry_vis
+        if row:
+            lines.append("  " + "  ".join(row))
 
     return Text.from_markup("\n".join(lines))
 
@@ -450,15 +460,25 @@ def completion_bullet(
         return Text("No data", style="dim")
 
     t = get_theme()
-    # Default targets to 100% if not provided
     if not targets:
         targets = [100.0] * len(labels)
+
+    # Truncate entries to stay within height budget: title(1) + bars + axis(1) + ticks(1) = 3
+    overhead = 3 if title else 2
+    max_bars = max(1, height - overhead)
+    truncated_count = max(0, len(labels) - max_bars)
+    if truncated_count > 0:
+        # keep one slot for "+N more" line
+        keep = max_bars - 1
+        labels = labels[:keep]
+        actual = actual[:keep]
+        targets = targets[:keep]
 
     lines: list[str] = []
     if title:
         lines.append(f"[bold {t.text}]{title}[/bold {t.text}]")
 
-    max_label = max(len(l) for l in labels)
+    max_label = max(len(l) for l in labels) if labels else 4
     bar_width = max(4, width - max_label - 12)
 
     for label, act, tgt in zip(labels, actual, targets, strict=False):
@@ -482,6 +502,9 @@ def completion_bullet(
         bar = f"[{color}]{bar_str}[/{color}][dim]{rest_str}[/dim]"
 
         lines.append(f"  {label:<{max_label}}│{bar} {act:.0f}%")
+
+    if truncated_count > 0:
+        lines.append(f"[dim]  +{truncated_count} more…[/dim]")
 
     # X-axis — same ┼ tick style as score_bar_chart
     axis_pad = max_label + 3
