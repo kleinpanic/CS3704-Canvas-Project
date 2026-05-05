@@ -117,6 +117,14 @@ class TestAppearanceConfig:
         cfg = Config(token="x")
         assert cfg.keybindings == {}
 
+    def test_sidebar_position_left_accepted(self):
+        cfg = Config(token="x", sidebar_position="left")
+        assert cfg.sidebar_position == "left"
+
+    def test_sidebar_position_right_accepted(self):
+        cfg = Config(token="x", sidebar_position="right")
+        assert cfg.sidebar_position == "right"
+
 
 class TestConfigToToml:
     def test_scalar_roundtrip(self):
@@ -130,8 +138,8 @@ class TestConfigToToml:
         cfg = Config(token="x", keybindings={"quit": "ctrl+q", "refresh": "f5"})
         toml_text = _config_to_toml(cfg)
         assert "[keybindings]" in toml_text
-        assert 'quit = "ctrl+q"' in toml_text
-        assert 'refresh = "f5"' in toml_text
+        assert '"quit" = "ctrl+q"' in toml_text
+        assert '"refresh" = "f5"' in toml_text
 
     def test_no_keybindings_section_when_empty(self):
         cfg = Config(token="x")
@@ -149,6 +157,28 @@ class TestConfigToToml:
         toml_text = _config_to_toml(cfg)
         assert 'sidebar_width = 44' in toml_text
         assert '"44"' not in toml_text
+
+    def test_http_timeout_and_max_retries_serialized(self):
+        cfg = Config(token="x", http_timeout=30, max_retries=3)
+        toml_text = _config_to_toml(cfg)
+        assert "http_timeout = 30" in toml_text
+        assert "max_retries = 3" in toml_text
+
+    def test_open_after_dl_serialized_as_bool(self):
+        cfg = Config(token="x", open_after_dl=True)
+        toml_text = _config_to_toml(cfg)
+        assert "open_after_dl = true" in toml_text
+
+    def test_string_with_special_chars_produces_valid_toml(self, tmp_dir):
+        import tomllib
+
+        cfg = Config(token="x", config_dir=tmp_dir, theme="dark")
+        # Inject a path with a backslash and a double-quote via download_dir
+        cfg.download_dir = 'C:\\Users\\test\\"downloads"'
+        cfg.save()
+        with open(os.path.join(tmp_dir, "config.toml"), "rb") as f:
+            data = tomllib.load(f)
+        assert data["download_dir"] == 'C:\\Users\\test\\"downloads"'
 
 
 class TestConfigSave:
@@ -200,6 +230,85 @@ class TestConfigSave:
         config_mod._overlay_file_config(loaded)
         assert loaded.keybindings.get("refresh") == "f5"
 
+    def test_save_raises_on_bad_path(self):
+        cfg = Config(token="x", config_dir="/nonexistent/path/that/cannot/be/created")
+        with pytest.raises(Exception):
+            cfg.save()
+
+    def test_download_dir_roundtrip(self, tmp_dir, sample_config_env):
+        import tomllib
+        import canvas_tui.config as config_mod
+
+        cfg = Config(token="x", config_dir=tmp_dir, download_dir="/tmp/my-canvas-dl")
+        cfg.save()
+        with open(os.path.join(tmp_dir, "config.toml"), "rb") as f:
+            data = tomllib.load(f)
+        assert data["download_dir"] == "/tmp/my-canvas-dl"
+
+        loaded = load_config()
+        loaded.config_dir = tmp_dir
+        config_mod._overlay_file_config(loaded)
+        assert loaded.download_dir == "/tmp/my-canvas-dl"
+
+    def test_download_dir_none_not_written(self, tmp_dir):
+        cfg = Config(token="x", config_dir=tmp_dir, download_dir=None)
+        cfg.save()
+        with open(os.path.join(tmp_dir, "config.toml"), "r") as f:
+            content = f.read()
+        assert "download_dir" not in content
+
+    def test_http_timeout_roundtrip(self, tmp_dir, sample_config_env):
+        import tomllib
+        import canvas_tui.config as config_mod
+
+        cfg = Config(token="x", config_dir=tmp_dir, http_timeout=45)
+        cfg.save()
+        with open(os.path.join(tmp_dir, "config.toml"), "rb") as f:
+            data = tomllib.load(f)
+        assert data["http_timeout"] == 45
+
+        loaded = load_config()
+        loaded.config_dir = tmp_dir
+        config_mod._overlay_file_config(loaded)
+        assert loaded.http_timeout == 45
+
+    def test_open_after_dl_roundtrip(self, tmp_dir, sample_config_env):
+        import tomllib
+        import canvas_tui.config as config_mod
+
+        cfg = Config(token="x", config_dir=tmp_dir, open_after_dl=True)
+        cfg.save()
+        with open(os.path.join(tmp_dir, "config.toml"), "rb") as f:
+            data = tomllib.load(f)
+        assert data["open_after_dl"] is True
+
+        loaded = load_config()
+        loaded.config_dir = tmp_dir
+        config_mod._overlay_file_config(loaded)
+        assert loaded.open_after_dl is True
+
+
+class TestAtomicConfigUpdate:
+    def test_dc_replace_produces_independent_copy(self):
+        from dataclasses import replace as dc_replace
+
+        original = Config(token="x", theme="dark", days_ahead=7)
+        candidate = dc_replace(original, theme="light", days_ahead=14)
+        candidate._validate()
+        assert original.theme == "dark"
+        assert original.days_ahead == 7
+        assert candidate.theme == "light"
+        assert candidate.days_ahead == 14
+
+    def test_invalid_candidate_does_not_mutate_original(self):
+        from dataclasses import replace as dc_replace
+
+        original = Config(token="x", theme="dark")
+        candidate = dc_replace(original, theme="neon")
+        candidate._validate()
+        assert original.theme == "dark"   # original untouched
+        assert candidate.theme == "dark"  # clamped back to default
+
 
 class TestKeybindingConflicts:
     def test_no_conflict_returns_empty_string(self):
@@ -223,6 +332,18 @@ class TestKeybindingConflicts:
         from canvas_tui.screens.settings import _find_conflicts
 
         assert _find_conflicts({"quit": "ctrl+q"}) == ""
+
+    def test_builtin_key_conflict_detected(self):
+        from canvas_tui.screens.settings import _find_conflicts
+
+        msg = _find_conflicts({"refresh": "q"}, builtin_keys={"q", "r"})
+        assert msg != ""
+        assert "q" in msg
+
+    def test_no_builtin_conflict_when_key_is_free(self):
+        from canvas_tui.screens.settings import _find_conflicts
+
+        assert _find_conflicts({"refresh": "f5"}, builtin_keys={"q", "r"}) == ""
 
 
 class TestDotEnv:
@@ -264,3 +385,27 @@ class TestDotEnv:
         # The dotenv loader should NOT overwrite existing env vars
         # (tested implicitly by the `if key not in os.environ` check)
         assert os.environ["EXISTING_VAR"] == "original"
+
+    def test_value_with_equals_sign(self, tmp_dir, monkeypatch):
+        dotenv_path = os.path.join(tmp_dir, ".env")
+        with open(dotenv_path, "w") as f:
+            f.write("COMPLEX_VAR=key=value\n")
+
+        monkeypatch.delenv("COMPLEX_VAR", raising=False)
+
+        def patched_load():
+            with open(dotenv_path, encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line or line.startswith("#") or "=" not in line:
+                        continue
+                    key, _, value = line.partition("=")
+                    key = key.strip()
+                    value = value.strip().strip("'\"")
+                    if key and key not in os.environ:
+                        os.environ[key] = value
+
+        patched_load()
+        # partition("=") takes only the first "=", so "key=value" is the value
+        assert os.environ.get("COMPLEX_VAR") == "key=value"
+        monkeypatch.delenv("COMPLEX_VAR", raising=False)

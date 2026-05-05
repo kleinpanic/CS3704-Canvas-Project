@@ -87,12 +87,18 @@ Select {
 """
 
 
-def _find_conflicts(keybindings: dict[str, str]) -> str:
-    """Return a description of any key used for multiple actions, or empty string."""
+def _find_conflicts(keybindings: dict[str, str], builtin_keys: set[str] | None = None) -> str:
+    """Return a description of any key conflict, or empty string.
+
+    Checks for duplicates within *keybindings* and, when *builtin_keys* is
+    supplied, also rejects any key already claimed by a built-in binding.
+    """
     seen: dict[str, str] = {}
     for action, key in keybindings.items():
         if not key:
             continue
+        if builtin_keys and key in builtin_keys:
+            return f"'{key}' is already used by a built-in binding"
         if key in seen:
             return f"'{key}' is mapped to both '{seen[key]}' and '{action}'"
         seen[key] = action
@@ -154,6 +160,16 @@ class SettingsScreen(Screen[dict[str, Any] | None]):
             yield Label("Auto-refresh interval (seconds)")
             yield Input(str(cfg.auto_refresh_sec), id="set-auto-refresh", placeholder="30–3600")
 
+            # ── Downloads ───────────────────────────────────────────────
+            yield Static("Downloads", classes="set-section-hdr")
+
+            yield Label("Download directory  (leave blank to use system default)")
+            yield Input(
+                cfg.download_dir or "",
+                id="set-download-dir",
+                placeholder="e.g. ~/Downloads/Canvas",
+            )
+
             # ── Extra keybindings ───────────────────────────────────────
             yield Static("Extra keybindings", classes="set-section-hdr")
             yield Static(
@@ -199,6 +215,9 @@ class SettingsScreen(Screen[dict[str, Any] | None]):
         except ValueError:
             return None
 
+        dl_inp = self.query_one("#set-download-dir", Input)
+        download_dir: str | None = dl_inp.value.strip() or None
+
         keybindings: dict[str, str] = {}
         for action in REBINDABLE_ACTIONS:
             inp = self.query_one(f"#set-kb-{action}", Input)
@@ -213,6 +232,7 @@ class SettingsScreen(Screen[dict[str, Any] | None]):
             "days_ahead": days_ahead,
             "past_hours": past_hours,
             "auto_refresh_sec": auto_refresh,
+            "download_dir": download_dir,
             "keybindings": keybindings,
         }
 
@@ -232,7 +252,8 @@ class SettingsScreen(Screen[dict[str, Any] | None]):
         if result is None:
             self._show_error("Invalid values — all numeric fields must be whole numbers.")
             return
-        conflict = _find_conflicts(result["keybindings"])
+        builtin = {key for key, *_ in self._owner.BINDINGS}
+        conflict = _find_conflicts(result["keybindings"], builtin_keys=builtin)
         if conflict:
             self._show_error(f"Keybinding conflict: {conflict}")
             return
