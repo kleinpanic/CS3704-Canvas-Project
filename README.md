@@ -57,6 +57,38 @@ print(agent.run("What's due this week?"))
 - **Training pipeline (paper + code):** [github.com/kleinpanic/CS3704-DPO-SSOT](https://github.com/kleinpanic/CS3704-DPO-SSOT)
 - **Bench comparison (SFT vs DPO):** [docs/bench_v7_comparison.md](https://github.com/kleinpanic/CS3704-DPO-SSOT/blob/main/docs/bench_v7_comparison.md)
 
+### Try the agent right now
+
+You don't need the fine-tuned weights to try the agent — the SDK ships a
+**Gemini fallback backend** that speaks the same Gemma4 tool-call protocol.
+
+- **Browser demo** (mock Canvas data, your Gemini API key): [kleinpanic.github.io/CS3704-Canvas-Project/agent-demo/](https://kleinpanic.github.io/CS3704-Canvas-Project/agent-demo/)
+- **Python SDK** (real Canvas data via your token):
+
+  ```bash
+  pip install canvas-sdk[gemini]          # base + Gemini fallback
+  pip install canvas-sdk[autodownload]    # also fetches the v7-dpo Gemma4 model from HF
+  pip install canvas-sdk[all]             # both
+  ```
+
+  ```python
+  import os
+  from canvas_sdk import CanvasAgent
+
+  os.environ["GOOGLE_API_KEY"]   = "..."        # for the Gemini fallback
+  os.environ["CANVAS_TOKEN"]     = "..."        # your Canvas token
+  os.environ["CANVAS_BASE_URL"]  = "https://canvas.vt.edu"
+
+  agent = CanvasAgent.auto()                    # auto-resolves: env -> local -> HF -> Gemini
+  print(agent.run("What is due this week?"))
+  ```
+
+  Resolution order for `CanvasAgent.auto()`:
+  1. `CANVAS_LLM_ENDPOINT` env (skip auto-download, use your own server)
+  2. Local cache at `~/.cache/canvas-agent/v7-dpo/` (spawns vLLM on :8765)
+  3. Download `kleinpanic/canvas-calendar-agent-v7-dpo` from HF, then (2)
+  4. Fall back to Gemini (`gemini-2.5-flash` by default)
+
 ---
 
 ## Overview
@@ -271,7 +303,7 @@ All commits to protected branches must be **GPG signed**.
 ## Documentation
 
 - **[Docs site](https://kleinpanic.github.io/CS3704-Canvas-Project/)** — live project docs
-- **[Live demo](https://kleinpanic.github.io/CS3704-Canvas-Project/demo/)** — chat with the Canvas Calendar Agent in your browser
+- **[Agent demo](https://kleinpanic.github.io/CS3704-Canvas-Project/agent-demo/)** — chat with the Canvas Calendar Agent in your browser
 - **[HF Space](https://huggingface.co/spaces/kleinpanic93/canvas-calendar-agent-demo)** — full v7-dpo model behind a Gradio chat UI
 - **[Architecture docs](docs-site/architecture.md)** — system design decisions
 - **[Browser extension docs](docs-site/extension.md)** — shared client/runtime architecture
