@@ -18,13 +18,18 @@ Recently completed:
 - expand course-context features that use modules, files, and announcements
 - reduce any remaining direct background/runtime coupling
 
-### 2. Docs and site maintenance
+### 2. SDK agent tools
+- 18-tool agent registry is now live (PR #83)
+- calendar adapter implemented
+- remaining SDK surface area documented in REVIEWS.md and codebase
+
+### 3. Docs and site maintenance
 - keep MkDocs pages aligned with current architecture
 - update screenshots/diagrams when UI or structure changes
 - keep workflow/governance pages consistent with real repo settings
 
-### 3. Repo architecture cleanup
-- decide how to isolate `GemmaReranker` and related data from core app concerns
+### 4. GemmaReranker isolation
+- isolate `GemmaReranker` and related data from core app concerns
 - clarify what is core product code versus experimental/support tooling
 
 ## Delivery Model
