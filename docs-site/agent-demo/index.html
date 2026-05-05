@@ -32,6 +32,30 @@
       0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
       30% { opacity: 1; transform: translateY(-3px); }
     }
+    /* 18-tool button grid */
+    .tool-btn {
+      display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+      background: #1f1f23; border: 1px solid #2e2e34; border-radius: 10px;
+      padding: 10px 12px; cursor: pointer; text-align: left; transition: border-color 0.12s, background 0.12s;
+      width: 100%;
+    }
+    .tool-btn:hover { border-color: #d63e36; background: #26171a; }
+    .tool-btn:active { background: #2e1a1c; }
+    .tool-icon { font-size: 1.1rem; line-height: 1; }
+    .tool-name { font-size: 0.75rem; font-weight: 600; color: #e5e7eb; line-height: 1.3; }
+    .tool-id { font-size: 0.65rem; color: #6b7280; font-family: monospace; line-height: 1.2; }
+    .tool-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(155px, 1fr)); gap: 8px; margin-top: 8px; }
+    .tool-family-header {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.07em; color: #6b7280; margin-bottom: 2px;
+    }
+    .tool-family-details > summary {
+      list-style: none; display: flex; align-items: center; gap: 6px;
+      padding: 8px 0 4px; cursor: pointer;
+    }
+    .tool-family-details > summary::-webkit-details-marker { display: none; }
+    .tool-family-chevron { transition: transform 0.15s ease; display: inline-block; color: #d63e36; }
+    .tool-family-details[open] .tool-family-chevron { transform: rotate(90deg); }
   </style>
 </head>
 <body class="bg-gray-950 text-gray-100 font-sans min-h-screen">
@@ -95,6 +119,147 @@
         <button id="clear-btn" class="text-xs text-gray-500 hover:text-gray-300">Clear chat</button>
       </div>
       <div class="px-5 py-4 flex flex-wrap gap-2" id="samples"></div>
+    </div>
+
+    <div class="bg-gray-900 border border-gray-800 rounded-2xl mb-4">
+      <div class="px-5 py-3 border-b border-gray-800 flex items-center justify-between">
+        <div class="text-sm font-medium text-gray-300">18 tools &mdash; click any to send a sample prompt</div>
+        <button id="toggle-tools-btn" class="text-xs text-gray-500 hover:text-gray-300">Hide</button>
+      </div>
+      <div id="tool-grid-panel" class="px-5 pb-5">
+
+        <!-- canvas (8) -->
+        <details class="tool-family-details" open>
+          <summary>
+            <span class="tool-family-chevron">&#9654;</span>
+            <span class="tool-family-header">canvas &mdash; 8 tools</span>
+          </summary>
+          <div class="tool-grid">
+            <button class="tool-btn" data-prompt="What assignments are due this week?" data-tool="canvas.get_assignments" aria-label="canvas.get_assignments — What assignments are due this week?">
+              <span class="tool-icon">&#x1F4CB;</span>
+              <span class="tool-name">Get Assignments</span>
+              <span class="tool-id">canvas.get_assignments</span>
+            </button>
+            <button class="tool-btn" data-prompt="Tell me about my CS 3704 course" data-tool="canvas.get_course" aria-label="canvas.get_course — Tell me about my CS 3704 course">
+              <span class="tool-icon">&#x1F393;</span>
+              <span class="tool-name">Get Course</span>
+              <span class="tool-id">canvas.get_course</span>
+            </button>
+            <button class="tool-btn" data-prompt="What are my current grades?" data-tool="canvas.get_grades" aria-label="canvas.get_grades — What are my current grades?">
+              <span class="tool-icon">&#x1F4CA;</span>
+              <span class="tool-name">Get Grades</span>
+              <span class="tool-id">canvas.get_grades</span>
+            </button>
+            <button class="tool-btn" data-prompt="Show me the syllabus for ECE 3574" data-tool="canvas.get_syllabus" aria-label="canvas.get_syllabus — Show me the syllabus for ECE 3574">
+              <span class="tool-icon">&#x1F4C4;</span>
+              <span class="tool-name">Get Syllabus</span>
+              <span class="tool-id">canvas.get_syllabus</span>
+            </button>
+            <button class="tool-btn" data-prompt="What's on my Canvas todo list?" data-tool="canvas.get_todo" aria-label="canvas.get_todo — What's on my Canvas todo list?">
+              <span class="tool-icon">&#x2705;</span>
+              <span class="tool-name">Get Todo</span>
+              <span class="tool-id">canvas.get_todo</span>
+            </button>
+            <button class="tool-btn" data-prompt="Any new announcements in my courses?" data-tool="canvas.list_announcements" aria-label="canvas.list_announcements — Any new announcements in my courses?">
+              <span class="tool-icon">&#x1F4E3;</span>
+              <span class="tool-name">List Announcements</span>
+              <span class="tool-id">canvas.list_announcements</span>
+            </button>
+            <button class="tool-btn" data-prompt="List all my enrolled courses this term" data-tool="canvas.list_courses" aria-label="canvas.list_courses — List all my enrolled courses this term">
+              <span class="tool-icon">&#x1F4DA;</span>
+              <span class="tool-name">List Courses</span>
+              <span class="tool-id">canvas.list_courses</span>
+            </button>
+            <button class="tool-btn" data-prompt="Show me my planner for the next 7 days" data-tool="canvas.list_planner_items" aria-label="canvas.list_planner_items — Show me my planner for the next 7 days">
+              <span class="tool-icon">&#x1F5D3;&#xFE0F;</span>
+              <span class="tool-name">List Planner Items</span>
+              <span class="tool-id">canvas.list_planner_items</span>
+            </button>
+          </div>
+        </details>
+
+        <!-- calendar (5) -->
+        <details class="tool-family-details" open>
+          <summary>
+            <span class="tool-family-chevron">&#9654;</span>
+            <span class="tool-family-header">calendar &mdash; 5 tools</span>
+          </summary>
+          <div class="tool-grid">
+            <button class="tool-btn" data-prompt="Create a study block tomorrow at 3pm for 90 minutes" data-tool="calendar.create_event" aria-label="calendar.create_event — Create a study block tomorrow at 3pm for 90 minutes">
+              <span class="tool-icon">&#x2795;</span>
+              <span class="tool-name">Create Event</span>
+              <span class="tool-id">calendar.create_event</span>
+            </button>
+            <button class="tool-btn" data-prompt="Cancel my Friday office hours visit" data-tool="calendar.delete_event" aria-label="calendar.delete_event — Cancel my Friday office hours visit">
+              <span class="tool-icon">&#x1F5D1;&#xFE0F;</span>
+              <span class="tool-name">Delete Event</span>
+              <span class="tool-id">calendar.delete_event</span>
+            </button>
+            <button class="tool-btn" data-prompt="Find me a 2-hour block to study tomorrow" data-tool="calendar.find_free_blocks" aria-label="calendar.find_free_blocks — Find me a 2-hour block to study tomorrow">
+              <span class="tool-icon">&#x1F50D;</span>
+              <span class="tool-name">Find Free Blocks</span>
+              <span class="tool-id">calendar.find_free_blocks</span>
+            </button>
+            <button class="tool-btn" data-prompt="What's on my calendar this week?" data-tool="calendar.list_events" aria-label="calendar.list_events — What's on my calendar this week?">
+              <span class="tool-icon">&#x1F4C5;</span>
+              <span class="tool-name">List Events</span>
+              <span class="tool-id">calendar.list_events</span>
+            </button>
+            <button class="tool-btn" data-prompt="Move my CS office hours to Wednesday at 4pm" data-tool="calendar.modify_event" aria-label="calendar.modify_event — Move my CS office hours to Wednesday at 4pm">
+              <span class="tool-icon">&#x270F;&#xFE0F;</span>
+              <span class="tool-name">Modify Event</span>
+              <span class="tool-id">calendar.modify_event</span>
+            </button>
+          </div>
+        </details>
+
+        <!-- reranker (1) -->
+        <details class="tool-family-details" open>
+          <summary>
+            <span class="tool-family-chevron">&#9654;</span>
+            <span class="tool-family-header">reranker &mdash; 1 tool</span>
+          </summary>
+          <div class="tool-grid">
+            <button class="tool-btn" data-prompt="Rank my todos by what I should do first" data-tool="reranker.priority_hint" aria-label="reranker.priority_hint — Rank my todos by what I should do first">
+              <span class="tool-icon">&#x1F3C6;</span>
+              <span class="tool-name">Priority Hint</span>
+              <span class="tool-id">reranker.priority_hint</span>
+            </button>
+          </div>
+        </details>
+
+        <!-- study (4) -->
+        <details class="tool-family-details" open>
+          <summary>
+            <span class="tool-family-chevron">&#9654;</span>
+            <span class="tool-family-header">study &mdash; 4 tools</span>
+          </summary>
+          <div class="tool-grid">
+            <button class="tool-btn" data-prompt="Build me an exam-prep bracket for the May 12 final" data-tool="study.exam_bracket" aria-label="study.exam_bracket — Build me an exam-prep bracket for the May 12 final">
+              <span class="tool-icon">&#x1F3D7;&#xFE0F;</span>
+              <span class="tool-name">Exam Bracket</span>
+              <span class="tool-id">study.exam_bracket</span>
+            </button>
+            <button class="tool-btn" data-prompt="What study block size should I use for a 4-credit physics class?" data-tool="study.recommend_block_size" aria-label="study.recommend_block_size — What study block size should I use for a 4-credit physics class?">
+              <span class="tool-icon">&#x23F1;&#xFE0F;</span>
+              <span class="tool-name">Recommend Block Size</span>
+              <span class="tool-id">study.recommend_block_size</span>
+            </button>
+            <button class="tool-btn" data-prompt="Plan a study schedule for my whole semester" data-tool="study.semester_schedule" aria-label="study.semester_schedule — Plan a study schedule for my whole semester">
+              <span class="tool-icon">&#x1F5FA;&#xFE0F;</span>
+              <span class="tool-name">Semester Schedule</span>
+              <span class="tool-id">study.semester_schedule</span>
+            </button>
+            <button class="tool-btn" data-prompt="Compute Cepeda spacing intervals for my exam in 12 days" data-tool="study.spaced_schedule" aria-label="study.spaced_schedule — Compute Cepeda spacing intervals for my exam in 12 days">
+              <span class="tool-icon">&#x1F9E0;</span>
+              <span class="tool-name">Spaced Schedule</span>
+              <span class="tool-id">study.spaced_schedule</span>
+            </button>
+          </div>
+        </details>
+
+        <p class="text-xs text-gray-600 mt-4 text-center">18 tools &bull; all live via HF Space &mdash; click any button to pre-fill and submit</p>
+      </div>
     </div>
 
     <div id="chat" class="bg-gray-900 border border-gray-800 rounded-2xl min-h-[280px] p-5 space-y-4 mb-4">
@@ -485,6 +650,24 @@ python -c "from canvas_sdk import CanvasAgent; print(CanvasAgent.auto().run('wha
       sendBtn.disabled = false;
     }
   }
+
+  // 18-tool button grid: click -> pre-fill textarea -> submit
+  document.querySelectorAll(".tool-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      input.value = btn.dataset.prompt;
+      input.focus();
+      form.requestSubmit();
+    });
+  });
+
+  // Toggle show/hide the tool grid panel
+  const toggleToolsBtn = document.getElementById("toggle-tools-btn");
+  const toolGridPanel = document.getElementById("tool-grid-panel");
+  toggleToolsBtn.addEventListener("click", () => {
+    const hidden = toolGridPanel.style.display === "none";
+    toolGridPanel.style.display = hidden ? "" : "none";
+    toggleToolsBtn.textContent = hidden ? "Hide" : "Show";
+  });
 
   form.addEventListener("submit", e => {
     e.preventDefault();
