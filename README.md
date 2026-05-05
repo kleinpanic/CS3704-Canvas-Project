@@ -221,6 +221,27 @@ canvas-tui
 
 ---
 
+## Run locally with Ollama
+
+The fine-tuned agent is available as a GGUF for local inference via [Ollama](https://ollama.com):
+
+```bash
+ollama pull hf.co/kleinpanic93/canvas-calendar-agent-v7-dpo-gguf:Q4_K_M
+ollama run hf.co/kleinpanic93/canvas-calendar-agent-v7-dpo-gguf:Q4_K_M "What assignments are due this week?"
+```
+
+Other available quants:
+
+| Tag | Size | Notes |
+|---|---|---|
+| `Q4_K_M` | ~3.2 GB | Recommended — fast + good quality |
+| `Q8_0` | ~4.7 GB | Higher quality, larger memory |
+| `f16` | ~8.7 GB | Reference / no quality loss |
+
+Full GGUF repo: [kleinpanic93/canvas-calendar-agent-v7-dpo-gguf](https://huggingface.co/kleinpanic93/canvas-calendar-agent-v7-dpo-gguf)
+
+---
+
 ## Development
 
 ### Setup
