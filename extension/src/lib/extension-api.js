@@ -22,6 +22,14 @@ export async function getCourseAssignments(courseId) {
   return send(MESSAGE_TYPES.getCourseAssignments, { courseId });
 }
 
+export async function getCourseAnnouncements(courseId) {
+  return send(MESSAGE_TYPES.getCourseAnnouncements, { courseId });
+}
+
+export async function getCourseModules(courseId) {
+  return send(MESSAGE_TYPES.getCourseModules, { courseId });
+}
+
 export async function validateToken() {
   return send(MESSAGE_TYPES.validateToken);
 }
@@ -40,6 +48,10 @@ export async function clearCache() {
 
 export async function refreshBadge() {
   return send(MESSAGE_TYPES.refreshBadge);
+}
+
+export async function getRmpRating(professorName) {
+  return send(MESSAGE_TYPES.getRmpRating, { professorName });
 }
 
 export async function dismissAssignmentRemote(assignmentId) {

@@ -9,7 +9,8 @@
     "notifications"
   ],
   "host_permissions": [
-    "https://canvas.vt.edu/*"
+    "https://canvas.vt.edu/*",
+    "https://www.ratemyprofessors.com/*"
   ],
   "background": {
     "service_worker": "src/background.js",

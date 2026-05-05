@@ -106,6 +106,7 @@ export class CanvasClient {
       params: {
         per_page: perPage,
         enrollment_state: enrollmentState,
+        'include[]': 'teachers',
       },
     });
   }
