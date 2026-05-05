@@ -90,23 +90,19 @@ def main():
             name = course.get("name", cid)
             print(f"  Course {cid}: {name[:40]}")
 
-            assignments = fetch(f"/courses/{cid}/assignments",
-                                {"bucket": "upcoming", "per_page": "30"})
+            assignments = fetch(f"/courses/{cid}/assignments", {"bucket": "upcoming", "per_page": "30"})
             save(out_dir, f"course_{cid}_assignments.json", assignments)
 
-            announcements = fetch(f"/courses/{cid}/discussion_topics",
-                                  {"only_announcements": "true", "per_page": "10"})
+            announcements = fetch(f"/courses/{cid}/discussion_topics", {"only_announcements": "true", "per_page": "10"})
             save(out_dir, f"course_{cid}_announcements.json", announcements)
 
             modules = fetch(f"/courses/{cid}/modules", {"per_page": "20"})
             save(out_dir, f"course_{cid}_modules.json", modules)
 
-            enrollments = fetch(f"/courses/{cid}/enrollments",
-                                {"user_id": "self", "per_page": "5"})
+            enrollments = fetch(f"/courses/{cid}/enrollments", {"user_id": "self", "per_page": "5"})
             save(out_dir, f"course_{cid}_grades.json", enrollments)
 
-            files = fetch(f"/courses/{cid}/files",
-                          {"sort": "updated_at", "order": "desc", "per_page": "20"})
+            files = fetch(f"/courses/{cid}/files", {"sort": "updated_at", "order": "desc", "per_page": "20"})
             save(out_dir, f"course_{cid}_files.json", files)
 
     print(f"\nDone. Data written to {out_dir}/")

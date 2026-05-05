@@ -28,6 +28,7 @@ Then merge into the main items file:
     cat data/canvas_items_v4.jsonl data/canvas_items_collab.jsonl | \\
         sort -u > /tmp/merged.jsonl && mv /tmp/merged.jsonl data/canvas_items_v5.jsonl
 """
+
 from __future__ import annotations
 
 import argparse
@@ -38,17 +39,17 @@ from pathlib import Path
 
 
 _SUBMISSION_TYPE_MAP = {
-    "online_quiz":       "QUIZ",
-    "online_upload":     "ASGN",
+    "online_quiz": "QUIZ",
+    "online_upload": "ASGN",
     "online_text_entry": "ASGN",
-    "discussion_topic":  "DISC",
-    "media_recording":   "ASGN",
-    "none":              "ASGN",
+    "discussion_topic": "DISC",
+    "media_recording": "ASGN",
+    "none": "ASGN",
 }
 
 
 def _item_type(submission_types: list[str]) -> str:
-    for t in (submission_types or []):
+    for t in submission_types or []:
         mapped = _SUBMISSION_TYPE_MAP.get(t)
         if mapped:
             return mapped
@@ -115,29 +116,38 @@ def convert_file(path: Path, seen: set[str]) -> list[dict]:
                 continue
             seen.add(key)
 
-            items.append({
-                "item_id":        key,
-                "contributor":    contributor,
-                "type":           itype,
-                "title":          title,
-                "course":         course,
-                "due_offset_days": offset,
-                "points":         pts,
-                "status":         status,
-                "source":         f"collab:{path.name}",
-            })
+            items.append(
+                {
+                    "item_id": key,
+                    "contributor": contributor,
+                    "type": itype,
+                    "title": title,
+                    "course": course,
+                    "due_offset_days": offset,
+                    "points": pts,
+                    "status": status,
+                    "source": f"collab:{path.name}",
+                }
+            )
 
     return items
 
 
 def main() -> None:
     p = argparse.ArgumentParser(description="Convert collab Canvas snapshots to canvas_items format.")
-    p.add_argument("--input", required=True,
-                   help="Path to JSONL file or directory of JSONL files from share_my_canvas.py")
-    p.add_argument("--output", default="data/canvas_items_collab.jsonl",
-                   help="Output JSONL path (default: data/canvas_items_collab.jsonl)")
-    p.add_argument("--dedupe-against", default=None,
-                   help="Existing canvas_items JSONL to deduplicate against (e.g. data/canvas_items_v4.jsonl)")
+    p.add_argument(
+        "--input", required=True, help="Path to JSONL file or directory of JSONL files from share_my_canvas.py"
+    )
+    p.add_argument(
+        "--output",
+        default="data/canvas_items_collab.jsonl",
+        help="Output JSONL path (default: data/canvas_items_collab.jsonl)",
+    )
+    p.add_argument(
+        "--dedupe-against",
+        default=None,
+        help="Existing canvas_items JSONL to deduplicate against (e.g. data/canvas_items_v4.jsonl)",
+    )
     args = p.parse_args()
 
     seen: set[str] = set()
