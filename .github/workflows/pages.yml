@@ -84,6 +84,14 @@ jobs:
           mkdir -p site/agent-demo
           cp docs-site/agent-demo/index.html site/agent-demo/index.html
 
+      # Inject HF token into agent demo so authenticated requests bypass
+      # the small ZeroGPU anonymous quota. Token is read-only / inference-scoped.
+      - name: Inject HF token into agent demo
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          sed -i "s|__HF_TOKEN__|${HF_TOKEN}|g" site/agent-demo/index.html
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site

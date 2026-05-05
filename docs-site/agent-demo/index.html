@@ -446,29 +446,68 @@ python -c "from canvas_sdk import CanvasAgent; print(CanvasAgent.auto().run('wha
   }
 
   // -----------------------------------------------------------------
-  // HuggingFace Space call (Gradio REST endpoint)
+  // HuggingFace Space — Gradio 5 ChatInterface two-step REST + auth
   // -----------------------------------------------------------------
-  // The Space exposes a Gradio Interface whose predict() returns a single
-  // structured object: {final_answer, transcript, tool_calls}.
-  const HF_SPACE_URL = "https://kleinpanic93-canvas-calendar-agent-demo.hf.space/api/predict";
+  // 1. POST /gradio_api/call/chat -> { event_id }
+  // 2. GET  /gradio_api/call/chat/{event_id} (SSE stream)
+  // Authorization: Bearer <HF_TOKEN> is required because ZeroGPU
+  // anonymous quota is small and burns out fast. The token is injected
+  // by CI from secrets.HF_TOKEN at build time (placeholder __HF_TOKEN__).
+  const HF_SPACE_BASE = "https://kleinpanic93-canvas-calendar-agent-demo.hf.space";
+  const HF_TOKEN = "__HF_TOKEN__";
+  const HF_AUTH_HEADERS = (HF_TOKEN && !HF_TOKEN.startsWith("__"))
+    ? {"Authorization": "Bearer " + HF_TOKEN}
+    : {};
 
   async function callHFSpace(userMessage) {
-    const resp = await fetch(HF_SPACE_URL, {
+    const post = await fetch(`${HF_SPACE_BASE}/gradio_api/call/chat`, {
       method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({data: [userMessage]})
+      headers: {"Content-Type": "application/json", ...HF_AUTH_HEADERS},
+      body: JSON.stringify({data: [userMessage, []]})
     });
-    const result = await resp.json();
-    if (!resp.ok) {
-      throw new Error(result.error || `HTTP ${resp.status}`);
+    if (!post.ok) throw new Error(`POST failed: HTTP ${post.status}`);
+    const postJson = await post.json();
+    const eid = postJson.event_id;
+    if (!eid) throw new Error("No event_id from HF Space");
+
+    const stream = await fetch(`${HF_SPACE_BASE}/gradio_api/call/chat/${eid}`, {
+      headers: HF_AUTH_HEADERS
+    });
+    if (!stream.ok) throw new Error(`Stream failed: HTTP ${stream.status}`);
+    const text = await stream.text();
+    const completeMatch = text.match(/event:\s*complete\s*\ndata:\s*(.+)/);
+    if (!completeMatch) {
+      const errMatch = text.match(/event:\s*error\s*\ndata:\s*(.+)/);
+      if (errMatch) throw new Error(`Space error: ${errMatch[1]}`);
+      throw new Error("Unexpected SSE format from Space");
     }
-    const payload = result.data?.[0];
-    if (!payload) throw new Error("Empty response from HF Space");
-    return {
-      final_answer: payload.final_answer || "",
-      transcript: payload.transcript || "",
-      tool_calls: Array.isArray(payload.tool_calls) ? payload.tool_calls : []
-    };
+    const arr = JSON.parse(completeMatch[1]);
+    const responseStr = Array.isArray(arr) ? arr[0] : arr;
+
+    // Split markdown response into final answer + structured tool list.
+    const toolBlock = responseStr.match(/^([\s\S]*?)\n*---\n\*\*Tool calls[^\n]*\*\*\n([\s\S]+)$/);
+    let finalAnswer = responseStr;
+    let toolCalls = [];
+    if (toolBlock) {
+      finalAnswer = toolBlock[1].trim();
+      toolCalls = parseMarkdownToolLines(toolBlock[2]);
+    }
+    return {final_answer: finalAnswer, transcript: "", tool_calls: toolCalls};
+  }
+
+  // Lines look like:  - `tool.name({"arg":"v"})` -> `{"result":...}...`
+  function parseMarkdownToolLines(block) {
+    const lineRe = /^-\s*`([\w.]+)\((\{[^`]*\})\)`\s*->\s*`([^`]*)`/gm;
+    const out = [];
+    let m;
+    while ((m = lineRe.exec(block))) {
+      let args = {};
+      try { args = JSON.parse(m[2]); } catch {}
+      let result = m[3].replace(/\.\.\.$/, "");
+      try { result = JSON.parse(result); } catch { /* keep as preview string */ }
+      out.push({tool: m[1], args, result});
+    }
+    return out;
   }
 
   // -----------------------------------------------------------------
