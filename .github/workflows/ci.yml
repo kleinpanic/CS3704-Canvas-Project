@@ -9,6 +9,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     name: Test
@@ -20,6 +24,10 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: "3.11"
+          cache: pip
+          cache-dependency-paths: |
+            pyproject.toml
+            sdk/pyproject.toml
 
       - name: Install package
         run: pip install -e ".[dev]" --quiet
@@ -37,6 +45,10 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: "3.11"
+          cache: pip
+          cache-dependency-paths: |
+            pyproject.toml
+            sdk/pyproject.toml
 
       - name: Install package
         run: |
@@ -74,6 +86,10 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-paths: |
+            pyproject.toml
+            sdk/pyproject.toml
 
       - name: Syntax smoke test
         run: python -c "import canvas_tui; print('OK')"
@@ -89,6 +105,7 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: "3.11"
+          cache: pip
 
       - name: Install vulture
         run: pip install vulture --quiet
