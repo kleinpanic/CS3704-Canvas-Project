@@ -1,4 +1,4 @@
-# CS3704 Canvas TUI - Unified Makefile
+# CS3704 Canvas Calendar Agent - Unified Makefile
 # Run `make` or `make help` to see all available commands
 
 SHELL := /bin/bash
@@ -8,9 +8,22 @@ SHELL := /bin/bash
 PYTHON := python3
 VENV := .venv
 SRC_DIR := src/canvas_tui
+SDK_DIR := src/sdk
+EXT_DIR := extension
 TEST_DIR := tests
 DOCS_DIR := docs-site
 SCRIPTS_DIR := scripts
+
+# HuggingFace artifacts (v3.0 v7-dpo release)
+HF_USER := kleinpanic93
+HF_MODEL := $(HF_USER)/canvas-calendar-agent-v7-dpo
+HF_DATASET := $(HF_USER)/canvas-calendar-preferences-v7
+HF_SPACE := $(HF_USER)/canvas-calendar-agent-demo
+
+LIVE_DEMO := https://kleinpanic.github.io/CS3704-Canvas-Project/agent-demo/
+HF_SPACE_URL := https://huggingface.co/spaces/$(HF_SPACE)
+HF_MODEL_URL := https://huggingface.co/$(HF_MODEL)
+HF_DATASET_URL := https://huggingface.co/datasets/$(HF_DATASET)
 
 # Colors for output
 CYAN := \033[36m
@@ -19,7 +32,7 @@ RED := \033[31m
 YELLOW := \033[33m
 RESET := \033[0m
 
-.PHONY: help setup install dev clean fmt lint test test-all coverage ci docs serve release check
+.PHONY: help setup install install-sdk install-extension install-all dev clean fmt lint test test-all coverage ci docs serve release check demo demo-local demo-open hf-info
 
 # ============================================================================
 # SETUP & INSTALLATION
@@ -31,10 +44,25 @@ setup: ## Create virtual environment
 	@$(VENV)/bin/python -m pip install --upgrade pip -q
 	@printf "$(GREEN)✓ Virtual environment ready$(RESET)\n"
 
-install: setup ## Install package
-	@printf "$(CYAN)Installing package...$(RESET)\n"
+install: setup ## Install TUI package
+	@printf "$(CYAN)Installing TUI package...$(RESET)\n"
 	@$(VENV)/bin/pip install -e . -q
-	@printf "$(GREEN)✓ Package installed$(RESET)\n"
+	@printf "$(GREEN)✓ TUI installed$(RESET)\n"
+
+install-sdk: setup ## Install agentic SDK with HF auto-download
+	@printf "$(CYAN)Installing canvas_sdk with auto-download support...$(RESET)\n"
+	@$(VENV)/bin/pip install -e "$(SDK_DIR)[autodownload]" -q
+	@printf "$(GREEN)✓ SDK installed — first agent run pulls$(RESET) $(YELLOW)$(HF_MODEL)$(RESET) $(GREEN)from HF$(RESET)\n"
+
+install-extension: ## Install Chrome extension dependencies
+	@printf "$(CYAN)Installing extension deps...$(RESET)\n"
+	@cd $(EXT_DIR) && npm install --silent
+	@printf "$(GREEN)✓ Extension deps installed$(RESET)\n"
+	@printf "$(YELLOW)→ chrome://extensions (developer mode) → Load unpacked → select $(EXT_DIR)/src/$(RESET)\n"
+
+install-all: install install-sdk install-extension ## One-shot: TUI + SDK + extension
+	@printf "$(GREEN)✓ Full stack installed (TUI + SDK + extension)$(RESET)\n"
+	@$(MAKE) -s hf-info
 
 dev: setup ## Install with dev dependencies
 	@printf "$(CYAN)Installing dev dependencies...$(RESET)\n"
@@ -75,7 +103,7 @@ test-p: dev ## Run tests in parallel
 	@printf "$(CYAN)Running tests in parallel...$(RESET)\n"
 	@$(VENV)/bin/pytest $(TEST_DIR) -n auto -q
 
-test-all: dev ## Run full test suite with "sexy" output
+test-all: dev ## Run full test suite with sexy output
 	@printf "$(CYAN)Running full test suite...$(RESET)\n"
 	@$(VENV)/bin/python $(SCRIPTS_DIR)/run_tests.py
 
@@ -144,6 +172,29 @@ run: dev ## Run the TUI application
 	@$(VENV)/bin/python -m canvas_tui
 
 # ============================================================================
+# AGENT DEMO (Gemma-4-E2B-IT DPO model)
+# ============================================================================
+
+demo: ## Open the live HF Space demo in browser
+	@printf "$(CYAN)Opening live demo: $(LIVE_DEMO)$(RESET)\n"
+	@xdg-open "$(LIVE_DEMO)" 2>/dev/null || open "$(LIVE_DEMO)" 2>/dev/null || printf "$(YELLOW)Open manually: $(LIVE_DEMO)$(RESET)\n"
+
+demo-local: install-sdk ## Run agent locally (auto-downloads DPO model on first use)
+	@printf "$(CYAN)Running agent with $(HF_MODEL)...$(RESET)\n"
+	@$(VENV)/bin/python -c "from canvas_sdk import CanvasAgent; a = CanvasAgent.auto(); print(a.run('Plan my finals study schedule.'))"
+
+demo-open: ## Open the HuggingFace Space directly
+	@printf "$(CYAN)Opening HF Space: $(HF_SPACE_URL)$(RESET)\n"
+	@xdg-open "$(HF_SPACE_URL)" 2>/dev/null || open "$(HF_SPACE_URL)" 2>/dev/null || printf "$(YELLOW)Open manually: $(HF_SPACE_URL)$(RESET)\n"
+
+hf-info: ## Show HuggingFace links (model / dataset / space)
+	@printf "\n$(CYAN)🤗 HuggingFace artifacts$(RESET)\n"
+	@printf "  $(YELLOW)Model:  $(RESET)$(HF_MODEL_URL)\n"
+	@printf "  $(YELLOW)Dataset:$(RESET) $(HF_DATASET_URL)\n"
+	@printf "  $(YELLOW)Space:  $(RESET)$(HF_SPACE_URL)\n"
+	@printf "  $(YELLOW)Live:   $(RESET)$(LIVE_DEMO)\n\n"
+
+# ============================================================================
 # RELEASE
 # ============================================================================
 
@@ -156,11 +207,15 @@ release: check build ## Prepare a release (run tests, build)
 # ============================================================================
 
 help: ## Show this help message
-	@printf "\n$(CYAN)CS3704 Canvas TUI - Available Commands$(RESET)\n\n"
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  $(YELLOW)%-12s$(RESET) %s\n", $$1, $$2}'
-	@printf "\n$(CYAN)Examples:$(RESET)\n"
-	@printf "  make dev       - Set up dev environment\n"
-	@printf "  make check     - Pre-commit check (fmt+lint+test)\n"
-	@printf "  make test-all  - Full test suite with beautiful output\n"
-	@printf "  make ci        - Simulate CI pipeline locally\n"
-	@printf "  make release   - Prepare a release\n\n"
+	@printf "\n$(CYAN)CS3704 Canvas Calendar Agent — Commands$(RESET)\n\n"
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  $(YELLOW)%-18s$(RESET) %s\n", $$1, $$2}'
+	@printf "\n$(CYAN)Quick start$(RESET)\n"
+	@printf "  $(YELLOW)make install-all$(RESET)   - One-shot: TUI + SDK + extension\n"
+	@printf "  $(YELLOW)make demo$(RESET)          - Open live demo (Gemma-4-E2B-IT DPO via HF Space)\n"
+	@printf "  $(YELLOW)make demo-local$(RESET)    - Run agent locally (auto-downloads DPO model)\n"
+	@printf "  $(YELLOW)make hf-info$(RESET)       - Show HuggingFace artifact URLs\n"
+	@printf "\n$(CYAN)🤗 Live HuggingFace artifacts$(RESET)\n"
+	@printf "  $(YELLOW)Model:  $(RESET)$(HF_MODEL_URL)\n"
+	@printf "  $(YELLOW)Dataset:$(RESET) $(HF_DATASET_URL)\n"
+	@printf "  $(YELLOW)Space:  $(RESET)$(HF_SPACE_URL)\n"
+	@printf "  $(YELLOW)Demo:   $(RESET)$(LIVE_DEMO)\n\n"
