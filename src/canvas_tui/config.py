@@ -34,6 +34,23 @@ class Config:
     ann_past_days: int = 14
     ann_future_days: int = 14
 
+    # Calendar backend — "google" | "ical" | "none"
+    calendar_backend: str = "none"
+    google_credentials_path: str = field(
+        default_factory=lambda: os.path.expanduser("~/.config/canvas-tui/google_credentials.json")
+    )
+    google_token_path: str = field(
+        default_factory=lambda: os.path.expanduser("~/.config/canvas-tui/google_token.json")
+    )
+    ical_path: str = field(
+        default_factory=lambda: os.path.expanduser("~/.local/share/canvas-tui/calendar.ics")
+    )
+    ical_write_path: str = ""
+
+    # AI reranker
+    use_ai_reranker: bool = False
+    model_path: str = ""
+
     config_dir: str = field(default_factory=lambda: os.path.expanduser("~/.config/canvas-tui"))
 
     def __post_init__(self) -> None:
@@ -140,6 +157,13 @@ def _overlay_file_config(cfg: Config) -> None:
         "refresh_cooldown": "refresh_cooldown",
         "auto_refresh_sec": "auto_refresh_sec",
         "download_dir": "download_dir",
+        "calendar_backend": "calendar_backend",
+        "google_credentials_path": "google_credentials_path",
+        "google_token_path": "google_token_path",
+        "ical_path": "ical_path",
+        "ical_write_path": "ical_write_path",
+        "use_ai_reranker": "use_ai_reranker",
+        "model_path": "model_path",
         "default_block_min": "default_block_min",
         "past_hours": "past_hours",
         "ann_past_days": "ann_past_days",
