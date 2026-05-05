@@ -15,6 +15,7 @@ Usage:
 
 That's it. No other API keys or setup needed.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -34,31 +35,34 @@ _ENROLLMENT_STATES = ["active", "completed", "invited", "rejected"]
 
 # Canvas submission_type → pipeline type
 _SUBTYPE_MAP = {
-    "online_quiz":        "QUIZ",
-    "online_upload":      "ASGN",
-    "online_text_entry":  "ASGN",
-    "discussion_topic":   "DISC",
-    "media_recording":    "ASGN",
-    "none":               "ASGN",
-    "not_graded":         None,   # skip ungraded
-    "wiki_page":          None,   # skip
-    "external_tool":      "ASGN",
+    "online_quiz": "QUIZ",
+    "online_upload": "ASGN",
+    "online_text_entry": "ASGN",
+    "discussion_topic": "DISC",
+    "media_recording": "ASGN",
+    "none": "ASGN",
+    "not_graded": None,  # skip ungraded
+    "wiki_page": None,  # skip
+    "external_tool": "ASGN",
 }
 
 
 def _token() -> str:
     t = os.environ.get("CANVAS_TOKEN", "")
     if not t:
-        print("ERROR: CANVAS_TOKEN is not set.\n"
-              "Get your token at canvas.vt.edu → Account → Settings → "
-              "Approved Integrations → New Access Token\n"
-              "Then run:  export CANVAS_TOKEN=your_token_here")
+        print(
+            "ERROR: CANVAS_TOKEN is not set.\n"
+            "Get your token at canvas.vt.edu → Account → Settings → "
+            "Approved Integrations → New Access Token\n"
+            "Then run:  export CANVAS_TOKEN=your_token_here"
+        )
         sys.exit(1)
     return t
 
 
 def _get(path: str, params: dict | None = None) -> list | dict:
     import requests
+
     headers = {"Authorization": f"Bearer {_token()}"}
     url = f"{BASE_URL}/api/v1{path}"
     results = []
@@ -121,7 +125,7 @@ def anonymize(obj: object, salt: str) -> object:
 
 
 def _submission_type(sub_types: list[str]) -> str | None:
-    for t in (sub_types or []):
+    for t in sub_types or []:
         mapped = _SUBTYPE_MAP.get(t)
         if mapped is not None:
             return mapped
@@ -138,11 +142,14 @@ def collect(contributor: str) -> list[dict]:
     seen_cids: set = set()
     courses = []
     for state in _ENROLLMENT_STATES:
-        batch = _get("/courses", {
-            "enrollment_state": state,
-            "per_page": 50,
-            "include[]": "term",
-        })
+        batch = _get(
+            "/courses",
+            {
+                "enrollment_state": state,
+                "per_page": 50,
+                "include[]": "term",
+            },
+        )
         for c in batch:
             if c.get("id") not in seen_cids:
                 seen_cids.add(c.get("id"))
@@ -158,11 +165,14 @@ def collect(contributor: str) -> list[dict]:
         print(f"  {cname} [{term}]...")
         try:
             # Get ALL assignments — no bucket filter — to capture full history
-            assignments = _get(f"/courses/{cid}/assignments", {
-                "per_page": 50,
-                "order_by": "due_at",
-                "include[]": ["submission"],
-            })
+            assignments = _get(
+                f"/courses/{cid}/assignments",
+                {
+                    "per_page": 50,
+                    "order_by": "due_at",
+                    "include[]": ["submission"],
+                },
+            )
         except Exception as e:
             print(f"    skipped ({e})")
             assignments = []
@@ -190,14 +200,16 @@ def collect(contributor: str) -> list[dict]:
             else:
                 sub_status = "NOT_SUBMITTED"
 
-            asgn_records.append({
-                "name": a.get("name"),
-                "type": atype,
-                "due_at": a.get("due_at"),
-                "points_possible": pts,
-                "submission_types": sub_types,
-                "submission_status": sub_status,
-            })
+            asgn_records.append(
+                {
+                    "name": a.get("name"),
+                    "type": atype,
+                    "due_at": a.get("due_at"),
+                    "points_possible": pts,
+                    "submission_types": sub_types,
+                    "submission_status": sub_status,
+                }
+            )
 
         if not asgn_records:
             continue  # skip courses with nothing plannable
@@ -207,33 +219,37 @@ def collect(contributor: str) -> list[dict]:
         _raw_code = course.get("course_code", "")
         _m = re.search(r"[A-Z]{2,5}\s*\d{3,4}[A-Z]?", _raw_code)
         _code_key = _m.group(0) if _m else _raw_code
-        records.append({
-            "type": "course_snapshot",
-            "course_name": cname,
-            "course_code": _anon_course(_code_key) if _code_key else "",
-            "term": term,
-            "assignments": asgn_records,
-            "contributor_id": contributor,
-            "collected_at": collected_at,
-        })
+        records.append(
+            {
+                "type": "course_snapshot",
+                "course_name": cname,
+                "course_code": _anon_course(_code_key) if _code_key else "",
+                "term": term,
+                "assignments": asgn_records,
+                "contributor_id": contributor,
+                "collected_at": collected_at,
+            }
+        )
 
     print("Fetching todo list...")
     try:
         todos = _get("/users/self/todo_items", {"per_page": 50})
-        records.append({
-            "type": "todo_snapshot",
-            "items": [
-                {
-                    "type": t.get("type"),
-                    "assignment_name": t.get("assignment", {}).get("name") if t.get("assignment") else None,
-                    "due_at": t.get("assignment", {}).get("due_at") if t.get("assignment") else None,
-                    "course_id": t.get("course_id"),
-                }
-                for t in todos
-            ],
-            "contributor_id": contributor,
-            "collected_at": collected_at,
-        })
+        records.append(
+            {
+                "type": "todo_snapshot",
+                "items": [
+                    {
+                        "type": t.get("type"),
+                        "assignment_name": t.get("assignment", {}).get("name") if t.get("assignment") else None,
+                        "due_at": t.get("assignment", {}).get("due_at") if t.get("assignment") else None,
+                        "course_id": t.get("course_id"),
+                    }
+                    for t in todos
+                ],
+                "contributor_id": contributor,
+                "collected_at": collected_at,
+            }
+        )
         print(f"  {len(todos)} todo items")
     except Exception as e:
         print(f"  todo fetch skipped ({e})")
@@ -243,14 +259,15 @@ def collect(contributor: str) -> list[dict]:
 
 def main():
     p = argparse.ArgumentParser(description="Dump anonymized Canvas data for CS3704 dataset.")
-    p.add_argument("--contributor", required=True,
-                   help="Your PID or GitHub handle — used as anonymization salt, never stored in output")
-    p.add_argument("--output", default=None,
-                   help="Output JSONL path (default: data/collab/<contributor>.jsonl)")
+    p.add_argument(
+        "--contributor",
+        required=True,
+        help="Your PID or GitHub handle — used as anonymization salt, never stored in output",
+    )
+    p.add_argument("--output", default=None, help="Output JSONL path (default: data/collab/<contributor>.jsonl)")
     args = p.parse_args()
 
-    out = Path(args.output) if args.output else \
-        Path("data/collab") / f"{args.contributor}.jsonl"
+    out = Path(args.output) if args.output else Path("data/collab") / f"{args.contributor}.jsonl"
     out.parent.mkdir(parents=True, exist_ok=True)
 
     records = collect(args.contributor)
