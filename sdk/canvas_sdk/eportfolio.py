@@ -17,9 +17,7 @@ class EPortfolio(CanvasObject):
         :returns: ePortfolio with deleted date set.
         :rtype: :class:`canvas_sdk.eportfolio.EPortfolio`
         """
-        response = self._requester.request(
-            "DELETE", "eportfolios/{}".format(self.id), _kwargs=combine_kwargs(**kwargs)
-        )
+        response = self._requester.request("DELETE", "eportfolios/{}".format(self.id), _kwargs=combine_kwargs(**kwargs))
         return EPortfolio(self._requester, response.json())
 
     def get_eportfolio_pages(self, **kwargs):

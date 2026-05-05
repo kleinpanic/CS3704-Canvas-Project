@@ -14,12 +14,34 @@ from .models import ProfessorRating, MatchResult
 
 # Suffixes and titles to strip during normalization
 _STRIP_SUFFIXES = {
-    "jr", "sr", "ii", "iii", "iv", "v", "vi",
-    "md", "phd", "esq", "dds", "dvm", "do", "ed",
+    "jr",
+    "sr",
+    "ii",
+    "iii",
+    "iv",
+    "v",
+    "vi",
+    "md",
+    "phd",
+    "esq",
+    "dds",
+    "dvm",
+    "do",
+    "ed",
 }
 _STRIP_TITLES = {
-    "dr", "prof", "professor", "mr", "mrs", "ms", "miss",
-    "instructor", "lecturer", "adjunct", "assistant", "associate",
+    "dr",
+    "prof",
+    "professor",
+    "mr",
+    "mrs",
+    "ms",
+    "miss",
+    "instructor",
+    "lecturer",
+    "adjunct",
+    "assistant",
+    "associate",
 }
 
 

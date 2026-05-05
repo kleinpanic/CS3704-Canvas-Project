@@ -38,9 +38,7 @@ class AppointmentGroup(CanvasObject):
         if isinstance(appointment_group, dict) and "context_codes" in appointment_group:
             kwargs["appointment_group"] = appointment_group
         else:
-            raise RequiredFieldMissing(
-                "Dictionary with key 'context_code' is required."
-            )
+            raise RequiredFieldMissing("Dictionary with key 'context_code' is required.")
 
         response = self._requester.request(
             "PUT",

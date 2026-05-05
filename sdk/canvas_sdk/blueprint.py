@@ -19,18 +19,14 @@ class BlueprintTemplate(CanvasObject):
         """
         response = self._requester.request(
             "POST",
-            "courses/{}/blueprint_templates/{}/migrations".format(
-                self.course_id, self.id
-            ),
+            "courses/{}/blueprint_templates/{}/migrations".format(self.course_id, self.id),
             _kwargs=combine_kwargs(**kwargs),
         )
         response_json = response.json()
         response_json.update({"course_id": self.course_id})
         return BlueprintMigration(self._requester, response_json)
 
-    def change_blueprint_restrictions(
-        self, content_type, content_id, restricted, **kwargs
-    ):
+    def change_blueprint_restrictions(self, content_type, content_id, restricted, **kwargs):
         """
         Set or remove restrictions on a blueprint course object.
         Must have all three parameters for this function call to work.
@@ -54,9 +50,7 @@ class BlueprintTemplate(CanvasObject):
 
         response = self._requester.request(
             "PUT",
-            "courses/{}/blueprint_templates/{}/restrict_item".format(
-                self.course_id, self.id
-            ),
+            "courses/{}/blueprint_templates/{}/restrict_item".format(self.course_id, self.id),
             _kwargs=combine_kwargs(**kwargs),
         )
         return response.json().get("success", False)
@@ -78,9 +72,7 @@ class BlueprintTemplate(CanvasObject):
             Course,
             self._requester,
             "GET",
-            "courses/{}/blueprint_templates/{}/associated_courses".format(
-                self.course_id, self.id
-            ),
+            "courses/{}/blueprint_templates/{}/associated_courses".format(self.course_id, self.id),
             _kwargs=combine_kwargs(**kwargs),
         )
 
@@ -100,9 +92,7 @@ class BlueprintTemplate(CanvasObject):
             ChangeRecord,
             self._requester,
             "GET",
-            "courses/{}/blueprint_templates/{}/unsynced_changes".format(
-                self.course_id, self.id
-            ),
+            "courses/{}/blueprint_templates/{}/unsynced_changes".format(self.course_id, self.id),
             kwargs=combine_kwargs(**kwargs),
         )
 
@@ -122,9 +112,7 @@ class BlueprintTemplate(CanvasObject):
             BlueprintMigration,
             self._requester,
             "GET",
-            "courses/{}/blueprint_templates/{}/migrations".format(
-                self.course_id, self.id
-            ),
+            "courses/{}/blueprint_templates/{}/migrations".format(self.course_id, self.id),
             {"course_id": self.course_id},
             kwargs=combine_kwargs(**kwargs),
         )
@@ -147,9 +135,7 @@ class BlueprintTemplate(CanvasObject):
         migration_id = obj_or_id(migration, "migration", (BlueprintMigration,))
         response = self._requester.request(
             "GET",
-            "courses/{}/blueprint_templates/{}/migrations/{}".format(
-                self.course_id, self.id, migration_id
-            ),
+            "courses/{}/blueprint_templates/{}/migrations/{}".format(self.course_id, self.id, migration_id),
             kwargs=combine_kwargs(**kwargs),
         )
         response_json = response.json()
@@ -169,9 +155,7 @@ class BlueprintTemplate(CanvasObject):
         """
         response = self._requester.request(
             "PUT",
-            "courses/{}/blueprint_templates/{}/update_associations".format(
-                self.course_id, self.id
-            ),
+            "courses/{}/blueprint_templates/{}/update_associations".format(self.course_id, self.id),
             _kwargs=combine_kwargs(**kwargs),
         )
         return response.json().get("success", False)
@@ -198,9 +182,7 @@ class BlueprintMigration(CanvasObject):
             ChangeRecord,
             self._requester,
             "GET",
-            "courses/{}/blueprint_templates/{}/migrations/{}/details".format(
-                self.course_id, self.template_id, self.id
-            ),
+            "courses/{}/blueprint_templates/{}/migrations/{}/details".format(self.course_id, self.template_id, self.id),
             kwargs=combine_kwargs(**kwargs),
         )
 
@@ -254,9 +236,7 @@ class BlueprintSubscription(CanvasObject):
             BlueprintMigration,
             self._requester,
             "GET",
-            "courses/{}/blueprint_subscriptions/{}/migrations".format(
-                self.course_id, self.id
-            ),
+            "courses/{}/blueprint_subscriptions/{}/migrations".format(self.course_id, self.id),
             {"course_id": self.id},
             kwargs=combine_kwargs(**kwargs),
         )
@@ -279,9 +259,7 @@ class BlueprintSubscription(CanvasObject):
         migration_id = obj_or_id(migration, "migration", (BlueprintMigration,))
         response = self._requester.request(
             "GET",
-            "courses/{}/blueprint_subscriptions/{}/migrations/{}".format(
-                self.course_id, self.id, migration_id
-            ),
+            "courses/{}/blueprint_subscriptions/{}/migrations/{}".format(self.course_id, self.id, migration_id),
             _kwargs=combine_kwargs(**kwargs),
         )
         response_json = response.json()

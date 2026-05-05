@@ -18,6 +18,7 @@ if TYPE_CHECKING:
 
 # ── Command Interface ──────────────────────────────────────────────────────────
 
+
 class Command(ABC):
     """Base command. Subclasses implement execute()."""
 
@@ -35,6 +36,7 @@ class Command(ABC):
 @dataclass
 class CommandResult:
     """Standard result wrapper for all commands."""
+
     ok: bool
     data: dict | list | None = None
     error: str | None = None
@@ -49,8 +51,10 @@ class CommandResult:
 
 # ── Concrete Commands ─────────────────────────────────────────────────────────
 
+
 class RefreshCoursesCommand(Command):
     """Fetch and cache all enrolled courses."""
+
     name = "refresh_courses"
 
     def __init__(self, client: CanvasClient, cache: CacheBackend):
@@ -71,6 +75,7 @@ class RefreshCoursesCommand(Command):
 
 class FetchAssignmentsCommand(Command):
     """Fetch assignments for a specific course."""
+
     name = "fetch_assignments"
 
     def __init__(self, client: CanvasClient, cache: CacheBackend, course_id: int):
@@ -84,9 +89,7 @@ class FetchAssignmentsCommand(Command):
             return CommandResult(ok=True, data=cached, cached=True)
         try:
             # CanvasAPI returns dicts, not Assignment objects
-            assignments = self._client.fetch_assignment_details(
-                self._course_id, 0
-            )
+            assignments = self._client.fetch_assignment_details(self._course_id, 0)
             return CommandResult(ok=True, data=assignments)
         except Exception as e:
             return CommandResult(ok=False, error=str(e))
@@ -97,6 +100,7 @@ class FetchAssignmentsCommand(Command):
 
 class FetchUpcomingCommand(Command):
     """Fetch upcoming assignments across all courses."""
+
     name = "fetch_upcoming"
 
     def __init__(self, client: CanvasClient, cache: CacheBackend):
@@ -120,6 +124,7 @@ class FetchUpcomingCommand(Command):
 
 class ValidateTokenCommand(Command):
     """Validate the stored Canvas token."""
+
     name = "validate_token"
 
     def __init__(self, client: CanvasClient):
@@ -137,6 +142,7 @@ class ValidateTokenCommand(Command):
 
 
 # ── Command Registry ───────────────────────────────────────────────────────────
+
 
 class CommandRegistry:
     """Maps command names to Command instances. Used by both TUI and extension."""

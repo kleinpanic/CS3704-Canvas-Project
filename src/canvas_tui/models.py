@@ -8,6 +8,7 @@ New layout (v2): one class per file under models/
 
 The top-level models.py remains as a compatibility shim.
 """
+
 from __future__ import annotations
 
 from .course import CourseInfo

@@ -37,11 +37,7 @@ class PollChoice(CanvasObject):
         :type poll_choice: list
         :rtype: :class:`canvas_sdk.poll_choice.PollChoice`
         """
-        if (
-            isinstance(poll_choice, list)
-            and isinstance(poll_choice[0], dict)
-            and "text" in poll_choice[0]
-        ):
+        if isinstance(poll_choice, list) and isinstance(poll_choice[0], dict) and "text" in poll_choice[0]:
             kwargs["poll_choice"] = poll_choice
         else:
             raise RequiredFieldMissing("Dictionary with key 'text' is required.")

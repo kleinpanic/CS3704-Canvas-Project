@@ -63,6 +63,19 @@ Repository = "https://github.com/kleinpanic/CS3704-Canvas-Project"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.towncrier]
+name = "canvas-tui"
+version = "1.1.1"
+directory = "newsfragments"
+filename = "CHANGELOG.md"
+issue_format = "[#{issue}](https://github.com/kleinpanic/CS3704-Canvas-Project/issues/{issue})"
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+version = "1.1.1"
+tag_format = "v$version"
+version_source = "commitizen"
+
 [tool.coverage.run]
 omit = [
     # Textual TUI layer — requires a running terminal; cannot execute in headless CI

@@ -8,60 +8,67 @@ on:
 permissions:
   contents: write
   id-token: write
+  actions: write
 
 concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  # Require CI to pass before release.
-  # Uses exponential-backoff polling to handle the case where CI hasn't started yet
-  # when the tag workflow fires (common race: tag pushed before CI run registers).
   require-ci:
     runs-on: ubuntu-latest
+    outputs:
+      ci_passed: ${{ steps.ci.result }}
     steps:
-      - name: Wait for CI and verify success
+      - name: Check CI status
+        id: ci
         uses: actions/github-script@v9
         with:
           script: |
+            const run = await github.rest.actions.listWorkflowRuns({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'ci.yml',
+              branch: 'main',
+              status: 'success',
+              head_sha: context.sha,
+              per_page: 1
+            });
+            if (run.data.workflow_runs.length > 0) {
+              console.log(`CI passed for ${context.sha}`);
+              return true;
+            }
+            // Poll
             const maxAttempts = 15;
-            const baseDelayMs = 10_000; // 10 seconds base delay
-
-            async function waitForCI() {
-              for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-                const run = await github.rest.actions.listWorkflowRuns({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  workflow_id: 'ci.yml',
-                  branch: 'main',
-                  status: 'success',
-                  head_sha: context.sha,
-                  per_page: 1
-                });
-
-                if (run.data.workflow_runs.length > 0) {
-                  console.log(`CI passed for commit ${context.sha} (attempt ${attempt})`);
-                  return true;
-                }
-
-                if (attempt < maxAttempts) {
-                  const delay = baseDelayMs * Math.pow(1.5, attempt - 1);
-                  console.log(`No successful CI run found for ${context.sha} (attempt ${attempt}/${maxAttempts}) — waiting ${delay}ms`);
-                  await new Promise(resolve => setTimeout(resolve, delay));
-                }
+            const baseDelayMs = 10_000;
+            for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+              const r = await github.rest.actions.listWorkflowRuns({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                workflow_id: 'ci.yml',
+                branch: 'main',
+                status: 'success',
+                head_sha: context.sha,
+                per_page: 1
+              });
+              if (r.data.workflow_runs.length > 0) {
+                console.log(`CI passed after ${attempt} attempt(s)`);
+                return true;
               }
-              return false;
+              if (attempt < maxAttempts) {
+                const delay = baseDelayMs * Math.pow(1.5, attempt - 1);
+                console.log(`Waiting ${delay}ms...`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+              }
             }
-
-            const ok = await waitForCI();
-            if (!ok) {
-              throw new Error(
-                `No successful CI run found for commit ${context.sha} after ${maxAttempts} attempts. ` +
-                `Release blocked. Verify CI passed at: ` +
-                `https://github.com/${context.repo.owner}/${context.repo.repo}/actions`
-              );
-            }
+            throw new Error(`No successful CI for ${context.sha} after ${maxAttempts} attempts`);
           result-encoding: 'escape'
+
+      - name: Report CI failure
+        if: failure()
+        run: |
+          echo "CI check failed — release will not proceed."
+          echo "Check CI at: https://github.com/${{ github.repository }}/actions/workflows/ci.yml"
 
   build:
     needs: require-ci
@@ -76,10 +83,10 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
+          cache: pip
 
       - name: Install build deps
-        run: |
-          python -m pip install --upgrade pip build twine
+        run: python -m pip install --upgrade pip build twine
 
       - name: Build wheel + sdist
         run: python -m build
@@ -96,8 +103,9 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: dist
+          name: dist-${{ github.run_number }}
           path: dist/
+          retention-days: 7
 
   release:
     needs: build
@@ -108,8 +116,10 @@ jobs:
       - name: Download artifacts
         uses: actions/download-artifact@v8
         with:
-          name: dist
+          name: dist-${{ needs.build.outputs.version }}
           path: dist/
+          pattern: dist-*
+          merge-multiple: true
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -120,13 +130,7 @@ jobs:
           prerelease: ${{ contains(needs.build.outputs.version, '-') }}
           files: dist/*
 
-  # Future: PyPI publishing (requires trusted publisher setup)
-  # publish-pypi:
-  #   needs: [build, release]
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/download-artifact@v8
-  #       with:
-  #         name: dist
-  #         path: dist/
-  #     - uses: pypa/gh-action-pypi-publish@release/v1
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "::error::Release ${{ needs.build.outputs.version }} failed. Check logs: https://github.com/${{ github.repository }}/actions/workflows/release.yml"

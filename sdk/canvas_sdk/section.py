@@ -59,9 +59,7 @@ class Section(CanvasObject):
 
         :rtype: :class:`canvas_sdk.section.Section`
         """
-        response = self._requester.request(
-            "DELETE", "sections/{}".format(self.id), _kwargs=combine_kwargs(**kwargs)
-        )
+        response = self._requester.request("DELETE", "sections/{}".format(self.id), _kwargs=combine_kwargs(**kwargs))
         return Section(self._requester, response.json())
 
     def edit(self, **kwargs):
@@ -73,9 +71,7 @@ class Section(CanvasObject):
 
         :rtype: :class:`canvas_sdk.section.Section`
         """
-        response = self._requester.request(
-            "PUT", "sections/{}".format(self.id), _kwargs=combine_kwargs(**kwargs)
-        )
+        response = self._requester.request("PUT", "sections/{}".format(self.id), _kwargs=combine_kwargs(**kwargs))
 
         if "name" in response.json():
             super(Section, self).set_attributes(response.json())
@@ -120,9 +116,7 @@ class Section(CanvasObject):
 
         assignment_id = obj_or_id(assignment, "assignment", (Assignment,))
 
-        response = self._requester.request(
-            "GET", "sections/{}/assignments/{}/override".format(self.id, assignment_id)
-        )
+        response = self._requester.request("GET", "sections/{}/assignments/{}/override".format(self.id, assignment_id))
         response_json = response.json()
         response_json.update({"course_id": self.course_id})
 

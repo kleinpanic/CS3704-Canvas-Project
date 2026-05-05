@@ -150,9 +150,7 @@ class Group(CanvasObject):
         else:
             raise RequiredFieldMissing("Dictionary with key 'title' is required.")
 
-        response = self._requester.request(
-            "POST", "groups/{}/pages".format(self.id), _kwargs=combine_kwargs(**kwargs)
-        )
+        response = self._requester.request("POST", "groups/{}/pages".format(self.id), _kwargs=combine_kwargs(**kwargs))
 
         page_json = response.json()
         page_json.update({"group_id": self.id})
@@ -168,9 +166,7 @@ class Group(CanvasObject):
 
         :rtype: :class:`canvas_sdk.group.Group`
         """
-        response = self._requester.request(
-            "DELETE", "groups/{}".format(self.id), _kwargs=combine_kwargs(**kwargs)
-        )
+        response = self._requester.request("DELETE", "groups/{}".format(self.id), _kwargs=combine_kwargs(**kwargs))
         return Group(self._requester, response.json())
 
     def delete_external_feed(self, feed, **kwargs):
@@ -205,9 +201,7 @@ class Group(CanvasObject):
 
         :rtype: :class:`canvas_sdk.group.Group`
         """
-        response = self._requester.request(
-            "PUT", "groups/{}".format(self.id), _kwargs=combine_kwargs(**kwargs)
-        )
+        response = self._requester.request("PUT", "groups/{}".format(self.id), _kwargs=combine_kwargs(**kwargs))
         return Group(self._requester, response.json())
 
     def edit_front_page(self, **kwargs):
@@ -286,9 +280,7 @@ class Group(CanvasObject):
 
         assignment_id = obj_or_id(assignment, "assignment", (Assignment,))
 
-        response = self._requester.request(
-            "GET", "groups/{}/assignments/{}/override".format(self.id, assignment_id)
-        )
+        response = self._requester.request("GET", "groups/{}/assignments/{}/override".format(self.id, assignment_id))
         response_json = response.json()
         response_json.update({"course_id": self.course_id})
 
@@ -370,9 +362,7 @@ class Group(CanvasObject):
         """
         from canvas_sdk.content_migration import ContentMigration
 
-        migration_id = obj_or_id(
-            content_migration, "content_migration", (ContentMigration,)
-        )
+        migration_id = obj_or_id(content_migration, "content_migration", (ContentMigration,))
 
         response = self._requester.request(
             "GET",
@@ -563,9 +553,7 @@ class Group(CanvasObject):
         :rtype: :class:`canvas_sdk.paginated_list.PaginatedList` of
             :class:`canvas_sdk.folder.Folder`
         """
-        return PaginatedList(
-            Folder, self._requester, "GET", "groups/{}/folders".format(self.id)
-        )
+        return PaginatedList(Folder, self._requester, "GET", "groups/{}/folders".format(self.id))
 
     def get_full_discussion_topic(self, topic, **kwargs):
         """
@@ -984,9 +972,7 @@ class Group(CanvasObject):
         :rtype: tuple
         """
 
-        return Uploader(
-            self._requester, "groups/{}/files".format(self.id), file, **kwargs
-        ).start()
+        return Uploader(self._requester, "groups/{}/files".format(self.id), file, **kwargs).start()
 
 
 class GroupMembership(CanvasObject):
@@ -1127,9 +1113,7 @@ class GroupCategory(CanvasObject):
         :rtype: :class:`canvas_sdk.paginated_list.PaginatedList` of
             :class:`canvas_sdk.group.Group`
         """
-        return PaginatedList(
-            Group, self._requester, "GET", "group_categories/{}/groups".format(self.id)
-        )
+        return PaginatedList(Group, self._requester, "GET", "group_categories/{}/groups".format(self.id))
 
     def get_users(self, **kwargs):
         """

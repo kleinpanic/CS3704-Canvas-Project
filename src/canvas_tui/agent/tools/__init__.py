@@ -9,6 +9,7 @@ The agent loop reads SCHEMA to advertise tools to the model, parses the
 model's tool_call requests, dispatches to the matching call(), and
 appends the result back to the conversation.
 """
+
 from __future__ import annotations
 
 from . import calendar_tools, canvas_tools, reranker_tools, study_tools

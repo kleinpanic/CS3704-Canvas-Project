@@ -20,9 +20,7 @@ class Feature(CanvasObject):
         elif hasattr(self, "user_id"):
             return self.user_id
         else:
-            raise ValueError(
-                "Feature Flag does not have account_id, course_id or user_id"
-            )
+            raise ValueError("Feature Flag does not have account_id, course_id or user_id")
 
     @property
     def _parent_type(self):
@@ -39,16 +37,12 @@ class Feature(CanvasObject):
         elif hasattr(self, "user_id"):
             return "user"
         else:
-            raise ValueError(
-                "Feature Flag does not have account_id, course_id or user_id"
-            )
+            raise ValueError("Feature Flag does not have account_id, course_id or user_id")
 
 
 class FeatureFlag(CanvasObject):
     def __str__(self):
-        return "{} {} {} {}".format(
-            self.context_type, self.context_id, self.feature, self.state
-        )
+        return "{} {} {} {}".format(self.context_type, self.context_id, self.feature, self.state)
 
     def delete(self, feature, **kwargs):
         """
@@ -72,9 +66,7 @@ class FeatureFlag(CanvasObject):
 
         response = self._requester.request(
             "DELETE",
-            "{}s/{}/features/flags/{}".format(
-                feature._parent_type, feature._parent_id, feature_name
-            ),
+            "{}s/{}/features/flags/{}".format(feature._parent_type, feature._parent_id, feature_name),
             _kwargs=combine_kwargs(**kwargs),
         )
         return FeatureFlag(self._requester, response.json())
@@ -104,9 +96,7 @@ class FeatureFlag(CanvasObject):
 
         response = self._requester.request(
             "PUT",
-            "{}s/{}/features/flags/{}".format(
-                feature._parent_type, feature._parent_id, feature_name
-            ),
+            "{}s/{}/features/flags/{}".format(feature._parent_type, feature._parent_id, feature_name),
             _kwargs=combine_kwargs(**kwargs),
         )
         return FeatureFlag(self._requester, response.json())

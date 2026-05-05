@@ -25,7 +25,5 @@ class Favorite(CanvasObject):
             id = self.context_id
             uri_str = "users/self/favorites/groups/{}"
 
-        response = self._requester.request(
-            "DELETE", uri_str.format(id), _kwargs=combine_kwargs(**kwargs)
-        )
+        response = self._requester.request("DELETE", uri_str.format(id), _kwargs=combine_kwargs(**kwargs))
         return Favorite(self._requester, response.json())

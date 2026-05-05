@@ -4,6 +4,7 @@ Skipped entirely if the module is not yet present at canvas_sdk.backends.calenda
 Falls back to importing from canvas_tui.agent.backends.calendar_adapter if the sdk-side
 module doesn't exist yet.
 """
+
 import pytest
 
 # Try the SDK-side location first; fall back to canvas_tui source location.

@@ -106,9 +106,7 @@ class Account(CanvasObject):
             if not isinstance(entry, dict):
                 raise ValueError("grading_scheme_entry must consist of dictionaries.")
             if "name" not in entry or "value" not in entry:
-                raise ValueError(
-                    "Dictionaries with keys 'name' and 'value' are required."
-                )
+                raise ValueError("Dictionaries with keys 'name' and 'value' are required.")
         kwargs["grading_scheme_entry"] = grading_scheme_entry
 
         response = self._requester.request(
@@ -140,9 +138,7 @@ class Account(CanvasObject):
 
         response = self._requester.request(
             "DELETE",
-            "accounts/{}/users/{}/account_notifications/{}".format(
-                self.id, user_id, notif_id
-            ),
+            "accounts/{}/users/{}/account_notifications/{}".format(self.id, user_id, notif_id),
             _kwargs=combine_kwargs(**kwargs),
         )
         return AccountNotification(self._requester, response.json())
@@ -251,9 +247,7 @@ class Account(CanvasObject):
 
         return EnrollmentTerm(self._requester, enrollment_term_json)
 
-    def create_external_tool(
-        self, name, privacy_level, consumer_key, shared_secret, **kwargs
-    ):
+    def create_external_tool(self, name, privacy_level, consumer_key, shared_secret, **kwargs):
         """
         Create an external tool in the current account.
 
@@ -316,16 +310,13 @@ class Account(CanvasObject):
         :rtype: :class:`canvas_sdk.account.AccountNotification`
         """
         required_key_list = ["subject", "message", "start_at", "end_at"]
-        required_keys_present = all(
-            (x in account_notification for x in required_key_list)
-        )
+        required_keys_present = all((x in account_notification for x in required_key_list))
 
         if isinstance(account_notification, dict) and required_keys_present:
             kwargs["account_notification"] = account_notification
         else:
             raise RequiredFieldMissing(
-                "account_notification must be a dictionary with keys "
-                "'subject', 'message', 'start_at', and 'end_at'."
+                "account_notification must be a dictionary with keys 'subject', 'message', 'start_at', and 'end_at'."
             )
 
         response = self._requester.request(
@@ -479,9 +470,7 @@ class Account(CanvasObject):
         if isinstance(login, dict) and "unique_id" in login:
             kwargs["login"] = login
         else:
-            raise RequiredFieldMissing(
-                "login must be a dictionary with keys 'unique_id'."
-            )
+            raise RequiredFieldMissing("login must be a dictionary with keys 'unique_id'.")
 
         response = self._requester.request(
             "POST",
@@ -572,9 +561,7 @@ class Account(CanvasObject):
         :rtype: bool
         """
 
-        grading_period_id = obj_or_id(
-            grading_period, "grading_period", (GradingPeriod,)
-        )
+        grading_period_id = obj_or_id(grading_period, "grading_period", (GradingPeriod,))
 
         response = self._requester.request(
             "DELETE",
@@ -726,9 +713,7 @@ class Account(CanvasObject):
 
         response = self._requester.request(
             "GET",
-            "accounts/{}/authentication_providers/{}".format(
-                self.id, authentication_providers_id
-            ),
+            "accounts/{}/authentication_providers/{}".format(self.id, authentication_providers_id),
             _kwargs=combine_kwargs(**kwargs),
         )
 
@@ -765,9 +750,7 @@ class Account(CanvasObject):
 
         :rtype: :class:`canvas_sdk.content_migration.ContentMigration`
         """
-        migration_id = obj_or_id(
-            content_migration, "content_migration", (ContentMigration,)
-        )
+        migration_id = obj_or_id(content_migration, "content_migration", (ContentMigration,))
 
         response = self._requester.request(
             "GET",
@@ -900,9 +883,7 @@ class Account(CanvasObject):
         )
         return response.json()
 
-    def get_department_level_participation_data_with_given_term(
-        self, term_id, **kwargs
-    ):
+    def get_department_level_participation_data_with_given_term(self, term_id, **kwargs):
         """
         Return page view hits all available or concluded courses in the given term
 
@@ -1024,9 +1005,7 @@ class Account(CanvasObject):
         """
         term_id = obj_or_id(term, "term", (EnrollmentTerm,))
 
-        response = self._requester.request(
-            "GET", "accounts/{}/terms/{}".format(self.id, term_id)
-        )
+        response = self._requester.request("GET", "accounts/{}/terms/{}".format(self.id, term_id))
         return EnrollmentTerm(self._requester, response.json())
 
     def get_enrollment_terms(self, **kwargs):
@@ -1322,9 +1301,7 @@ class Account(CanvasObject):
         if outcome_import == "latest":
             outcome_import_id = "latest"
         else:
-            outcome_import_id = obj_or_id(
-                outcome_import, "outcome_import", (OutcomeImport,)
-            )
+            outcome_import_id = obj_or_id(outcome_import, "outcome_import", (OutcomeImport,))
 
         response = self._requester.request(
             "GET",
@@ -1732,9 +1709,7 @@ class Account(CanvasObject):
         :returns: True if the account was updated, False otherwise.
         :rtype: bool
         """
-        response = self._requester.request(
-            "PUT", "accounts/{}".format(self.id), _kwargs=combine_kwargs(**kwargs)
-        )
+        response = self._requester.request("PUT", "accounts/{}".format(self.id), _kwargs=combine_kwargs(**kwargs))
 
         if "name" in response.json():
             super(Account, self).set_attributes(response.json())
@@ -1832,16 +1807,13 @@ class AccountNotification(CanvasObject):
         :rtype: :class:`canvas_sdk.account.AccountNotification`
         """
         required_key_list = ["subject", "message", "start_at", "end_at"]
-        required_keys_present = all(
-            x in account_notification for x in required_key_list
-        )
+        required_keys_present = all(x in account_notification for x in required_key_list)
 
         if isinstance(account_notification, dict) and required_keys_present:
             kwargs["account_notification"] = account_notification
         else:
             raise RequiredFieldMissing(
-                "account_notification must be a dictionary with keys "
-                "'subject', 'message', 'start_at', and 'end_at'."
+                "account_notification must be a dictionary with keys 'subject', 'message', 'start_at', and 'end_at'."
             )
 
         response = self._requester.request(

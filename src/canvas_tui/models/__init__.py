@@ -2,6 +2,7 @@
 
 Re-exports all model classes for convenience.
 """
+
 from __future__ import annotations
 
 from .course import CourseInfo

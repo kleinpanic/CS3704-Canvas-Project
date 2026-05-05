@@ -24,9 +24,7 @@ class ContentMigration(CanvasObject):
         elif hasattr(self, "user_id"):
             return self.user_id
         else:
-            raise ValueError(
-                "Content Migration does not have an account_id, course_id, group_id or user_id"
-            )
+            raise ValueError("Content Migration does not have an account_id, course_id, group_id or user_id")
 
     @property
     def _parent_type(self):
@@ -44,9 +42,7 @@ class ContentMigration(CanvasObject):
         elif hasattr(self, "user_id"):
             return "user"
         else:
-            raise ValueError(
-                "Content Migration does not have an account_id, course_id, group_id or user_id"
-            )
+            raise ValueError("Content Migration does not have an account_id, course_id, group_id or user_id")
 
     def get_migration_issue(self, migration_issue, **kwargs):
         """
@@ -75,9 +71,7 @@ class ContentMigration(CanvasObject):
         """
         from canvas_sdk.content_migration import MigrationIssue
 
-        migration_issue_id = obj_or_id(
-            migration_issue, "migration_issue", (MigrationIssue,)
-        )
+        migration_issue_id = obj_or_id(migration_issue, "migration_issue", (MigrationIssue,))
 
         response = self._requester.request(
             "GET",
@@ -127,9 +121,7 @@ class ContentMigration(CanvasObject):
             MigrationIssue,
             self._requester,
             "GET",
-            "{}s/{}/content_migrations/{}/migration_issues/".format(
-                self._parent_type, self._parent_id, self.id
-            ),
+            "{}s/{}/content_migrations/{}/migration_issues/".format(self._parent_type, self._parent_id, self.id),
             {
                 "context_type": self._parent_type,
                 "context_id": self._parent_id,
@@ -181,9 +173,7 @@ class ContentMigration(CanvasObject):
 
         progress_id = self.progress_url.split("/")[-1]
 
-        response = self._requester.request(
-            "GET", "progress/{}".format(progress_id), _kwargs=combine_kwargs(**kwargs)
-        )
+        response = self._requester.request("GET", "progress/{}".format(progress_id), _kwargs=combine_kwargs(**kwargs))
         return Progress(self._requester, response.json())
 
     def get_selective_data(self, **kwargs):
@@ -217,9 +207,7 @@ class ContentMigration(CanvasObject):
             ContentMigrationSelectionNode,
             self._requester,
             "GET",
-            "{}s/{}/content_migrations/{}/selective_data".format(
-                self._parent_type, self._parent_id, self.id
-            ),
+            "{}s/{}/content_migrations/{}/selective_data".format(self._parent_type, self._parent_id, self.id),
             {
                 "context_type": self._parent_type,
                 "context_id": self._parent_id,
@@ -249,9 +237,7 @@ class ContentMigration(CanvasObject):
         """
         response = self._requester.request(
             "PUT",
-            "{}s/{}/content_migrations/{}".format(
-                self._parent_type, self._parent_id, self.id
-            ),
+            "{}s/{}/content_migrations/{}".format(self._parent_type, self._parent_id, self.id),
             _kwargs=combine_kwargs(**kwargs),
         )
 

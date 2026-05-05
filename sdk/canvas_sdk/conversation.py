@@ -100,9 +100,7 @@ class Conversation(CanvasObject):
 
         :rtype: `bool`
         """
-        response = self._requester.request(
-            "PUT", "conversations/{}".format(self.id), _kwargs=combine_kwargs(**kwargs)
-        )
+        response = self._requester.request("PUT", "conversations/{}".format(self.id), _kwargs=combine_kwargs(**kwargs))
 
         if response.json().get("id"):
             super(Conversation, self).set_attributes(response.json())

@@ -92,9 +92,7 @@ class Page(CanvasObject):
 
         response = self._requester.request(
             "GET",
-            "{}s/{}/pages/{}/revisions/{}".format(
-                self.parent_type, self.parent_id, self.url, revision_id
-            ),
+            "{}s/{}/pages/{}/revisions/{}".format(self.parent_type, self.parent_id, self.url, revision_id),
             _kwargs=combine_kwargs(**kwargs),
         )
         pagerev_json = response.json()
@@ -119,9 +117,7 @@ class Page(CanvasObject):
             PageRevision,
             self._requester,
             "GET",
-            "{}s/{}/pages/{}/revisions".format(
-                self.parent_type, self.parent_id, self.url
-            ),
+            "{}s/{}/pages/{}/revisions".format(self.parent_type, self.parent_id, self.url),
             _kwargs=combine_kwargs(**kwargs),
         )
 
@@ -169,9 +165,7 @@ class Page(CanvasObject):
         revision_id = obj_or_id(revision, "revision", (PageRevision,))
         response = self._requester.request(
             "POST",
-            "{}s/{}/pages/{}/revisions/{}".format(
-                self.parent_type, self.parent_id, self.url, revision_id
-            ),
+            "{}s/{}/pages/{}/revisions/{}".format(self.parent_type, self.parent_id, self.url, revision_id),
             _kwargs=combine_kwargs(**kwargs),
         )
         pagerev_json = response.json()
@@ -190,9 +184,7 @@ class Page(CanvasObject):
         """
         response = self._requester.request(
             "GET",
-            "{}s/{}/pages/{}/revisions/latest".format(
-                self.parent_type, self.parent_id, self.url
-            ),
+            "{}s/{}/pages/{}/revisions/latest".format(self.parent_type, self.parent_id, self.url),
             _kwargs=combine_kwargs(**kwargs),
         )
         return PageRevision(self._requester, response.json())

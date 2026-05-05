@@ -15,9 +15,7 @@ class File(CanvasObject):
 
         :rtype: :class:`canvas_sdk.file.File`
         """
-        response = self._requester.request(
-            "DELETE", "files/{}".format(self.id), _kwargs=combine_kwargs(**kwargs)
-        )
+        response = self._requester.request("DELETE", "files/{}".format(self.id), _kwargs=combine_kwargs(**kwargs))
         return File(self._requester, response.json())
 
     def download(self, location):
@@ -54,7 +52,5 @@ class File(CanvasObject):
 
         :rtype: :class:`canvas_sdk.file.File`
         """
-        response = self._requester.request(
-            "PUT", "files/{}".format(self.id), _kwargs=combine_kwargs(**kwargs)
-        )
+        response = self._requester.request("PUT", "files/{}".format(self.id), _kwargs=combine_kwargs(**kwargs))
         return File(self._requester, response.json())

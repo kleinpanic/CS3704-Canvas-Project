@@ -8,6 +8,7 @@ Supported backends (configured via Config.calendar_backend):
 The backend is selected once at startup via CalendarAdapter.from_config().
 All calendar tools in canvas_sdk.agent_tools.calendar_tools call this adapter.
 """
+
 from __future__ import annotations
 
 import abc
@@ -25,8 +26,7 @@ class CalendarBackend(abc.ABC):
         start_iso: str | None = None,
         end_iso: str | None = None,
         include_all_day: bool = True,
-    ) -> list[dict[str, Any]]:
-        ...
+    ) -> list[dict[str, Any]]: ...
 
     @abc.abstractmethod
     def find_free_blocks(
@@ -37,8 +37,7 @@ class CalendarBackend(abc.ABC):
         latest_hour: int = 22,
         calendar_id: str = "primary",
         exclude_weekends: bool = False,
-    ) -> list[dict[str, Any]]:
-        ...
+    ) -> list[dict[str, Any]]: ...
 
     @abc.abstractmethod
     def create_event(
@@ -49,8 +48,7 @@ class CalendarBackend(abc.ABC):
         description: str = "",
         calendar_id: str = "primary",
         rationale: str = "",
-    ) -> dict[str, Any]:
-        ...
+    ) -> dict[str, Any]: ...
 
     @abc.abstractmethod
     def propose_modification(
@@ -60,14 +58,10 @@ class CalendarBackend(abc.ABC):
         start_iso: str | None = None,
         end_iso: str | None = None,
         rationale: str = "",
-    ) -> dict[str, Any]:
-        ...
+    ) -> dict[str, Any]: ...
 
     @abc.abstractmethod
-    def propose_deletion(
-        self, event_id: str, rationale: str = ""
-    ) -> dict[str, Any]:
-        ...
+    def propose_deletion(self, event_id: str, rationale: str = "") -> dict[str, Any]: ...
 
 
 class _NopBackend(CalendarBackend):
@@ -120,6 +114,7 @@ class GoogleCalendarBackend(CalendarBackend):
             ) from e
 
         import json, os
+
         SCOPES = ["https://www.googleapis.com/auth/calendar"]
         creds = None
         if os.path.exists(self._token_path):
@@ -130,9 +125,7 @@ class GoogleCalendarBackend(CalendarBackend):
             if creds and creds.expired and creds.refresh_token:
                 creds.refresh(Request())
             else:
-                flow = InstalledAppFlow.from_client_secrets_file(
-                    self._creds_path, SCOPES
-                )
+                flow = InstalledAppFlow.from_client_secrets_file(self._creds_path, SCOPES)
                 creds = flow.run_local_server(port=0)
             with open(self._token_path, "w") as f:
                 f.write(creds.to_json())
@@ -155,14 +148,18 @@ class GoogleCalendarBackend(CalendarBackend):
         t_min = start_iso or now.isoformat()
         t_max = end_iso or (now + dt.timedelta(days=14)).isoformat()
 
-        result = svc.events().list(
-            calendarId=calendar_id,
-            timeMin=t_min,
-            timeMax=t_max,
-            maxResults=250,
-            singleEvents=True,
-            orderBy="startTime",
-        ).execute()
+        result = (
+            svc.events()
+            .list(
+                calendarId=calendar_id,
+                timeMin=t_min,
+                timeMax=t_max,
+                maxResults=250,
+                singleEvents=True,
+                orderBy="startTime",
+            )
+            .execute()
+        )
 
         out = []
         for ev in result.get("items", []):
@@ -173,15 +170,17 @@ class GoogleCalendarBackend(CalendarBackend):
             is_all_day = "date" in start and "dateTime" not in start
             if is_all_day and not include_all_day:
                 continue
-            out.append({
-                "id": ev["id"],
-                "title": ev.get("summary", ""),
-                "start_iso": start_str,
-                "end_iso": end_str,
-                "all_day": is_all_day,
-                "description": ev.get("description", ""),
-                "calendar_id": calendar_id,
-            })
+            out.append(
+                {
+                    "id": ev["id"],
+                    "title": ev.get("summary", ""),
+                    "start_iso": start_str,
+                    "end_iso": end_str,
+                    "all_day": is_all_day,
+                    "description": ev.get("description", ""),
+                    "calendar_id": calendar_id,
+                }
+            )
         return out
 
     def find_free_blocks(
@@ -218,9 +217,7 @@ class GoogleCalendarBackend(CalendarBackend):
             slot_start = max(cursor, day_start)
 
             if slot_start >= day_end:
-                cursor = (cursor + dt.timedelta(days=1)).replace(
-                    hour=earliest_hour, minute=0, second=0, microsecond=0
-                )
+                cursor = (cursor + dt.timedelta(days=1)).replace(hour=earliest_hour, minute=0, second=0, microsecond=0)
                 continue
 
             for b_start, b_end in busy:
@@ -232,24 +229,26 @@ class GoogleCalendarBackend(CalendarBackend):
                     gap_minutes = int((b_start - slot_start).total_seconds() / 60)
                     if gap_minutes >= min_minutes:
                         block_end = min(slot_start + dt.timedelta(minutes=min_minutes), b_start)
-                        free_blocks.append({
-                            "start_iso": slot_start.isoformat(),
-                            "end_iso": block_end.isoformat(),
-                            "minutes": int((block_end - slot_start).total_seconds() / 60),
-                        })
+                        free_blocks.append(
+                            {
+                                "start_iso": slot_start.isoformat(),
+                                "end_iso": block_end.isoformat(),
+                                "minutes": int((block_end - slot_start).total_seconds() / 60),
+                            }
+                        )
                 slot_start = max(slot_start, b_end)
 
             gap_minutes = int((day_end - slot_start).total_seconds() / 60)
             if gap_minutes >= min_minutes:
-                free_blocks.append({
-                    "start_iso": slot_start.isoformat(),
-                    "end_iso": (slot_start + dt.timedelta(minutes=min_minutes)).isoformat(),
-                    "minutes": min_minutes,
-                })
+                free_blocks.append(
+                    {
+                        "start_iso": slot_start.isoformat(),
+                        "end_iso": (slot_start + dt.timedelta(minutes=min_minutes)).isoformat(),
+                        "minutes": min_minutes,
+                    }
+                )
 
-            cursor = (cursor + dt.timedelta(days=1)).replace(
-                hour=earliest_hour, minute=0, second=0, microsecond=0
-            )
+            cursor = (cursor + dt.timedelta(days=1)).replace(hour=earliest_hour, minute=0, second=0, microsecond=0)
 
         return free_blocks[:20]
 
@@ -301,6 +300,7 @@ class ICalBackend(CalendarBackend):
             raise ImportError("ICalBackend requires: pip install icalendar recurring_ical_events") from e
 
         import urllib.request
+
         if self._ical_path.startswith("http"):
             with urllib.request.urlopen(self._ical_path) as r:
                 data = r.read()
@@ -324,9 +324,7 @@ class ICalBackend(CalendarBackend):
         cal = self._load_cal()
         now = dt.datetime.now(dt.timezone.utc)
         t_start = dt.datetime.fromisoformat((start_iso or now.isoformat()).replace("Z", "+00:00"))
-        t_end = dt.datetime.fromisoformat(
-            (end_iso or (now + dt.timedelta(days=14)).isoformat()).replace("Z", "+00:00")
-        )
+        t_end = dt.datetime.fromisoformat((end_iso or (now + dt.timedelta(days=14)).isoformat()).replace("Z", "+00:00"))
         events = recurring_ical_events.of(cal).between(t_start, t_end)
         out = []
         for ev in events:
@@ -339,19 +337,27 @@ class ICalBackend(CalendarBackend):
             is_all_day = isinstance(s_dt, dt.date) and not isinstance(s_dt, dt.datetime)
             if is_all_day and not include_all_day:
                 continue
-            out.append({
-                "id": str(ev.get("UID", "")),
-                "title": str(ev.get("SUMMARY", "")),
-                "start_iso": s_dt.isoformat() if hasattr(s_dt, "isoformat") else str(s_dt),
-                "end_iso": e_dt.isoformat() if (e_dt and hasattr(e_dt, "isoformat")) else None,
-                "all_day": is_all_day,
-                "description": str(ev.get("DESCRIPTION", "")),
-            })
+            out.append(
+                {
+                    "id": str(ev.get("UID", "")),
+                    "title": str(ev.get("SUMMARY", "")),
+                    "start_iso": s_dt.isoformat() if hasattr(s_dt, "isoformat") else str(s_dt),
+                    "end_iso": e_dt.isoformat() if (e_dt and hasattr(e_dt, "isoformat")) else None,
+                    "all_day": is_all_day,
+                    "description": str(ev.get("DESCRIPTION", "")),
+                }
+            )
         return out
 
-    def find_free_blocks(self, min_minutes: int = 90, horizon_days: int = 7,
-                         earliest_hour: int = 7, latest_hour: int = 22,
-                         calendar_id: str = "primary", exclude_weekends: bool = False) -> list[dict]:
+    def find_free_blocks(
+        self,
+        min_minutes: int = 90,
+        horizon_days: int = 7,
+        earliest_hour: int = 7,
+        latest_hour: int = 22,
+        calendar_id: str = "primary",
+        exclude_weekends: bool = False,
+    ) -> list[dict]:
         now = dt.datetime.now(dt.UTC)
         end = now + dt.timedelta(days=horizon_days)
         events = self.list_events(start_iso=now.isoformat(), end_iso=end.isoformat(), include_all_day=False)
@@ -383,26 +389,42 @@ class ICalBackend(CalendarBackend):
                 if slot_start < b_s:
                     gap = int((b_s - slot_start).total_seconds() / 60)
                     if gap >= min_minutes:
-                        free_blocks.append({"start_iso": slot_start.isoformat(),
-                                            "end_iso": (slot_start + dt.timedelta(minutes=min_minutes)).isoformat(),
-                                            "minutes": min_minutes})
+                        free_blocks.append(
+                            {
+                                "start_iso": slot_start.isoformat(),
+                                "end_iso": (slot_start + dt.timedelta(minutes=min_minutes)).isoformat(),
+                                "minutes": min_minutes,
+                            }
+                        )
                 slot_start = max(slot_start, b_e)
             gap = int((day_end - slot_start).total_seconds() / 60)
             if gap >= min_minutes:
-                free_blocks.append({"start_iso": slot_start.isoformat(),
-                                    "end_iso": (slot_start + dt.timedelta(minutes=min_minutes)).isoformat(),
-                                    "minutes": min_minutes})
+                free_blocks.append(
+                    {
+                        "start_iso": slot_start.isoformat(),
+                        "end_iso": (slot_start + dt.timedelta(minutes=min_minutes)).isoformat(),
+                        "minutes": min_minutes,
+                    }
+                )
             cursor = (cursor + dt.timedelta(days=1)).replace(hour=earliest_hour, minute=0, second=0, microsecond=0)
         return free_blocks
 
-    def create_event(self, title: str, start_iso: str, end_iso: str,
-                     description: str = "", calendar_id: str = "primary", rationale: str = "") -> dict:
+    def create_event(
+        self,
+        title: str,
+        start_iso: str,
+        end_iso: str,
+        description: str = "",
+        calendar_id: str = "primary",
+        rationale: str = "",
+    ) -> dict:
         try:
             from icalendar import Calendar, Event
         except ImportError as e:
             raise ImportError("ICalBackend requires: pip install icalendar") from e
 
         import uuid
+
         uid = str(uuid.uuid4())
         ev = Event()
         ev.add("SUMMARY", title)
@@ -413,6 +435,7 @@ class ICalBackend(CalendarBackend):
             ev.add("DESCRIPTION", f"{description}\nrationale: {rationale}".strip())
 
         import os
+
         if os.path.exists(self._write_path):
             with open(self._write_path, "rb") as f:
                 cal = Calendar.from_ical(f.read())
@@ -440,15 +463,17 @@ class CalendarAdapter:
     @classmethod
     def from_config(cls) -> CalendarBackend:
         from canvas_tui.config import load_config
+
         cfg = load_config()
         backend = getattr(cfg, "calendar_backend", "none")
 
         if backend == "google":
             import os
-            creds_path = getattr(cfg, "google_credentials_path",
-                                 os.path.expanduser("~/.config/canvas-tui/google_credentials.json"))
-            token_path = getattr(cfg, "google_token_path",
-                                 os.path.expanduser("~/.config/canvas-tui/google_token.json"))
+
+            creds_path = getattr(
+                cfg, "google_credentials_path", os.path.expanduser("~/.config/canvas-tui/google_credentials.json")
+            )
+            token_path = getattr(cfg, "google_token_path", os.path.expanduser("~/.config/canvas-tui/google_token.json"))
             return GoogleCalendarBackend(creds_path, token_path)
 
         if backend == "ical":

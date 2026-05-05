@@ -3,6 +3,7 @@ neuroscience-grounded heuristics in the system prompt. Exposed as tools
 so the model can ask for a spaced-repetition schedule without having to
 do the date arithmetic itself.
 """
+
 from __future__ import annotations
 
 import datetime as dt
@@ -24,13 +25,22 @@ class SpacedSchedule:
             "type": "object",
             "properties": {
                 "exam_iso": {"type": "string", "description": "ISO8601 exam datetime."},
-                "n_sessions": {"type": "integer", "default": 4, "description": "Target number of sessions (3-5 typical)."},
+                "n_sessions": {
+                    "type": "integer",
+                    "default": 4,
+                    "description": "Target number of sessions (3-5 typical).",
+                },
                 "minutes_per_session": {"type": "integer", "default": 90},
-                "preferred_hour": {"type": "integer", "default": 9, "description": "Preferred start hour (24h, default 9am for morning peak cognition)."},
+                "preferred_hour": {
+                    "type": "integer",
+                    "default": 9,
+                    "description": "Preferred start hour (24h, default 9am for morning peak cognition).",
+                },
             },
             "required": ["exam_iso"],
         },
     }
+
     @staticmethod
     def call(args: dict) -> list[dict]:
         exam = dt.datetime.fromisoformat(args["exam_iso"].replace("Z", "+00:00"))
@@ -44,12 +54,14 @@ class SpacedSchedule:
         sessions = []
         for g in gaps:
             t = (exam - dt.timedelta(days=g)).replace(hour=hour, minute=0, second=0, microsecond=0)
-            sessions.append({
-                "start_iso": t.isoformat(),
-                "end_iso": (t + dt.timedelta(minutes=minutes)).isoformat(),
-                "label": f"Exam prep session — {g}d before",
-                "minutes": minutes,
-            })
+            sessions.append(
+                {
+                    "start_iso": t.isoformat(),
+                    "end_iso": (t + dt.timedelta(minutes=minutes)).isoformat(),
+                    "label": f"Exam prep session — {g}d before",
+                    "minutes": minutes,
+                }
+            )
         return sessions
 
 
@@ -67,22 +79,32 @@ class DeepBlockSize:
             "properties": {
                 "task_type": {
                     "type": "string",
-                    "enum": ["writing", "problem_set", "exam_prep", "reading", "review", "admin", "discussion", "project_work"],
+                    "enum": [
+                        "writing",
+                        "problem_set",
+                        "exam_prep",
+                        "reading",
+                        "review",
+                        "admin",
+                        "discussion",
+                        "project_work",
+                    ],
                 },
             },
             "required": ["task_type"],
         },
     }
+
     @staticmethod
     def call(args: dict) -> dict:
         rec = {
-            "writing":      (90, "deep cognitive work — peak ~90min, hard cap before fatigue"),
-            "problem_set":  (90, "sustained reasoning — 60-90min blocks; 25min for trivial sets"),
-            "exam_prep":    (90, "comprehensive recall + practice — 90min with 15min breaks"),
-            "reading":      (45, "moderate cognitive load — 45min blocks, more frequent breaks"),
-            "review":       (45, "lighter than first-pass learning"),
-            "admin":        (25, "Pomodoro-style — short shallow work"),
-            "discussion":   (60, "structured dialogue — 60min canonical class length"),
+            "writing": (90, "deep cognitive work — peak ~90min, hard cap before fatigue"),
+            "problem_set": (90, "sustained reasoning — 60-90min blocks; 25min for trivial sets"),
+            "exam_prep": (90, "comprehensive recall + practice — 90min with 15min breaks"),
+            "reading": (45, "moderate cognitive load — 45min blocks, more frequent breaks"),
+            "review": (45, "lighter than first-pass learning"),
+            "admin": (25, "Pomodoro-style — short shallow work"),
+            "discussion": (60, "structured dialogue — 60min canonical class length"),
             "project_work": (90, "deep work — 90min blocks, group adjacent if possible"),
         }
         minutes, rationale = rec[args["task_type"]]
@@ -108,6 +130,7 @@ class ExamBracket:
             "required": ["exam_start_iso", "exam_end_iso"],
         },
     }
+
     @staticmethod
     def call(args: dict) -> list[dict]:
         start = dt.datetime.fromisoformat(args["exam_start_iso"].replace("Z", "+00:00"))
@@ -117,11 +140,11 @@ class ExamBracket:
             {
                 "label": "Exam-day light review (no new material)",
                 "start_iso": (start - dt.timedelta(minutes=review + 15)).isoformat(),
-                "end_iso":   (start - dt.timedelta(minutes=15)).isoformat(),
+                "end_iso": (start - dt.timedelta(minutes=15)).isoformat(),
             },
             {
                 "label": "Decompress (no other deep work)",
                 "start_iso": end.isoformat(),
-                "end_iso":   (end + dt.timedelta(minutes=30)).isoformat(),
+                "end_iso": (end + dt.timedelta(minutes=30)).isoformat(),
             },
         ]

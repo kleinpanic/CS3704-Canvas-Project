@@ -37,10 +37,7 @@ class SQLiteCache(CacheBackend):
         self._conn.commit()
 
     def get(self, key: str) -> dict[str, Any] | None:
-        row = self._conn.execute(
-            "SELECT value, expires_at FROM cache WHERE key = ?",
-            (key,)
-        ).fetchone()
+        row = self._conn.execute("SELECT value, expires_at FROM cache WHERE key = ?", (key,)).fetchone()
         if row is None:
             return None
         if row["expires_at"] and row["expires_at"] < time.time():
@@ -55,7 +52,7 @@ class SQLiteCache(CacheBackend):
         expires_at = time.time() + ttl if ttl else None
         self._conn.execute(
             "INSERT OR REPLACE INTO cache (key, value, expires_at) VALUES (?, ?, ?)",
-            (key, json.dumps(value), expires_at)
+            (key, json.dumps(value), expires_at),
         )
         self._conn.commit()
 

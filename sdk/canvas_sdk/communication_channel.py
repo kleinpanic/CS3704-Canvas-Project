@@ -64,9 +64,7 @@ class CommunicationChannel(CanvasObject):
         """
         response = self._requester.request(
             "GET",
-            "users/{}/communication_channels/{}/notification_preference_categories".format(
-                self.user_id, self.id
-            ),
+            "users/{}/communication_channels/{}/notification_preference_categories".format(self.user_id, self.id),
             _kwargs=combine_kwargs(**kwargs),
         )
         return response.json()["categories"]
@@ -84,9 +82,7 @@ class CommunicationChannel(CanvasObject):
         """
         response = self._requester.request(
             "GET",
-            "users/{}/communication_channels/{}/notification_preferences".format(
-                self.user_id, self.id
-            ),
+            "users/{}/communication_channels/{}/notification_preferences".format(self.user_id, self.id),
             _kwargs=combine_kwargs(**kwargs),
         )
 
@@ -119,9 +115,7 @@ class CommunicationChannel(CanvasObject):
             kwargs["notification_preferences"] = notification_preferences
             response = self._requester.request(
                 "PUT",
-                "users/self/communication_channels/{}/notification_preferences".format(
-                    self.id
-                ),
+                "users/self/communication_channels/{}/notification_preferences".format(self.id),
                 _kwargs=combine_kwargs(**kwargs),
             )
             return response.json()["notification_preferences"]
@@ -147,9 +141,7 @@ class CommunicationChannel(CanvasObject):
         kwargs["notification_preferences[frequency]"] = frequency
         response = self._requester.request(
             "PUT",
-            "users/self/communication_channels/{}/notification_preferences/{}".format(
-                self.id, notification
-            ),
+            "users/self/communication_channels/{}/notification_preferences/{}".format(self.id, notification),
             _kwargs=combine_kwargs(**kwargs),
         )
         data = response.json()["notification_preferences"][0]
@@ -177,9 +169,7 @@ class CommunicationChannel(CanvasObject):
         kwargs["notification_preferences[frequency]"] = frequency
         response = self._requester.request(
             "PUT",
-            "users/self/communication_channels/{}/notification_preference_categories/{}".format(
-                self.id, category
-            ),
+            "users/self/communication_channels/{}/notification_preference_categories/{}".format(self.id, category),
             _kwargs=combine_kwargs(**kwargs),
         )
         return response.json()["notification_preferences"]
