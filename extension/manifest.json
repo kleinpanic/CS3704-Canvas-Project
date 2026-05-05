@@ -6,7 +6,8 @@
   "permissions": [
     "activeTab",
     "storage",
-    "notifications"
+    "notifications",
+    "nativeMessaging"
   ],
   "host_permissions": [
     "https://canvas.vt.edu/*",

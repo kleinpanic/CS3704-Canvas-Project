@@ -18,18 +18,64 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
           cache: pip
-          cache-dependency-paths: docs-site/mkdocs.yml
-      - name: Install docs deps
-        run: pip install mkdocs-material mkdocs-awesome-pages-plugin --quiet  # pinned deps for cache
-      - name: Build site
-        run: mkdocs build --site-dir site
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v4
+
+      - name: Install MkDocs
+        run: pip install mkdocs-material --quiet
+
+      - name: Build MkDocs docs
+        run: |
+          cd docs-site
+          mkdocs build
+
+      # Copy real extension source so the live demo runs the actual code
+      - name: Copy extension source for live demo
+        run: |
+          mkdir -p site/extension/src
+          cp -r extension/src/popup site/extension/src/popup
+          cp -r extension/src/lib   site/extension/src/lib
+
+      # Swap in the production shim (calls static JSON, no CORS needed)
+      - name: Install production chrome shim
+        run: |
+          cp docs-site/chrome_shim_prod.js site/extension/src/popup/chrome_shim_prod.js
+          # Replace the dev shim reference in popup HTML with the prod shim
+          sed -i 's|<script src="chrome_shim.js"></script>|<script src="chrome_shim_prod.js"></script>|g' \
+            site/extension/src/popup/index.html
+
+      # Inject Canvas token into prod shim at build time (never in source)
+      - name: Inject Canvas token
+        env:
+          CANVAS_API_TOKEN: ${{ secrets.CANVAS_API_TOKEN }}
+        run: |
+          sed -i "s|__CANVAS_TOKEN__|${CANVAS_API_TOKEN}|g" \
+            site/extension/src/popup/chrome_shim_prod.js
+
+      # Pre-fetch live Canvas data and bake as static JSON
+      - name: Fetch Canvas data snapshot
+        env:
+          CANVAS_TOKEN: ${{ secrets.CANVAS_API_TOKEN }}
+        run: |
+          python3 docs-site/fetch_canvas_data.py --out site/data
+
+      # Inject Canvas token into homepage shim at build time (never in source)
+      - name: Inject token into homepage
+        env:
+          CANVAS_API_TOKEN: ${{ secrets.CANVAS_API_TOKEN }}
+        run: |
+          sed -i "s|__CANVAS_TOKEN__|${CANVAS_API_TOKEN}|g" \
+            docs-site/index.html
+
+      # Place the Tailwind homepage at site root
+      - name: Install homepage
+        run: cp docs-site/index.html site/index.html
+
+      - uses: actions/upload-pages-artifact@v3
         with:
           path: site
 
@@ -42,4 +88,4 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v5
+        uses: actions/deploy-pages@v4
