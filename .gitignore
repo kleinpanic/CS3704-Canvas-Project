@@ -64,3 +64,4 @@ adapter_model.safetensors
 
 # Local Spark data (contains private API tokens)
 spark-maker-data/
+.opencode/
