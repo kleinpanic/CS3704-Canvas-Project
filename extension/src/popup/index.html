@@ -17,7 +17,7 @@
         </div>
         <span class="cache-badge hidden">cached</span>
         <div class="header-actions">
-          <button id="refresh-btn" class="btn-icon btn-secondary" aria-label="Refresh data">↻</button>
+          <button id="refresh-btn" class="btn-icon" aria-label="Refresh data">↻</button>
           <button id="settings-btn" class="btn-icon" aria-label="Open settings">⚙</button>
         </div>
       </div>
@@ -37,6 +37,7 @@
           </select>
         </div>
         <div id="upcoming-content">
+          <p class="view-title">Assignments</p>
           <ul id="upcoming-list" class="item-list"></ul>
           <div id="loading" class="state-msg">Loading…</div>
           <div id="error" class="state-msg error hidden"></div>
@@ -45,6 +46,7 @@
 
       <!-- Courses View -->
       <section id="view-courses" class="view hidden">
+        <p class="view-title">Your Courses</p>
         <ul id="courses-list" class="item-list"></ul>
         <div id="courses-loading" class="state-msg">Loading…</div>
         <div id="courses-error" class="state-msg error hidden"></div>
