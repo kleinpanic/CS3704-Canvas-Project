@@ -54,6 +54,22 @@ export async function getRmpRating(professorName) {
   return send(MESSAGE_TYPES.getRmpRating, { professorName });
 }
 
+export async function getCourseGrades(courseId) {
+  return send(MESSAGE_TYPES.getCourseGrades, { courseId });
+}
+
+export async function getTodo() {
+  return send(MESSAGE_TYPES.getTodo);
+}
+
+export async function getCourseFiles(courseId) {
+  return send(MESSAGE_TYPES.getCourseFiles, { courseId });
+}
+
+export async function getPlannerNotes() {
+  return send(MESSAGE_TYPES.getPlannerNotes);
+}
+
 export async function dismissAssignmentRemote(assignmentId) {
   return send(MESSAGE_TYPES.dismiss, { assignmentId });
 }

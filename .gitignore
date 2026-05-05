@@ -64,3 +64,17 @@ adapter_model.safetensors
 
 # Local Spark data (contains private API tokens)
 spark-maker-data/
+
+# AI / GSD workflow artifacts (local only, not app code)
+.planning/
+CLAUDE.md
+scripts/.claude/
+scripts/claude_gsd_cron.sh
+data/trajectories/
+
+# Extension build artifacts
+extension/node_modules/
+extension/coverage/
+popup-visual-check.png
+popup-grades-tab.png
+.playwright-mcp/

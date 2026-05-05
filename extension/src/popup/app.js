@@ -23,6 +23,7 @@ import {
   getPreferences,
   savePreferences,
   getRmpRating,
+  getCourseGrades,
 } from '../lib/extension-api.js';
 
 // ── DOM Refs ──────────────────────────────────────────────────────────────────
@@ -50,6 +51,12 @@ const $coursesList    = document.getElementById("courses-list");
 const $coursesLoading = document.getElementById("courses-loading");
 const $coursesError   = document.getElementById("courses-error");
 
+// Grades
+const $gradesList    = document.getElementById("grades-list");
+const $gradesLoading = document.getElementById("grades-loading");
+const $gradesError   = document.getElementById("grades-error");
+const $viewGrades    = document.getElementById("view-grades");
+
 // Detail
 const $backBtn          = document.getElementById("back-btn");
 const $detailName       = document.getElementById("detail-course-name");
@@ -76,6 +83,7 @@ let allCourses     = [];
 let activeTab      = "upcoming";
 let settingsOpen   = false;
 let prefs          = { theme: "light", daysAhead: 7 };
+let gradesLoaded   = false;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -379,11 +387,18 @@ function switchTab(tabName) {
   $viewUpcoming.classList.toggle("hidden",  tabName !== "upcoming");
   $viewCourses.classList.toggle("active",   tabName === "courses");
   $viewCourses.classList.toggle("hidden",   tabName !== "courses");
+  $viewGrades.classList.toggle("active",    tabName === "grades");
+  $viewGrades.classList.toggle("hidden",    tabName !== "grades");
   $viewDetail.classList.add("hidden");
   $viewDetail.classList.remove("active");
 
   if (tabName === "courses" && $coursesList.innerHTML === "") {
     loadCourses();
+  }
+
+  if (tabName === "grades" && !gradesLoaded) {
+    gradesLoaded = true;
+    loadGrades();
   }
 }
 
@@ -451,6 +466,69 @@ async function loadCourses() {
     $coursesLoading.classList.add("hidden");
     $coursesError.textContent = err.message;
     $coursesError.classList.remove("hidden");
+  }
+}
+
+// ── Render: Grades ────────────────────────────────────────────────────────────
+
+function renderGrades(courses, gradesData) {
+  $gradesLoading.classList.add("hidden");
+  if (!courses.length) {
+    $gradesError.textContent = "No courses found.";
+    $gradesError.classList.remove("hidden");
+    return;
+  }
+
+  $gradesList.innerHTML = courses.map((course, index) => {
+    const enrollments = gradesData[index]?.data || [];
+    const enrollment  = enrollments[0] || null;
+    const grades      = enrollment?.grades || {};
+    const score       = grades.current_score != null ? grades.current_score : null;
+    const letter      = grades.current_grade || null;
+    const scoreLabel  = score != null ? `${score.toFixed(1)}%` : "N/A";
+    const letterLabel = letter || "—";
+    const barWidth    = score != null ? Math.min(100, Math.max(0, score)) : 0;
+
+    return `
+      <li class="course-card grade-card">
+        <span class="course-dot"></span>
+        <div class="course-info">
+          <div class="course-full-name">${course.name || "Unnamed Course"}</div>
+          <div class="course-meta">
+            <span class="course-code">${course.course_code || ""}</span>
+            <span class="grade-score"> · ${scoreLabel}</span>
+            <span class="grade-letter"> · ${letterLabel}</span>
+          </div>
+          <div class="grade-bar-track">
+            <div class="grade-bar-fill" style="width:${barWidth}%"></div>
+          </div>
+        </div>
+      </li>`;
+  }).join("");
+}
+
+async function loadGrades() {
+  $gradesLoading.classList.remove("hidden");
+  $gradesError.classList.add("hidden");
+  $gradesList.innerHTML = "";
+
+  try {
+    // Ensure courses are loaded
+    if (!allCourses.length) {
+      const res = await getCourses();
+      if (!res.ok) throw new Error(res.error || "Failed to fetch courses");
+      allCourses = res.data || [];
+    }
+
+    const gradesData = await Promise.all(
+      allCourses.map(c => getCourseGrades(c.id).catch(() => ({ ok: false, data: [] })))
+    );
+
+    renderGrades(allCourses, gradesData);
+  } catch (err) {
+    $gradesLoading.classList.add("hidden");
+    $gradesError.textContent = err.message;
+    $gradesError.classList.remove("hidden");
   }
 }
 
@@ -568,6 +646,10 @@ $refreshBtn.addEventListener("click", async () => {
     await loadUpcoming();
   } else if (activeTab === "courses") {
     await loadCourses();
+  } else if (activeTab === "grades") {
+    gradesLoaded = false;
+    await loadGrades();
+    gradesLoaded = true;
   }
 });
 

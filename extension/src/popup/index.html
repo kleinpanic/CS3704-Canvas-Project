@@ -26,6 +26,7 @@
     <nav id="tab-bar">
       <button class="tab active" data-view="upcoming">Upcoming</button>
       <button class="tab" data-view="courses">Courses</button>
+      <button class="tab" data-view="grades">Grades</button>
     </nav>
 
     <main>
@@ -57,6 +58,17 @@
         </div>
         <div id="courses-error" class="state-msg error hidden"></div>
         <div id="professor-panel" class="hidden"></div>
+      </section>
+
+      <!-- Grades View -->
+      <section id="view-grades" class="view hidden">
+        <p class="view-title">Course Grades</p>
+        <ul id="grades-list" class="item-list"></ul>
+        <div id="grades-loading" class="state-msg">
+          <div class="loader"></div>
+          <span>Loading grades…</span>
+        </div>
+        <div id="grades-error" class="state-msg error hidden"></div>
       </section>
 
       <!-- Course Detail View -->

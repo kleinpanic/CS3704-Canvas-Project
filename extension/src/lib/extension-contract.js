@@ -17,4 +17,8 @@ export const MESSAGE_TYPES = {
   getRmpRating: 'GET_RMP_RATING',
   getCourseAnnouncements: 'GET_COURSE_ANNOUNCEMENTS',
   getCourseModules: 'GET_COURSE_MODULES',
+  getCourseGrades: 'GET_COURSE_GRADES',
+  getTodo: 'GET_TODO',
+  getCourseFiles: 'GET_COURSE_FILES',
+  getPlannerNotes: 'GET_PLANNER_NOTES',
 };
