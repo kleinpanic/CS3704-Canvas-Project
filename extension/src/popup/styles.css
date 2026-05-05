@@ -625,6 +625,163 @@ body.dark-theme header {
   box-shadow: var(--shadow-sm);
 }
 
+/* ── Course Teacher & Rating Badge ──────────────────────── */
+
+.course-teacher {
+  color: var(--text-muted);
+  font-size: var(--size-sm);
+}
+
+.rating-badge {
+  background: #f4a020;
+  color: white;
+  border-radius: 8px;
+  padding: 1px 5px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* ── Summary Banner ──────────────────────────────────────── */
+
+.summary-banner {
+  margin: var(--space-sm) var(--space-md) 0;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  font-size: var(--size-sm);
+  font-weight: var(--weight-semibold);
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.summary-banner.urgent {
+  background: rgba(232, 93, 4, 0.12);
+  color: var(--urgent);
+  border: 1px solid rgba(232, 93, 4, 0.3);
+}
+
+.summary-banner.ok {
+  background: rgba(45, 106, 79, 0.1);
+  color: var(--ok);
+  border: 1px solid rgba(45, 106, 79, 0.25);
+}
+
+/* ── No-token State ──────────────────────────────────────── */
+
+.no-token-state {
+  padding: var(--space-xl) var(--space-lg);
+  gap: var(--space-md);
+}
+
+.no-token-icon {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+/* ── Grade Cards ─────────────────────────────────────────── */
+
+.grade-card {
+  cursor: default;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding: var(--space-md) var(--space-md) var(--space-sm);
+  border-left: 4px solid var(--border);
+}
+
+.grade-card:hover {
+  border-left-color: inherit;
+}
+
+.grade-card.grade-a { border-left-color: #2d6a4f; }
+.grade-card.grade-b { border-left-color: #52b788; }
+.grade-card.grade-c { border-left-color: #f4a020; }
+.grade-card.grade-d { border-left-color: #e85d04; }
+.grade-card.grade-f { border-left-color: #c1121f; }
+.grade-card.grade-none { border-left-color: var(--border-strong); }
+
+.grade-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-xs);
+}
+
+.grade-course-name {
+  font-size: var(--size-md);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+}
+
+.grade-scores {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  flex-shrink: 0;
+}
+
+.grade-score {
+  font-size: 1.4rem;
+  font-weight: var(--weight-bold);
+  line-height: 1;
+}
+
+.grade-card.grade-a .grade-score { color: #2d6a4f; }
+.grade-card.grade-b .grade-score { color: #1a7340; }
+.grade-card.grade-c .grade-score { color: #f4a020; }
+.grade-card.grade-d .grade-score { color: #e85d04; }
+.grade-card.grade-f .grade-score { color: #c1121f; }
+.grade-card.grade-none .grade-score { color: var(--text-muted); }
+
+.grade-letter {
+  font-size: var(--size-xs);
+  font-weight: var(--weight-bold);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  color: white;
+}
+
+.grade-card.grade-a .grade-letter { background: #2d6a4f; }
+.grade-card.grade-b .grade-letter { background: #1a7340; }
+.grade-card.grade-c .grade-letter { background: #f4a020; }
+.grade-card.grade-d .grade-letter { background: #e85d04; }
+.grade-card.grade-f .grade-letter { background: #c1121f; }
+.grade-card.grade-none .grade-letter { background: var(--text-muted); }
+
+.grade-meta {
+  font-size: var(--size-xs);
+  color: var(--text-muted);
+  margin-bottom: var(--space-xs);
+}
+
+.grade-bar-track {
+  height: 5px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: var(--space-xs);
+}
+
+.grade-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+
+.grade-card.grade-a .grade-bar-fill { background: #2d6a4f; }
+.grade-card.grade-b .grade-bar-fill { background: #52b788; }
+.grade-card.grade-c .grade-bar-fill { background: #f4a020; }
+.grade-card.grade-d .grade-bar-fill { background: #e85d04; }
+.grade-card.grade-f .grade-bar-fill { background: #c1121f; }
+.grade-card.grade-none .grade-bar-fill { background: var(--border-strong); }
+
 /* ── Professor Section ───────────────────────────────────── */
 
 .professor-section {

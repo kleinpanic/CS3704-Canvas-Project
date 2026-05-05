@@ -24,10 +24,13 @@ import {
   savePreferences,
   getRmpRating,
   getCourseGrades,
+  getToken,
 } from '../lib/extension-api.js';
 
 // ── DOM Refs ──────────────────────────────────────────────────────────────────
 
+const $summaryBanner  = document.getElementById("summary-banner");
+const $noTokenState   = document.getElementById("no-token-state");
 const $userInfo       = document.getElementById("user-info");
 const $cacheBadge     = document.querySelector(".cache-badge");
 const $refreshBtn     = document.getElementById("refresh-btn");
@@ -166,8 +169,29 @@ function renderUpcoming(assignments) {
     ? assignments.filter(a => (a.context_course_name || a.course_name) === $courseFilter.value)
     : assignments;
 
+  // Summary banner
+  const urgentCount = filtered.filter(a => {
+    const d = getDueDate(a);
+    if (!d) return false;
+    const diff = new Date(d) - new Date();
+    return diff < 86400000;
+  }).length;
+
+  if (filtered.length > 0) {
+    $summaryBanner.classList.remove("hidden");
+    if (urgentCount > 0) {
+      $summaryBanner.className = "summary-banner urgent";
+      $summaryBanner.textContent = `⚠️ ${urgentCount} due within 24h`;
+    } else {
+      $summaryBanner.className = "summary-banner ok";
+      $summaryBanner.textContent = "✓ No urgent deadlines";
+    }
+  } else {
+    $summaryBanner.classList.add("hidden");
+  }
+
   if (filtered.length === 0) {
-    $upcomingList.innerHTML = `<li class="assignment-item"><div class="assignment-main"><div class="assignment-name">No upcoming assignments</div></div></li>`;
+    $upcomingList.innerHTML = `<li class="assignment-item"><div class="assignment-main"><div class="assignment-name">📚 All caught up! No upcoming assignments.</div></div></li>`;
     return;
   }
 
@@ -188,7 +212,7 @@ function populateCourseFilter() {
 function renderCourses(courses) {
   $coursesLoading.classList.add("hidden");
   if (!courses.length) {
-    $coursesError.textContent = "No active courses found.";
+    $coursesError.innerHTML = `🎓 No active courses found.`;
     $coursesError.classList.remove("hidden");
     return;
   }
@@ -447,8 +471,9 @@ async function loadUpcoming() {
     }
   } catch (err) {
     $loading.classList.add("hidden");
-    $error.textContent = err.message;
+    $error.innerHTML = `${err.message} <button class="btn-secondary retry-btn" style="margin-top:var(--space-sm);font-size:var(--size-xs)">Try again</button>`;
     $error.classList.remove("hidden");
+    $error.querySelector(".retry-btn")?.addEventListener("click", loadUpcoming);
   }
 }
 
@@ -464,17 +489,34 @@ async function loadCourses() {
     renderCourses(allCourses);
   } catch (err) {
     $coursesLoading.classList.add("hidden");
-    $coursesError.textContent = err.message;
+    $coursesError.innerHTML = `${err.message} <button class="btn-secondary retry-btn" style="margin-top:var(--space-sm);font-size:var(--size-xs)">Try again</button>`;
     $coursesError.classList.remove("hidden");
+    $coursesError.querySelector(".retry-btn")?.addEventListener("click", loadCourses);
   }
 }
 
 // ── Render: Grades ────────────────────────────────────────────────────────────
 
+function gradeClass(score) {
+  if (score == null) return "grade-none";
+  if (score >= 90)   return "grade-a";
+  if (score >= 80)   return "grade-b";
+  if (score >= 70)   return "grade-c";
+  if (score >= 60)   return "grade-d";
+  return "grade-f";
+}
+
 function renderGrades(courses, gradesData) {
   $gradesLoading.classList.add("hidden");
   if (!courses.length) {
-    $gradesError.textContent = "No courses found.";
+    $gradesError.innerHTML = `📊 No grade data available yet.`;
+    $gradesError.classList.remove("hidden");
+    return;
+  }
+
+  const hasAnyGrade = gradesData.some(g => (g?.data || []).length > 0);
+  if (!hasAnyGrade) {
+    $gradesError.innerHTML = `📊 No grade data available yet.`;
     $gradesError.classList.remove("hidden");
     return;
   }
@@ -485,23 +527,24 @@ function renderGrades(courses, gradesData) {
     const grades      = enrollment?.grades || {};
     const score       = grades.current_score != null ? grades.current_score : null;
     const letter      = grades.current_grade || null;
-    const scoreLabel  = score != null ? `${score.toFixed(1)}%` : "N/A";
+    const scoreLabel  = score != null ? `${score.toFixed(1)}%` : "—";
     const letterLabel = letter || "—";
     const barWidth    = score != null ? Math.min(100, Math.max(0, score)) : 0;
+    const cls         = gradeClass(score);
+    const numGraded   = enrollment?.unread_count ?? null;
 
     return `
-      <li class="course-card grade-card">
-        <span class="course-dot"></span>
-        <div class="course-info">
-          <div class="course-full-name">${course.name || "Unnamed Course"}</div>
-          <div class="course-meta">
-            <span class="course-code">${course.course_code || ""}</span>
-            <span class="grade-score"> · ${scoreLabel}</span>
-            <span class="grade-letter"> · ${letterLabel}</span>
+      <li class="grade-card ${cls}">
+        <div class="grade-card-header">
+          <span class="grade-course-name">${course.name || "Unnamed Course"}</span>
+          <div class="grade-scores">
+            <span class="grade-score">${scoreLabel}</span>
+            <span class="grade-letter">${letterLabel}</span>
           </div>
-          <div class="grade-bar-track">
-            <div class="grade-bar-fill" style="width:${barWidth}%"></div>
-          </div>
+        </div>
+        ${numGraded != null ? `<div class="grade-meta">${numGraded} assignments graded</div>` : ""}
+        <div class="grade-bar-track">
+          <div class="grade-bar-fill" style="width:${barWidth}%"></div>
         </div>
       </li>`;
   }).join("");
@@ -660,9 +703,36 @@ $settingsBtn.addEventListener("click", () => {
 
 $courseFilter.addEventListener("change", () => renderUpcoming(allAssignments));
 
-// Load preferences before first render so theme and daysAhead are applied.
-getPreferences().then((p) => {
-  prefs = p;
-  applyTheme(prefs.theme);
+// ── Init ──────────────────────────────────────────────────────────────────────
+
+async function initApp() {
+  try {
+    const p = await getPreferences();
+    prefs = p;
+    applyTheme(prefs.theme);
+  } catch (_) {
+    // use defaults
+  }
+
+  try {
+    const tokenRes = await getToken();
+    const hasToken = tokenRes?.ok && tokenRes?.data;
+    if (!hasToken) {
+      $loading.classList.add("hidden");
+      $noTokenState.classList.remove("hidden");
+      return;
+    }
+  } catch (_) {
+    $loading.classList.add("hidden");
+    $noTokenState.classList.remove("hidden");
+    return;
+  }
+
   loadUpcoming();
-}).catch(() => loadUpcoming());
+}
+
+document.getElementById("open-settings-btn")?.addEventListener("click", () => {
+  openSettings();
+});
+
+initApp();

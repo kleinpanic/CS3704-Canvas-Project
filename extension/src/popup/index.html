@@ -38,8 +38,14 @@
           </select>
         </div>
         <div id="upcoming-content">
+          <div id="summary-banner" class="summary-banner hidden"></div>
           <p class="view-title">Upcoming Assignments</p>
           <ul id="upcoming-list" class="item-list"></ul>
+          <div id="no-token-state" class="state-msg no-token-state hidden">
+            <span class="no-token-icon">🔑</span>
+            <span>Set your Canvas API token to get started</span>
+            <button id="open-settings-btn" class="btn-primary">Open Settings</button>
+          </div>
           <div id="loading" class="state-msg">
             <div class="loader"></div>
             <span>Loading assignments…</span>
