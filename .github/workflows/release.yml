@@ -14,27 +14,54 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Require CI to pass before release
+  # Require CI to pass before release.
+  # Uses exponential-backoff polling to handle the case where CI hasn't started yet
+  # when the tag workflow fires (common race: tag pushed before CI run registers).
   require-ci:
     runs-on: ubuntu-latest
     steps:
-      - name: Check CI status
+      - name: Wait for CI and verify success
         uses: actions/github-script@v9
         with:
           script: |
-            const ref = context.ref;
-            const run = await github.rest.actions.listWorkflowRuns({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: 'ci.yml',
-              status: 'success',
-              head_sha: context.sha,
-              per_page: 1
-            });
-            if (run.data.workflow_runs.length === 0) {
-              throw new Error('No successful CI run found for this commit. Release blocked.');
+            const maxAttempts = 15;
+            const baseDelayMs = 10_000; // 10 seconds base delay
+
+            async function waitForCI() {
+              for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+                const run = await github.rest.actions.listWorkflowRuns({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  workflow_id: 'ci.yml',
+                  branch: 'main',
+                  status: 'success',
+                  head_sha: context.sha,
+                  per_page: 1
+                });
+
+                if (run.data.workflow_runs.length > 0) {
+                  console.log(`CI passed for commit ${context.sha} (attempt ${attempt})`);
+                  return true;
+                }
+
+                if (attempt < maxAttempts) {
+                  const delay = baseDelayMs * Math.pow(1.5, attempt - 1);
+                  console.log(`No successful CI run found for ${context.sha} (attempt ${attempt}/${maxAttempts}) — waiting ${delay}ms`);
+                  await new Promise(resolve => setTimeout(resolve, delay));
+                }
+              }
+              return false;
             }
-            console.log('CI passed for commit:', context.sha);
+
+            const ok = await waitForCI();
+            if (!ok) {
+              throw new Error(
+                `No successful CI run found for commit ${context.sha} after ${maxAttempts} attempts. ` +
+                `Release blocked. Verify CI passed at: ` +
+                `https://github.com/${context.repo.owner}/${context.repo.repo}/actions`
+              );
+            }
+          result-encoding: 'escape'
 
   build:
     needs: require-ci
