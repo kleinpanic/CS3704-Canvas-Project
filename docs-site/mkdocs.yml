@@ -23,6 +23,7 @@ nav:
   - Architecture: architecture.md
   - Extension: extension.md
   - Workflow: workflow.md
+  - Training Pipeline: training-pipeline.md
   - Roadmap: roadmap.md
   - Reviews:
       - PM3 Review: pm3-review.md
