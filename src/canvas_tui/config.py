@@ -47,6 +47,12 @@ class Config:
     use_ai_reranker: bool = False
     model_path: str = ""
 
+    # LLM agent settings — OpenAI-compatible endpoint for fine-tuned Gemma4
+    llm_endpoint: str = "http://localhost:18080/v1"
+    llm_model: str = "google/gemma-4-e2b-it"
+    llm_api_key: str = "forge"
+    agent_max_turns: int = 8
+
     config_dir: str = field(default_factory=lambda: os.path.expanduser("~/.config/canvas-tui"))
 
     # Appearance
@@ -73,6 +79,7 @@ class Config:
         self.default_block_min = max(5, min(self.default_block_min, 480))
         self.ann_past_days = max(0, min(self.ann_past_days, 365))
         self.ann_future_days = max(0, min(self.ann_future_days, 365))
+        self.agent_max_turns = max(1, min(self.agent_max_turns, 32))
         if self.theme not in ("dark", "light"):
             self.theme = "dark"
         if self.sidebar_position not in ("left", "right"):
@@ -193,6 +200,10 @@ def _overlay_file_config(cfg: Config) -> None:
         "ical_write_path": "ical_write_path",
         "use_ai_reranker": "use_ai_reranker",
         "model_path": "model_path",
+        "llm_endpoint": "llm_endpoint",
+        "llm_model": "llm_model",
+        "llm_api_key": "llm_api_key",
+        "agent_max_turns": "agent_max_turns",
         "ann_past_days": "ann_past_days",
         "ann_future_days": "ann_future_days",
         # Support the typo variant for backwards compat
