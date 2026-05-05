@@ -77,78 +77,81 @@ def extract_final_answer(text: str) -> str:
     return re.sub(r"<\|tool_call>.*?<tool_call\|>", "", text, flags=re.DOTALL).strip()
 
 
+# 18-tool catalog — canonical names matching canvas_sdk.agent_tools.REGISTRY.
+# Mock data here lets the HF Space exercise the full tool surface without
+# needing real Canvas credentials.
 TOOL_CATALOG = {
     "canvas.get_assignments": {
         "description": "List upcoming Canvas assignments across enrolled courses.",
-        "args": {"days_ahead": "int (default 14)"},
+        "args": {"horizon_days": "int (default 7)"},
+    },
+    "canvas.get_course": {
+        "description": "Get metadata for a specific course (name, code, term).",
+        "args": {"course_id": "int"},
+    },
+    "canvas.get_grades": {
+        "description": "Get current grades for one or all courses.",
+        "args": {"course_id": "int (optional)"},
+    },
+    "canvas.get_syllabus": {
+        "description": "Fetch the course syllabus body.",
+        "args": {"course_id": "int"},
     },
     "canvas.get_todo": {
         "description": "Get the user's Canvas to-do list.",
         "args": {},
     },
-    "canvas.get_announcements": {
+    "canvas.list_announcements": {
         "description": "List recent course announcements.",
         "args": {"course_id": "int (optional)"},
     },
-    "canvas.get_course_info": {
-        "description": "Get metadata for a specific course (name, code, term).",
-        "args": {"course_id": "int"},
-    },
-    "canvas.get_calendar_events": {
-        "description": "List Canvas calendar events.",
-        "args": {"start_date": "ISO 8601", "end_date": "ISO 8601"},
+    "canvas.list_courses": {
+        "description": "List enrolled courses for the current term.",
+        "args": {"term": "str (optional)"},
     },
     "canvas.list_planner_items": {
         "description": "List items from the Canvas planner.",
         "args": {"start_date": "ISO 8601", "end_date": "ISO 8601"},
     },
-    "calendar.list_events": {
-        "description": "List events from the user's local calendar.",
-        "args": {"start_date": "ISO 8601", "end_date": "ISO 8601"},
-    },
-    "calendar.find_free_blocks": {
-        "description": "Find contiguous free blocks of time.",
-        "args": {"min_minutes": "int", "start": "ISO 8601", "end": "ISO 8601"},
-    },
-    "calendar.schedule_block": {
-        "description": "Schedule a study block.",
-        "args": {"title": "str", "start": "ISO 8601", "duration_min": "int"},
-    },
     "calendar.create_event": {
         "description": "Create a new calendar event.",
         "args": {"title": "str", "start": "ISO 8601", "end": "ISO 8601"},
-    },
-    "calendar.update_event": {
-        "description": "Update an existing calendar event.",
-        "args": {"event_id": "str", "patch": "dict"},
     },
     "calendar.delete_event": {
         "description": "Delete a calendar event.",
         "args": {"event_id": "str"},
     },
-    "study.compute_spacing_intervals": {
-        "description": "Compute spaced-repetition intervals for an exam.",
-        "args": {"exam_date": "ISO 8601", "n_sessions": "int"},
+    "calendar.find_free_blocks": {
+        "description": "Find contiguous free blocks of time.",
+        "args": {"min_minutes": "int", "horizon_days": "int"},
     },
-    "study.estimate_total_prep_hours": {
-        "description": "Estimate total prep hours for an assignment or exam.",
-        "args": {"item": "dict"},
+    "calendar.list_events": {
+        "description": "List events from the user's local calendar.",
+        "args": {"start_iso": "ISO 8601", "end_iso": "ISO 8601"},
     },
-    "study.score_load": {
-        "description": "Score the cognitive load of a week's workload.",
-        "args": {"items": "list"},
+    "calendar.modify_event": {
+        "description": "Modify an existing calendar event.",
+        "args": {"event_id": "str", "patch": "dict"},
     },
-    "reranker.rank_assignments": {
-        "description": "Rank assignments by urgency/importance.",
+    "reranker.priority_hint": {
+        "description": "Score and rank a list of items by urgency/priority.",
         "args": {"items": "list", "query": "str"},
     },
-    "reranker.rank_announcements": {
-        "description": "Rank announcements by relevance.",
-        "args": {"items": "list", "query": "str"},
+    "study.exam_bracket": {
+        "description": "Build an exam-prep bracket: deep prep, review, light cram blocks before exam_date.",
+        "args": {"exam_date": "ISO 8601", "topics": "list"},
     },
-    "reranker.rank_courses": {
-        "description": "Rank courses by relevance to a query.",
-        "args": {"items": "list", "query": "str"},
+    "study.recommend_block_size": {
+        "description": "Recommend study-block size based on credit hours and topic difficulty.",
+        "args": {"credit_hours": "int", "difficulty": "str"},
+    },
+    "study.semester_schedule": {
+        "description": "Generate a semester study schedule from courses and exam dates.",
+        "args": {"courses": "list", "exam_dates": "list"},
+    },
+    "study.spaced_schedule": {
+        "description": "Compute Cepeda-spaced repetition intervals for an exam.",
+        "args": {"exam_date": "ISO 8601", "sessions": "int"},
     },
 }
 
@@ -172,55 +175,95 @@ def build_system_prompt() -> str:
     )
 
 
+_MOCK_ASSIGNMENTS = [
+    {"id": 101, "title": "CS3704 PM4 Submission", "course": "CS 3704", "due_at": "2026-05-08T23:59:00Z", "points": 100, "submitted": False},
+    {"id": 102, "title": "ECE3574 Final Project Report", "course": "ECE 3574", "due_at": "2026-05-10T17:00:00Z", "points": 200, "submitted": False},
+    {"id": 103, "title": "MATH2114 Final Exam", "course": "MATH 2114", "due_at": "2026-05-12T08:00:00Z", "points": 300, "submitted": False},
+    {"id": 104, "title": "PHYS2306 HW7", "course": "PHYS 2306", "due_at": "2026-05-06T23:59:00Z", "points": 50, "submitted": True},
+]
+_MOCK_COURSES = [
+    {"id": 1, "name": "Software Engineering", "code": "CS 3704", "term": "Spring 2026", "credits": 3},
+    {"id": 2, "name": "Applied Software Design", "code": "ECE 3574", "term": "Spring 2026", "credits": 3},
+    {"id": 3, "name": "Linear Algebra", "code": "MATH 2114", "term": "Spring 2026", "credits": 3},
+    {"id": 4, "name": "Foundations of Physics II", "code": "PHYS 2306", "term": "Spring 2026", "credits": 4},
+]
+_MOCK_ANNOUNCEMENTS = [
+    {"course": "CS 3704", "title": "PM4 grading rubric posted", "posted_at": "2026-05-04T14:00:00Z", "body": "See Canvas for the updated rubric. Points distribution unchanged."},
+    {"course": "MATH 2114", "title": "Final exam location: McBryde 100", "posted_at": "2026-05-03T09:00:00Z", "body": "Bring your VT ID."},
+]
+
+
 def mock_tool_result(tool_name: str, args: dict) -> dict:
-    """Return placeholder data for any tool — Space has no Canvas access."""
+    """Return realistic placeholder data for any of the 18 SDK tools — Space has no Canvas creds."""
     if tool_name == "canvas.get_assignments":
-        return {
-            "items": [
-                {
-                    "title": "CS3704 PM4 Submission",
-                    "course": "CS 3704",
-                    "due_at": "2026-05-08T23:59:00Z",
-                    "points": 100,
-                },
-                {
-                    "title": "ECE3574 Final Project Report",
-                    "course": "ECE 3574",
-                    "due_at": "2026-05-10T17:00:00Z",
-                    "points": 200,
-                },
-                {
-                    "title": "MATH2114 Final Exam",
-                    "course": "MATH 2114",
-                    "due_at": "2026-05-12T08:00:00Z",
-                    "points": 300,
-                },
-            ]
-        }
+        horizon = int(args.get("horizon_days", 7))
+        return {"horizon_days": horizon, "items": _MOCK_ASSIGNMENTS}
+    if tool_name == "canvas.get_course":
+        cid = int(args.get("course_id", 1))
+        match = next((c for c in _MOCK_COURSES if c["id"] == cid), _MOCK_COURSES[0])
+        return match
+    if tool_name == "canvas.get_grades":
+        return {"items": [{"course": c["code"], "grade": "A-", "score": 91.2} for c in _MOCK_COURSES]}
+    if tool_name == "canvas.get_syllabus":
+        return {"course_id": args.get("course_id", 1), "syllabus": "Course meets MWF 10–10:50 in McBryde 113. Final exam: TBD. Prof: @PROF1. Email: @PROF_EMAIL."}
     if tool_name == "canvas.get_todo":
-        return {"items": [{"title": "Watch lecture 14", "course": "CS 3704"}]}
-    if tool_name == "canvas.get_announcements":
-        return {
-            "items": [
-                {
-                    "course": "CS 3704",
-                    "title": "PM4 grading rubric posted",
-                    "posted_at": "2026-05-04T14:00:00Z",
-                }
-            ]
-        }
+        return {"items": [
+            {"title": "Watch lecture 14", "course": "CS 3704", "kind": "video"},
+            {"title": "Submit PM4", "course": "CS 3704", "kind": "assignment", "due": "2026-05-08T23:59:00Z"},
+        ]}
+    if tool_name == "canvas.list_announcements":
+        return {"items": _MOCK_ANNOUNCEMENTS}
+    if tool_name == "canvas.list_courses":
+        return {"items": _MOCK_COURSES}
+    if tool_name == "canvas.list_planner_items":
+        return {"items": [
+            {"title": a["title"], "course": a["course"], "due": a["due_at"], "kind": "assignment"}
+            for a in _MOCK_ASSIGNMENTS
+        ]}
+    if tool_name == "calendar.create_event":
+        return {"event_id": "evt_mock_001", "created": True, "title": args.get("title"), "start": args.get("start")}
+    if tool_name == "calendar.delete_event":
+        return {"event_id": args.get("event_id"), "deleted": True}
     if tool_name == "calendar.find_free_blocks":
-        return {
-            "blocks": [
-                {"start": "2026-05-06T09:00:00", "end": "2026-05-06T11:30:00"},
-                {"start": "2026-05-07T14:00:00", "end": "2026-05-07T17:00:00"},
-            ]
-        }
-    if tool_name == "study.compute_spacing_intervals":
-        return {"intervals_days": [10, 5, 2, 1]}
-    if tool_name in {"reranker.rank_assignments", "reranker.rank_courses", "reranker.rank_announcements"}:
-        return {"ranked": args.get("items", [])}
-    return {"ok": True, "note": f"mock result for {tool_name}"}
+        return {"blocks": [
+            {"start": "2026-05-06T09:00:00", "end": "2026-05-06T11:30:00", "duration_min": 150},
+            {"start": "2026-05-06T14:00:00", "end": "2026-05-06T16:00:00", "duration_min": 120},
+            {"start": "2026-05-07T13:00:00", "end": "2026-05-07T17:00:00", "duration_min": 240},
+            {"start": "2026-05-08T09:00:00", "end": "2026-05-08T11:00:00", "duration_min": 120},
+        ]}
+    if tool_name == "calendar.list_events":
+        return {"events": [
+            {"id": "evt_001", "title": "CS 3704 lecture", "start": "2026-05-06T10:00:00", "end": "2026-05-06T10:50:00"},
+            {"id": "evt_002", "title": "Office hours - ECE 3574", "start": "2026-05-07T15:00:00", "end": "2026-05-07T16:00:00"},
+        ]}
+    if tool_name == "calendar.modify_event":
+        return {"event_id": args.get("event_id"), "modified": True, "patch_applied": args.get("patch", {})}
+    if tool_name == "reranker.priority_hint":
+        items = args.get("items", _MOCK_ASSIGNMENTS)
+        ranked = sorted(items, key=lambda x: x.get("due_at", x.get("due", "")), reverse=False) if items else []
+        return {"ranked": ranked, "rationale": "sorted by earliest due date with weight on point value"}
+    if tool_name == "study.exam_bracket":
+        return {"bracket": [
+            {"phase": "deep_prep", "start": "2026-05-08", "end": "2026-05-09", "blocks_min": 240},
+            {"phase": "review", "start": "2026-05-10", "end": "2026-05-11", "blocks_min": 150},
+            {"phase": "light_cram", "start": "2026-05-12T06:00:00", "end": "2026-05-12T07:30:00", "blocks_min": 90},
+        ]}
+    if tool_name == "study.recommend_block_size":
+        ch = int(args.get("credit_hours", 3))
+        diff = args.get("difficulty", "medium")
+        size = {"easy": 60, "medium": 90, "hard": 120}.get(diff, 90)
+        return {"credit_hours": ch, "difficulty": diff, "recommended_block_min": size}
+    if tool_name == "study.semester_schedule":
+        return {"weeks": [
+            {"week": 1, "focus": "syllabus review + foundations", "study_hours": 9},
+            {"week": 2, "focus": "PM1 + HW1", "study_hours": 12},
+            {"week": "...", "focus": "...", "study_hours": "..."},
+            {"week": 14, "focus": "finals prep", "study_hours": 22},
+        ]}
+    if tool_name == "study.spaced_schedule":
+        # Cepeda spacing: +1d, +4d, +9d before exam (12-day window)
+        return {"intervals_days_before_exam": [9, 4, 1], "n_sessions": int(args.get("sessions", 3))}
+    return {"ok": True, "note": f"unhandled tool {tool_name}", "args": args}
 
 
 print(f"Loading {MODEL_ID} ...")
