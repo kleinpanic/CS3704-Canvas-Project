@@ -64,44 +64,26 @@
       protocol that the SDK parses and dispatches against live data.
     </p>
     <p class="text-gray-500 text-sm">
-      This page wires Gemini up as a fallback brain so you can experience the same protocol
-      without running the fine-tuned Gemma4 weights locally.
+      This page calls our fine-tuned Gemma4 v7-dpo model live, hosted on
+      HuggingFace Spaces &mdash; no API key, no setup.
       <strong class="text-gray-300">Mock Canvas data only.</strong> Tool calls return
       pre-baked sample results.
     </p>
   </header>
 
   <section class="max-w-4xl mx-auto px-6 pb-6">
-    <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5 mb-4">
-      <details>
-        <summary class="flex items-center gap-2 text-sm font-medium text-gray-300">
-          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-          Setup &mdash; paste your Gemini API key
-        </summary>
-        <div class="mt-3 space-y-3">
-          <p class="text-xs text-gray-400 leading-relaxed">
-            Get a free API key at
-            <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" class="text-canvas-red hover:underline">aistudio.google.com/apikey</a>.
-            The key is stored only in your browser's localStorage and never sent anywhere
-            except <code>generativelanguage.googleapis.com</code>.
-          </p>
-          <div class="flex gap-2">
-            <input
-              id="api-key"
-              type="password"
-              autocomplete="off"
-              placeholder="AIza..."
-              class="flex-1 bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-canvas-red"
-            />
-            <select id="model-pick" class="bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-canvas-red">
-              <option value="gemini-2.5-flash">gemini-2.5-flash (fast)</option>
-              <option value="gemini-2.5-pro">gemini-2.5-pro (smart)</option>
-              <option value="gemini-1.5-flash">gemini-1.5-flash (legacy)</option>
-            </select>
-          </div>
-          <p class="text-xs text-gray-500" id="key-status">No key stored.</p>
-        </div>
-      </details>
+    <div class="bg-gray-900 border border-canvas-red/40 rounded-2xl p-5 mb-4">
+      <p class="text-sm text-gray-200 leading-relaxed">
+        🤗 Powered by our fine-tuned
+        <a href="https://huggingface.co/kleinpanic93/canvas-calendar-agent-v7-dpo" target="_blank" rel="noopener" class="text-canvas-red hover:underline font-medium">Gemma-4-E2B-IT DPO model</a>
+        hosted on
+        <a href="https://huggingface.co/spaces/kleinpanic93/canvas-calendar-agent-demo" target="_blank" rel="noopener" class="text-canvas-red hover:underline">HuggingFace Spaces</a>.
+        No API key required.
+      </p>
+      <p class="text-xs text-gray-500 mt-2">
+        ⏱ Heads up: the first request after a quiet period takes ~30&nbsp;seconds while the
+        Space spins up from sleep on the free tier. Subsequent requests are fast.
+      </p>
     </div>
 
     <div class="bg-gray-900 border border-gray-800 rounded-2xl mb-4">
@@ -135,34 +117,30 @@
   <section class="max-w-4xl mx-auto px-6 py-12 border-t border-gray-800">
     <h2 class="text-2xl font-bold mb-4">How it works</h2>
     <pre class="text-xs text-gray-400 bg-gray-900 border border-gray-800 rounded-xl p-5 overflow-x-auto">
-+---------------------+   user msg    +-----------------------+
-|  Browser (this UI)  | ------------> |  GeminiBackend (web)  |
-|  + chat history     |               |  injects Gemma4 proto |
-+----------+----------+               +-----------+-----------+
-           ^                                      | content
-           | rendered final answer                v
-           |                            +-----------------+
-           |                            | Gemini API call |
-           |                            +--------+--------+
-           |                                     |
-           |        &lt;|tool_call&gt;call:NAME{...}&lt;tool_call|&gt;
-           |                                     v
++---------------------+   user msg    +---------------------------+
+|  Browser (this UI)  | ------------> |  HF Space (Gradio)        |
+|  + chat history     |               |  hosts Gemma4 v7-dpo      |
++----------+----------+               +-------------+-------------+
+           ^                                        | response.data[0]
+           | rendered final answer                  | = {final_answer,
+           |                                        |    transcript,
+           |                                        |    tool_calls}
+           |                                        v
            |                       +---------------------------+
-           +---------------------- |  parseToolCalls()         |
+           +---------------------- |  parse tool_calls + render|
                                    |  dispatchMock(name, args) |
                                    +---------------------------+
 </pre>
     <p class="text-gray-400 text-sm leading-relaxed mt-4">
-      In production, the Python SDK swaps the browser-side Gemini call for a local
-      <code>vLLM</code> server hosting the fine-tuned <code>gemma-4-e2b-it</code> weights
-      (auto-downloaded from HuggingFace on first run). Same parser, same 18 tools, same
-      contract &mdash; only the brain swaps.
+      The HF Space runs the same fine-tuned <code>gemma-4-e2b-it</code> v7-dpo weights
+      that the Python SDK auto-downloads from HuggingFace Hub on first run. Same parser,
+      same 18 tools, same contract &mdash; the demo and the SDK both call the canonical
+      DPO model.
     </p>
     <p class="text-gray-400 text-sm leading-relaxed mt-3">
       Run it yourself:
     </p>
-    <pre class="text-xs text-gray-300 bg-gray-900 border border-gray-800 rounded-xl p-5 mt-2 overflow-x-auto">pip install canvas-sdk[gemini]
-export GOOGLE_API_KEY=...
+    <pre class="text-xs text-gray-300 bg-gray-900 border border-gray-800 rounded-xl p-5 mt-2 overflow-x-auto">pip install canvas-sdk[autodownload]
 
 python -c "from canvas_sdk import CanvasAgent; print(CanvasAgent.auto().run('what is due this week?'))"</pre>
   </section>
@@ -196,31 +174,9 @@ python -c "from canvas_sdk import CanvasAgent; print(CanvasAgent.auto().run('wha
     {n:"reranker.priority_hint",d:"Rerank a list of upcoming items by urgency / weight / grade."}
   ];
 
-  const TOOL_PROTOCOL = `\
-You are bridging into a Gemma4-trained tool-calling harness. The harness can
-ONLY parse tool calls in the exact Gemma4 textual format below. Do NOT use
-Google's native function-calling — emit the tool call as plain text inside
-your reply.
-
-Tool-call format (literal characters, no markdown fences):
-<|tool_call>call:tool.name{arg1: value, arg2: <|"|>quoted string<|"|>}<tool_call|>
-
-After execution the harness will replay the result to you wrapped in:
-<|tool_response>response:tool.name{value:<|"|>{...json...}<|"|>}<tool_response|>
-
-Rules:
-- Quote every string argument with the <|"|>...<|"|> sentinel.
-- Issue independent calls in the same turn when possible.
-- Once you have enough information, write the final answer in plain prose
-  with NO <|tool_call> blocks remaining.
-- Never invent assignment names, due dates, course IDs, or grades — every
-  fact must trace back to a tool result.
-
-Available tools:
-${TOOL_CATALOG.map(t => `- ${t.n} — ${t.d}`).join("\n")}
-`;
-
-  const AGENT_SYSTEM = `You are the Canvas Calendar Agent, a tutor-style assistant that helps a college student manage their Canvas LMS coursework and weekly study schedule. Tone: concise, friendly, action-oriented. Prefer short bullet lists.`;
+  // The HF Space already hosts the fine-tuned Gemma4 v7-dpo model with the
+  // tool-calling system prompt baked in. The browser only needs to send the
+  // user message and render the structured response.
 
   // -----------------------------------------------------------------
   // Mock Canvas data (week of 2026-05-04)
@@ -322,37 +278,34 @@ ${TOOL_CATALOG.map(t => `- ${t.n} — ${t.d}`).join("\n")}
   }
 
   // -----------------------------------------------------------------
-  // Gemini API call
+  // HuggingFace Space call (Gradio REST endpoint)
   // -----------------------------------------------------------------
-  async function callGemini(apiKey, model, history) {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
-    const systemInstruction = AGENT_SYSTEM + "\n\n" + TOOL_PROTOCOL;
+  // The Space exposes a Gradio Interface whose predict() returns a single
+  // structured object: {final_answer, transcript, tool_calls}.
+  const HF_SPACE_URL = "https://kleinpanic93-canvas-calendar-agent-demo.hf.space/api/predict";
 
-    const body = {
-      systemInstruction: { parts: [{ text: systemInstruction }] },
-      contents: history.map(m => ({
-        role: m.role === "assistant" ? "model" : "user",
-        parts: [{ text: m.content }]
-      })),
-      generationConfig: { temperature: 0.2, maxOutputTokens: 1024 }
-    };
-
-    const resp = await fetch(url, {
+  async function callHFSpace(userMessage) {
+    const resp = await fetch(HF_SPACE_URL, {
       method: "POST",
       headers: {"Content-Type": "application/json"},
-      body: JSON.stringify(body)
+      body: JSON.stringify({data: [userMessage]})
     });
-    const data = await resp.json();
-    if (!resp.ok) throw new Error(data.error?.message || `HTTP ${resp.status}`);
-    return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    const result = await resp.json();
+    if (!resp.ok) {
+      throw new Error(result.error || `HTTP ${resp.status}`);
+    }
+    const payload = result.data?.[0];
+    if (!payload) throw new Error("Empty response from HF Space");
+    return {
+      final_answer: payload.final_answer || "",
+      transcript: payload.transcript || "",
+      tool_calls: Array.isArray(payload.tool_calls) ? payload.tool_calls : []
+    };
   }
 
   // -----------------------------------------------------------------
   // UI (no innerHTML for untrusted content — use createElement / textContent)
   // -----------------------------------------------------------------
-  const apiKeyInput = document.getElementById("api-key");
-  const modelPick = document.getElementById("model-pick");
-  const keyStatus = document.getElementById("key-status");
   const chat = document.getElementById("chat");
   const chatEmpty = document.getElementById("chat-empty");
   const form = document.getElementById("chat-form");
@@ -360,22 +313,6 @@ ${TOOL_CATALOG.map(t => `- ${t.n} — ${t.d}`).join("\n")}
   const sendBtn = document.getElementById("send-btn");
   const samplesEl = document.getElementById("samples");
   const clearBtn = document.getElementById("clear-btn");
-
-  apiKeyInput.value = localStorage.getItem("cca-gemini-key") || "";
-  modelPick.value = localStorage.getItem("cca-gemini-model") || "gemini-2.5-flash";
-  function syncKeyStatus() {
-    keyStatus.textContent = apiKeyInput.value
-      ? `Key stored locally (${apiKeyInput.value.slice(0,6)}...).`
-      : "No key stored.";
-  }
-  syncKeyStatus();
-  apiKeyInput.addEventListener("change", () => {
-    localStorage.setItem("cca-gemini-key", apiKeyInput.value);
-    syncKeyStatus();
-  });
-  modelPick.addEventListener("change", () => {
-    localStorage.setItem("cca-gemini-model", modelPick.value);
-  });
 
   const SAMPLES = [
     "What's due this week?",
@@ -510,46 +447,37 @@ ${TOOL_CATALOG.map(t => `- ${t.n} — ${t.d}`).join("\n")}
     if (t) t.remove();
   }
 
+  // Normalize a tool_call entry from the HF Space response into the
+  // {tool, args, result} shape that makeToolCard() expects.
+  function normalizeToolCall(tc) {
+    return {
+      tool: tc.tool || tc.name || "(unknown)",
+      args: tc.args || tc.arguments || {},
+      result: tc.result !== undefined ? tc.result : (tc.response !== undefined ? tc.response : null)
+    };
+  }
+
   async function runAgent(userMsg) {
-    if (!apiKeyInput.value) {
-      renderMessage("agent", "Paste a Gemini API key in the setup panel above first.");
-      return;
-    }
     history.push({role: "user", content: userMsg});
     renderMessage("user", userMsg);
     sendBtn.disabled = true;
 
     try {
-      for (let turn = 0; turn < 6; turn++) {
-        showTyping();
-        let raw;
-        try {
-          raw = await callGemini(apiKeyInput.value, modelPick.value, history);
-        } catch (err) {
-          hideTyping();
-          renderMessage("agent", `Error calling Gemini: ${err.message}`);
-          return;
-        }
+      showTyping();
+      let payload;
+      try {
+        payload = await callHFSpace(userMsg);
+      } catch (err) {
         hideTyping();
-
-        const calls = parseToolCalls(raw);
-        if (!calls.length) {
-          const final = stripToolCalls(raw) || raw;
-          renderMessage("agent", final);
-          history.push({role: "assistant", content: raw});
-          return;
-        }
-
-        const calledWithResults = calls.map(c => ({...c, result: dispatchMock(c.tool, c.args)}));
-        renderMessage("agent", stripToolCalls(raw), calledWithResults);
-        history.push({role: "assistant", content: raw});
-
-        const resultBlock = calledWithResults.map(c =>
-          `<|tool_response>response:${c.tool}{value:<|"|>${JSON.stringify(c.result)}<|"|>}<tool_response|>`
-        ).join("\n");
-        history.push({role: "user", content: resultBlock});
+        renderMessage("agent", `Error calling HF Space: ${err.message} (the Space may be cold-starting; try again in ~30s)`);
+        return;
       }
-      renderMessage("agent", "[turn budget exhausted]");
+      hideTyping();
+
+      const toolCards = payload.tool_calls.map(normalizeToolCall);
+      const finalText = payload.final_answer || payload.transcript || "(empty response)";
+      renderMessage("agent", finalText, toolCards.length ? toolCards : null);
+      history.push({role: "assistant", content: finalText});
     } finally {
       sendBtn.disabled = false;
     }

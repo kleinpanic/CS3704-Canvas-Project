@@ -7,7 +7,9 @@ A maintainable, team-ready **Canvas LMS productivity client** with a Textual TUI
 [![Pages](https://img.shields.io/github/actions/workflow/status/kleinpanic/CS3704-Canvas-Project/pages.yml?branch=main&label=Pages)](https://github.com/kleinpanic/CS3704-Canvas-Project/actions/workflows/pages.yml)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-<!-- HF model + dataset badges added after v2.0 release -->
+[![HF Model](https://img.shields.io/badge/🤗_Model-canvas--calendar--agent--v7--dpo-yellow)](https://huggingface.co/kleinpanic93/canvas-calendar-agent-v7-dpo)
+[![HF Dataset](https://img.shields.io/badge/🤗_Dataset-canvas--calendar--preferences--v7-blue)](https://huggingface.co/datasets/kleinpanic93/canvas-calendar-preferences-v7)
+[![HF Space](https://img.shields.io/badge/🤗_Demo-Live_HF_Space-purple)](https://huggingface.co/spaces/kleinpanic93/canvas-calendar-agent-demo)
 
 ## ML/AI components
 
@@ -19,15 +21,16 @@ Model weights will be published to HuggingFace and the accompanying paper will b
 
 ### Try the agent right now
 
-You don't need the fine-tuned weights to try the agent — the SDK ships a
-**Gemini fallback backend** that speaks the same Gemma4 tool-call protocol.
+The fine-tuned **v7-dpo Gemma4** weights are hosted as a live HuggingFace Space —
+no API key required to try the demo, and the Python SDK auto-downloads the same
+weights from HuggingFace Hub on first run.
 
-- **Browser demo** (mock Canvas data, your Gemini API key): [kleinpanic.github.io/CS3704-Canvas-Project/agent-demo/](https://kleinpanic.github.io/CS3704-Canvas-Project/agent-demo/)
+- **Browser demo** (mock Canvas data, hosted DPO model): [kleinpanic.github.io/CS3704-Canvas-Project/agent-demo/](https://kleinpanic.github.io/CS3704-Canvas-Project/agent-demo/)
 - **Python SDK** (real Canvas data via your token):
 
   ```bash
-  pip install canvas-sdk[gemini]          # base + Gemini fallback
-  pip install canvas-sdk[autodownload]    # also fetches the v7-dpo Gemma4 model from HF
+  pip install canvas-sdk[autodownload]    # fetches the v7-dpo Gemma4 model from HF on first run
+  pip install canvas-sdk[gemini]          # optional last-resort Gemini fallback
   pip install canvas-sdk[all]             # both
   ```
 
@@ -235,7 +238,7 @@ All commits to protected branches must be **GPG signed**.
 ## Documentation
 
 - **[Docs site](https://kleinpanic.github.io/CS3704-Canvas-Project/)** — live project docs
-- **[Agent demo](https://kleinpanic.github.io/CS3704-Canvas-Project/agent-demo/)** — chat with the Canvas Calendar Agent in your browser (Gemini-backed)
+- **[Agent demo](https://kleinpanic.github.io/CS3704-Canvas-Project/agent-demo/)** — chat with the Canvas Calendar Agent in your browser (powered by our fine-tuned Gemma4 v7-dpo on HuggingFace Spaces)
 - **[Architecture docs](docs-site/architecture.md)** — system design decisions
 - **[Browser extension docs](docs-site/extension.md)** — shared client/runtime architecture
 - **[Workflow guide](docs-site/workflow.md)** — how the team works
