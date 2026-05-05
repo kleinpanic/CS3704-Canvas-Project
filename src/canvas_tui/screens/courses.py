@@ -64,6 +64,12 @@ def is_likely_ghost(
         if year < now_year - 1:
             return True, f"old semester ({year})"
 
+    # Term mismatch: course carries a different term label than the current one
+    if current_term:
+        term_match = re.search(r"\b(spring|summer|fall|winter|sp|su|fa|wi)\s*\d{2,4}\b", full, re.IGNORECASE)
+        if term_match and current_term.lower() not in full.lower():
+            return True, f"term mismatch ({term_match.group()})"
+
     # Zero assignments and no grade data
     if assignment_count == 0:
         return True, "0 assignments"
