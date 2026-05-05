@@ -22,9 +22,27 @@ import {
 } from './lib/cache.js';
 import { createCanvasClient } from './lib/canvas-client.js';
 import { MESSAGE_TYPES } from './lib/extension-contract.js';
+import { nativeCall, isNativeHostAvailable } from './lib/native-host.js';
 
 const NOTIFY_BEFORE = [24 * 3600, 3600]; // 24h and 1h before deadline
 const canvasClient = createCanvasClient();
+
+// ── Native Host Helper ────────────────────────────────────────────────────────
+
+/**
+ * Attempt a call via the native messaging host.
+ * Returns the response data on success, or null if unavailable / errored.
+ */
+async function tryNative(method, params = {}) {
+  if (!isNativeHostAvailable()) return null;
+  try {
+    const token = await canvasClient.getToken().catch(() => null);
+    if (!token) return null;
+    return await nativeCall(method, token, canvasClient.baseUrl, params);
+  } catch {
+    return null;
+  }
+}
 
 // ── Badge Update ─────────────────────────────────────────────────────────────
 
@@ -154,6 +172,40 @@ const messageHandlers = {
       difficulty: teacher.avg_difficulty ?? null,
       numRatings: teacher.num_ratings ?? 0,
     };
+  },
+
+  [MESSAGE_TYPES.getCourseGrades]: async (msg) => {
+    // Try native host first; fall back to Canvas enrollments endpoint
+    const nativeData = await tryNative('getCourseGrades', { courseId: msg.courseId });
+    if (nativeData !== null) return { data: nativeData };
+
+    // Direct Canvas API fallback: enrollments with grades
+    const data = await canvasClient.request(
+      `/courses/${msg.courseId}/enrollments`,
+      { params: { type: 'StudentEnrollment', include: 'grades', per_page: 1 } }
+    );
+    return { data };
+  },
+
+  [MESSAGE_TYPES.getTodo]: async () => {
+    // Native host only; return empty array fallback if unavailable
+    const nativeData = await tryNative('getTodo');
+    return { data: nativeData ?? [] };
+  },
+
+  [MESSAGE_TYPES.getCourseFiles]: async (msg) => {
+    // Try native host first; fall back to canvasClient.getCourseFiles
+    const nativeData = await tryNative('getCourseFiles', { courseId: msg.courseId });
+    if (nativeData !== null) return { data: nativeData };
+
+    const data = await canvasClient.getCourseFiles(msg.courseId);
+    return { data };
+  },
+
+  [MESSAGE_TYPES.getPlannerNotes]: async () => {
+    // Native host only; return empty array fallback if unavailable
+    const nativeData = await tryNative('getPlannerNotes');
+    return { data: nativeData ?? [] };
   },
 };
 

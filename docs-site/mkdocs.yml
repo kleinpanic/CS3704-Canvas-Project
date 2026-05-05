@@ -1,0 +1,35 @@
+site_name: Canvas Tracker
+site_description: CS3704 Canvas Deadline Tracker — Chrome Extension
+site_url: https://kleinpanic.github.io/CS3704-Canvas-Project/
+repo_url: https://github.com/kleinpanic/CS3704-Canvas-Project
+repo_name: kleinpanic/CS3704-Canvas-Project
+docs_dir: docs
+site_dir: ../site/docs
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: red
+      accent: deep orange
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - search.highlight
+
+nav:
+  - Home: index.md
+  - Architecture: architecture.md
+  - Extension: extension.md
+  - Workflow: workflow.md
+  - Roadmap: roadmap.md
+  - Reviews:
+      - PM3 Review: pm3-review.md
+      - Release Checklist: release-checklist.md
+      - Claims Audit: CLAIMS-AUDIT.md
+      - Robustness: ROBUSTNESS.md
+      - Visual Audit: VISUAL-AUDIT.md
+
+plugins:
+  - search

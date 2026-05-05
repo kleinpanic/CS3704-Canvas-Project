@@ -1,0 +1,48 @@
+{
+  "mode": "orchestration",
+  "granularity": "quick",
+  "workflow": {
+    "research": true,
+    "plan_check": false,
+    "verifier": true,
+    "auto_advance": true,
+    "nyquist_validation": false,
+    "security_enforcement": false,
+    "discuss_mode": "off",
+    "cross_ai_execution": true,
+    "cross_ai_command": "gemini -p",
+    "cross_ai_timeout": 300
+  },
+  "planning": {
+    "commit_docs": false,
+    "search_gitignored": true,
+    "sub_repos": []
+  },
+  "parallelization": {
+    "enabled": true,
+    "plan_level": true,
+    "task_level": true,
+    "skip_checkpoints": true,
+    "max_concurrent_agents": 4,
+    "min_plans_for_parallel": 1
+  },
+  "gates": {
+    "confirm_project": false,
+    "confirm_phases": false,
+    "confirm_roadmap": false,
+    "confirm_breakdown": false,
+    "confirm_plan": false,
+    "execute_next_plan": false,
+    "issues_review": false,
+    "confirm_transition": false
+  },
+  "safety": {
+    "always_confirm_destructive": true,
+    "always_confirm_external_services": false
+  },
+  "hooks": {
+    "context_warnings": false
+  },
+  "project_code": "CS3704",
+  "claude_md_path": "./CLAUDE.md"
+}
