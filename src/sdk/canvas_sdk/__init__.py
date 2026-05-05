@@ -1,5 +1,3 @@
-from canvas_sdk.canvas import Canvas
-
 __all__ = [
     "Canvas",
     "CanvasAgent",
@@ -12,7 +10,13 @@ __version__ = "1.0.0"
 
 
 def __getattr__(name):
-    """Lazy import of agent harness so SDK consumers without httpx still work."""
+    """Lazy import so submodules with optional deps (arrow, httpx, google) don't
+    break ``import canvas_sdk`` for consumers that only need the agent harness.
+    """
+    if name == "Canvas":
+        from canvas_sdk.canvas import Canvas
+
+        return Canvas
     if name == "CanvasAgent":
         from canvas_sdk.agent import CanvasAgent
 
