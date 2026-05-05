@@ -78,3 +78,12 @@ extension/coverage/
 popup-visual-check.png
 popup-grades-tab.png
 .playwright-mcp/
+
+# Dev-only chrome shim (contains real Canvas API token — never commit)
+extension/src/popup/chrome_shim.js
+
+# Playwright audit screenshots (local QA artifacts)
+audit-*.png
+popup-after-overhaul.png
+popup-grades-view.png
+popup-no-token.png
