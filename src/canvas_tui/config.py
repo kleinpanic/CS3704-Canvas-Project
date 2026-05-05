@@ -174,9 +174,15 @@ def _overlay_file_config(cfg: Config) -> None:
 
     _FIELD_MAP: dict[str, str] = {
         "days_ahead": "days_ahead",
+        "past_hours": "past_hours",
         "refresh_cooldown": "refresh_cooldown",
         "auto_refresh_sec": "auto_refresh_sec",
+        "http_timeout": "http_timeout",
+        "max_retries": "max_retries",
         "download_dir": "download_dir",
+        "default_block_min": "default_block_min",
+        "open_after_dl": "open_after_dl",
+        "calcurse_import": "calcurse_import",
         "calendar_backend": "calendar_backend",
         "google_credentials_path": "google_credentials_path",
         "google_token_path": "google_token_path",
@@ -184,8 +190,6 @@ def _overlay_file_config(cfg: Config) -> None:
         "ical_write_path": "ical_write_path",
         "use_ai_reranker": "use_ai_reranker",
         "model_path": "model_path",
-        "default_block_min": "default_block_min",
-        "past_hours": "past_hours",
         "ann_past_days": "ann_past_days",
         "ann_future_days": "ann_future_days",
         # Support the typo variant for backwards compat
@@ -201,7 +205,12 @@ def _overlay_file_config(cfg: Config) -> None:
             raw = file_cfg[file_key]
             current = getattr(cfg, attr_name)
             try:
-                if isinstance(current, int):
+                if isinstance(current, bool):
+                    if isinstance(raw, bool):
+                        setattr(cfg, attr_name, raw)
+                    else:
+                        setattr(cfg, attr_name, str(raw).lower() in ("1", "true", "yes"))
+                elif isinstance(current, int):
                     setattr(cfg, attr_name, int(raw))
                 elif isinstance(current, float):
                     setattr(cfg, attr_name, float(raw))
@@ -260,16 +269,20 @@ def _config_to_toml(cfg: Config) -> str:
         if isinstance(v, bool):
             return "true" if v else "false"
         if isinstance(v, str):
-            escaped = v.replace("\\", "\\\\").replace('"', '\\"')
-            return f'"{escaped}"'
+            # json.dumps covers backslash, double-quote, and all control chars
+            return json.dumps(v)
         return str(v)
 
     scalar_fields: list[tuple[str, Any]] = [
         ("days_ahead", cfg.days_ahead),
         ("past_hours", cfg.past_hours),
+        ("http_timeout", cfg.http_timeout),
+        ("max_retries", cfg.max_retries),
         ("refresh_cooldown", cfg.refresh_cooldown),
         ("auto_refresh_sec", cfg.auto_refresh_sec),
         ("default_block_min", cfg.default_block_min),
+        ("open_after_dl", cfg.open_after_dl),
+        ("calcurse_import", cfg.calcurse_import),
         ("ann_past_days", cfg.ann_past_days),
         ("ann_future_days", cfg.ann_future_days),
         ("theme", cfg.theme),
@@ -281,11 +294,14 @@ def _config_to_toml(cfg: Config) -> str:
     for key, val in scalar_fields:
         lines.append(f"{key} = {_toml_val(val)}")
 
+    if cfg.download_dir is not None:
+        lines.append(f"download_dir = {_toml_val(cfg.download_dir)}")
+
     if cfg.keybindings:
         lines.append("")
         lines.append("[keybindings]")
         for action, key in sorted(cfg.keybindings.items()):
-            lines.append(f'{action} = {_toml_val(key)}')
+            lines.append(f'"{action}" = {_toml_val(key)}')
 
     lines.append("")
     return "\n".join(lines)

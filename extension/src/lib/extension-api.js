@@ -52,7 +52,7 @@ export async function dismissAssignmentRemote(assignmentId) {
 const PREFS_KEY = "canvas_tui_prefs";
 
 const DEFAULT_PREFS = {
-  theme: "light",
+  theme: "dark",
   daysAhead: 7,
 };
 
