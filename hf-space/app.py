@@ -562,7 +562,7 @@ button.example-btn:hover { border-color: #d63e36 !important; background: #1f1010
 """
 
 DESCRIPTION_MD = """
-Fine-tuned **Gemma-4-E2B-IT** (DPO · β=0.1 · 181 trajectories · 90.3% reward accuracy) — speaks the native Gemma-4 tool protocol for **18 tools** across 4 families:
+Fine-tuned **Gemma-4-E2B-IT** with DPO (β=0.3, small-N regularization). Speaks the native Gemma-4 tool protocol for **18 tools** across 4 families. _Trajectory counts and bench scores are TBD post-phase-1/4; numbers shown in v7-broken artifacts are pre-rebuild and not verified. See [How it Works](https://kleinpanic.github.io/CS3704-Canvas-Project/agent-demo/method.html) for the cited methodology._
 
 `canvas.*` assignments · grades · syllabi · planner &nbsp;|&nbsp; `calendar.*` scheduling · free blocks &nbsp;|&nbsp; `reranker.*` priority hints &nbsp;|&nbsp; `study.*` exam prep · spaced repetition
 
