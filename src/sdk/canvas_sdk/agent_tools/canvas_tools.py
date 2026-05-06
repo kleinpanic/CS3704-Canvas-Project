@@ -10,13 +10,13 @@ import os
 from typing import Any
 
 __all__ = [
-    "ListCourses",
     "GetAssignments",
     "GetCourse",
+    "GetGrades",
     "GetSyllabus",
     "GetTodo",
-    "GetGrades",
     "ListAnnouncements",
+    "ListCourses",
     "ListPlannerItems",
 ]
 

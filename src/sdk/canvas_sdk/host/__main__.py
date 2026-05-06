@@ -17,7 +17,6 @@ from typing import Any
 
 from canvas_sdk.client import CanvasClient
 
-
 # ── Serialization ─────────────────────────────────────────────────────────────
 
 
@@ -165,7 +164,7 @@ def main() -> None:
             if msg is None:
                 break
             result = _handle(msg)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             result = {"ok": False, "error": str(exc)}
         _write(result)
 

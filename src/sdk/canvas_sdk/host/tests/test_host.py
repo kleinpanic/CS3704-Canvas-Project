@@ -8,12 +8,10 @@ Tests cover:
 """
 
 import dataclasses
-import pytest
 from unittest.mock import MagicMock, patch
 
 # Import the module under test
-from canvas_sdk.host.__main__ import _serialize, _drain, _handle
-
+from canvas_sdk.host.__main__ import _drain, _handle, _serialize
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
