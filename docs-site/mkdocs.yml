@@ -20,6 +20,7 @@ theme:
 
 nav:
   - Home: index.md
+  - Live Demo & ML Assets: live-demo.md
   - Architecture: architecture.md
   - Extension: extension.md
   - Workflow: workflow.md
