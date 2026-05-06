@@ -630,27 +630,39 @@ with gr.Blocks(theme=THEME, css=CUSTOM_CSS, title="Canvas Calendar Agent") as de
                 elem_id="calendar-pane",
             )
 
-    gr.Markdown("### Try one of the 18 tools")
-    with gr.Row():
-        with gr.Column():
-            gr.Markdown("**Calendar (5)**")
-            for ex in CALENDAR_EXAMPLES:
-                btn = gr.Button(ex, elem_classes=["example-btn"], size="sm")
-                btn.click(lambda x=ex: x, outputs=msg, api_name=False)
-            gr.Markdown("**Reranker (1)**")
-            for ex in RERANKER_EXAMPLES:
-                btn = gr.Button(ex, elem_classes=["example-btn"], size="sm")
-                btn.click(lambda x=ex: x, outputs=msg, api_name=False)
-        with gr.Column():
-            gr.Markdown("**Canvas (8)**")
-            for ex in CANVAS_EXAMPLES:
-                btn = gr.Button(ex, elem_classes=["example-btn"], size="sm")
-                btn.click(lambda x=ex: x, outputs=msg, api_name=False)
-        with gr.Column():
-            gr.Markdown("**Study (4)**")
-            for ex in STUDY_EXAMPLES:
-                btn = gr.Button(ex, elem_classes=["example-btn"], size="sm")
-                btn.click(lambda x=ex: x, outputs=msg, api_name=False)
+    gr.Examples(
+        examples=[
+            # Canvas (8)
+            ["List my courses"],
+            ["Tell me about my CS 3704 course"],
+            ["What assignments do I have due this week?"],
+            ["What are my current grades?"],
+            ["Show me the syllabus for MATH 2114"],
+            ["What's on my Canvas todo list?"],
+            ["Any new announcements in my courses?"],
+            ["What's on my planner this week?"],
+            # Calendar (5)
+            ["What's on my calendar this week?"],
+            ["Find a 2-hour free block tomorrow afternoon"],
+            ["Schedule a study block tomorrow 3-5pm"],
+            ["Move my 2pm event to 4pm"],
+            ["Cancel my 3pm meeting"],
+            # Study (4)
+            ["Build a study bracket for the May 12 final"],
+            ["What study block size do you recommend for me?"],
+            ["Build a semester study schedule"],
+            ["Plan spaced repetition for Linear Algebra final"],
+            # Reranker (1)
+            ["Rank my todos by priority"],
+        ],
+        inputs=msg,
+        fn=chat,
+        outputs=[chatbot, state, calendar_html],
+        run_on_click=True,
+        cache_examples=False,
+        label="Try one of the 18 tools — click to auto-submit",
+        elem_classes=["example-btn"],
+    )
 
     # Wire send button + Enter-key submit. Outputs order MUST match chat() return:
     # (history, state, calendar_html).
