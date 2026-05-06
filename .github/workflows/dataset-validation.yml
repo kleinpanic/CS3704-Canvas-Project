@@ -18,12 +18,12 @@ jobs:
     name: Dataset Validation
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
         with:
           fetch-depth: 0
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6
         with:
           python-version: "3.11"
           cache: pip
@@ -51,7 +51,7 @@ jobs:
             while IFS= read -r line; do
               if [ -z "$line" ]; then continue; fi
               echo "$line" | jq -c . > /dev/null || {
-                echo "FAIL $f: invalid JSON — run: python scripts/share_my_canvas.py --dry-run"
+                echo "FAIL $f: invalid JSON -- run: python scripts/share_my_canvas.py --dry-run"
                 exit 1
               }
             done < "$f"
@@ -73,10 +73,10 @@ jobs:
             --piiranha-model-sha "$PIIRANHA_SHA" \
             $CHANGED_FILES
 
-      - name: PII check (fork — token absent)
+      - name: PII check (fork - token absent)
         if: ${{ secrets.HF_TOKEN == '' }}
         run: |
-          echo "fork: HF_TOKEN not set — PII step skipped; maintainer must validate before merge"
+          echo "fork: HF_TOKEN not set -- PII step skipped; maintainer must validate before merge"
 
       - name: Warmup PII Space
         if: ${{ vars.CANVAS_PII_SPACE_URL != '' }}
