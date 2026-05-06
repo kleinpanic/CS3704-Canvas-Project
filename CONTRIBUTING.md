@@ -41,6 +41,8 @@ pytest -q                 # run tests
 python -m build           # build package
 ```
 
+Run `make clean` (or `bash tools/clean.sh`) to wipe build and cache artifacts.
+
 ---
 
 ## Repository Structure
