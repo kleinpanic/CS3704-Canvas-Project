@@ -12,6 +12,33 @@
  * No tokens are ever exposed to the browser.
  */
 
+// Defense-in-depth PII scrub for Canvas API responses. The live demo does not
+// currently route through /canvas, but if it ever does, PII won't leak.
+// SDK consumers who need raw passthrough can opt out with ?nopiiscrub=1.
+const _EMAIL_RE = /\b[\w.+-]+@[\w-]+\.[\w.-]+\b/g;
+const _PHONE_RE = /\b(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b/g;
+const _SSN_RE   = /\b\d{3}-\d{2}-\d{4}\b/g;
+const _ADDR_RE  = /\b\d{1,5}\s+[A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+)*\s+(?:Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Drive|Dr|Court|Ct|Lane|Ln)\b/g;
+
+function scrubString(s) {
+  return s
+    .replace(_SSN_RE,   '[SSN]')
+    .replace(_EMAIL_RE, '[EMAIL]')
+    .replace(_PHONE_RE, '[PHONE]')
+    .replace(_ADDR_RE,  '[ADDRESS]');
+}
+
+function scrubJson(obj) {
+  if (typeof obj === 'string') return scrubString(obj);
+  if (Array.isArray(obj)) return obj.map(scrubJson);
+  if (obj !== null && typeof obj === 'object') {
+    const out = {};
+    for (const [k, v] of Object.entries(obj)) out[k] = scrubJson(v);
+    return out;
+  }
+  return obj;
+}
+
 const SPACE_BASE = 'https://kleinpanic93-canvas-calendar-agent-demo.hf.space';
 const ALLOWED_ORIGINS = [
   'https://kleinpanic.github.io',
@@ -134,6 +161,8 @@ async function handleCanvas(request, env, cors) {
     });
   }
 
+  const noPiiScrub = new URL(request.url).searchParams.get('nopiiscrub') === '1';
+
   let body;
   try { body = await request.json(); }
   catch (_) {
@@ -178,14 +207,22 @@ async function handleCanvas(request, env, cors) {
   }
 
   const upstream = await fetch(`${CANVAS_BASE}${endpoint}`, fetchInit);
-  const upstreamBody = await upstream.text();
+  const upstreamText = await upstream.text();
+  const contentType = upstream.headers.get('Content-Type') || 'application/json';
 
-  return new Response(upstreamBody, {
+  let responseBody = upstreamText;
+  if (!noPiiScrub && upstream.ok && contentType.includes('application/json')) {
+    try {
+      const parsed = JSON.parse(upstreamText);
+      responseBody = JSON.stringify(scrubJson(parsed));
+    } catch (_) {
+      // Non-parseable body — pass through as-is
+    }
+  }
+
+  return new Response(responseBody, {
     status: upstream.status,
-    headers: {
-      'Content-Type': upstream.headers.get('Content-Type') || 'application/json',
-      ...cors,
-    },
+    headers: { 'Content-Type': contentType, ...cors },
   });
 }
 

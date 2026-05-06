@@ -62,6 +62,7 @@ jobs:
       - name: Fetch Canvas data snapshot
         env:
           CANVAS_TOKEN: ${{ secrets.CANVAS_API_TOKEN }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           python3 docs-site/fetch_canvas_data.py --out site/data
 

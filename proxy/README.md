@@ -64,6 +64,12 @@ Request body:
 - `method` defaults to `GET`; allowed values: GET, POST, PUT, PATCH, DELETE
 - `body` is optional; serialized size capped at 4000 chars
 - Canvas's HTTP status code is forwarded as-is (401, 404, etc.)
+- By default the response JSON is scrubbed for PII (emails, phone numbers, SSNs,
+  street addresses) before being returned to the caller. This is defense-in-depth —
+  the live demo does not currently route through this path, but if it ever does,
+  PII won't leak.
+- Append `?nopiiscrub=1` to opt out of scrubbing if you need raw field values
+  (e.g. an extension author building their own UI that displays full names).
 
 ```bash
 curl -X POST https://cs3704-demo-proxy.kleinpanic.workers.dev/canvas \
