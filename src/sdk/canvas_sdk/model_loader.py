@@ -5,7 +5,7 @@ Resolution order for ``ensure_model()``:
 1. ``CANVAS_LLM_ENDPOINT`` env var set            → use it (model from CANVAS_LLM_MODEL).
 2. Local cache at ``~/.cache/canvas-agent/v7-dpo`` exists → spawn a local OpenAI-compatible
    server (vLLM if importable, otherwise a tiny transformers+flask wrapper) on port 8765.
-3. HF repo ``kleinpanic/canvas-calendar-agent-v7-dpo`` is downloadable → snapshot it
+3. HF repo ``kleinpanic93/canvas-calendar-agent-v7-dpo`` is downloadable → snapshot it
    into the cache and recurse.
 4. Nothing local, nothing on HF → return the ``__GEMINI_FALLBACK__`` sentinel and let
    ``CanvasAgent`` route to ``GeminiBackend``.
@@ -28,7 +28,7 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 GEMINI_FALLBACK_SENTINEL = "__GEMINI_FALLBACK__"
-DEFAULT_HF_REPO = "kleinpanic/canvas-calendar-agent-v7-dpo"
+DEFAULT_HF_REPO = "kleinpanic93/canvas-calendar-agent-v7-dpo"
 DEFAULT_CACHE_DIR = Path.home() / ".cache" / "canvas-agent" / "v7-dpo"
 DEFAULT_LOCAL_PORT = 8765
 
