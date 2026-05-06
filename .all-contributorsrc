@@ -1,0 +1,43 @@
+{
+  "projectName": "CS3704-Canvas-Project",
+  "projectOwner": "kleinpanic",
+  "repoType": "github",
+  "repoHost": "https://github.com",
+  "files": ["CONTRIBUTORS.md"],
+  "imageSize": 100,
+  "commit": true,
+  "commitConvention": "angular",
+  "contributors": [
+    {
+      "login": "kleinpanic",
+      "name": "Klein Panic",
+      "avatar_url": "https://avatars.githubusercontent.com/kleinpanic",
+      "profile": "https://github.com/kleinpanic",
+      "contributions": ["code", "maintenance", "review", "security"]
+    },
+    {
+      "login": "Williammm23",
+      "name": "Williammm23",
+      "avatar_url": "https://avatars.githubusercontent.com/Williammm23",
+      "profile": "https://github.com/Williammm23",
+      "contributions": ["code", "test"]
+    },
+    {
+      "login": "pjie22",
+      "name": "pjie22",
+      "avatar_url": "https://avatars.githubusercontent.com/pjie22",
+      "profile": "https://github.com/pjie22",
+      "contributions": ["doc", "review"]
+    },
+    {
+      "login": "802797liu",
+      "name": "802797liu",
+      "avatar_url": "https://avatars.githubusercontent.com/802797liu",
+      "profile": "https://github.com/802797liu",
+      "contributions": ["code", "test"]
+    }
+  ],
+  "contributorsPerLine": 7,
+  "skipCi": true,
+  "linkToUsage": true
+}

@@ -1,0 +1,28 @@
+name: All Contributors
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  add-contributors:
+    runs-on: ubuntu-latest
+    if: >
+      github.event.issue.pull_request == null &&
+      contains(github.event.comment.body, '@all-contributors please add')
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450  # v2
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+
+      - name: Add contributor
+        uses: all-contributors/all-contributors-action@b8a138346bb95814b4a1c25dec9bfd61f15e7fa4  # v3.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
