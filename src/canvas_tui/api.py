@@ -3,14 +3,12 @@
 
 from __future__ import annotations
 
-import contextlib
 import datetime as dt
 from typing import Any
 from urllib.parse import urljoin
 from zoneinfo import ZoneInfo
 
 import requests
-
 from canvas_sdk.client import CanvasClient
 
 from .cache import ResponseCache, cache_key

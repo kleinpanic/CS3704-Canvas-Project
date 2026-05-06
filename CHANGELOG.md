@@ -31,6 +31,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Chrome extension routes 14 Canvas API MESSAGE_TYPES through native host first via `routeViaHost()` helper; automatic fallback to browser-fetch (#52)
 - Native host extended with 4 new methods: `getDashboardCards`, `getSyllabus`, `getAssignmentGroups`, `getSubmission`
 
+### Changed
+
+- `canvas_tui.api.CanvasAPI` now wraps `canvas_sdk.CanvasClient` for HTTP; retry, pagination, and rate-limiting delegated to SDK (D-06/D-07)
+- Tests reorganized by layer: SDK tests in `tests/sdk/`, TUI tests in `tests/tui/`, extension layer reserved in `tests/extension/` (D-08/D-09)
+- `data/trajectories/README.md` marks `collab/` as a closed legacy dataset; references to deleted `collect_trajectories.py` removed (D-17)
+- `scripts/README.md` reduced to a one-line pointer; `docs/contributing-data.md` is the canonical contributor guide (D-18)
+
 ### Fixed
 
 - Extension ratings UI verified complete per PR #94 (ext-ui redesign + professor ratings layout) (#46)
