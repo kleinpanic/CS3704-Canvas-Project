@@ -47,7 +47,17 @@
     GET_COURSE_FILES: async (msg) => fetchJson(`course_${msg.courseId}_files.json`),
     GET_PLANNER_NOTES: async () => fetchJson('planner_notes.json'),
 
-    GET_RMP_RATING: async () => ({ ok: false, error: 'Not available in demo' }),
+    GET_RMP_RATING: async (msg) => {
+      const name = (msg.professorName || '').trim();
+      if (!name) return { ok: true, rating: null, difficulty: null, numRatings: 0 };
+      const lastName = name.split(' ').pop();
+      const map = await fetchJson('rmp.json');
+      if (!map?.ok) return { ok: true, rating: null, difficulty: null, numRatings: 0 };
+      const hit = map.data[name] || map.data[lastName] || null;
+      return hit
+        ? { ok: true, rating: hit.rating, difficulty: hit.difficulty, numRatings: hit.numRatings }
+        : { ok: true, rating: null, difficulty: null, numRatings: 0 };
+    },
     GET_DASHBOARD_CARDS: async () => fetchJson('dashboard_cards.json'),
     GET_COURSE_SYLLABUS: async (msg) => fetchJson(`course_${msg.courseId}_syllabus.json`),
     GET_ASSIGNMENT_GROUPS: async (msg) => fetchJson(`course_${msg.courseId}_assignment_groups.json`),
