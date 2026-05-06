@@ -22,6 +22,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Keybinding registry (`src/canvas_tui/keybindings.py`) with conflict detection at startup; `validate_all()` raises `ValueError` on duplicate `(screen, key)` pairs (#50)
+- Multi-screen nav: `app.py` slimmed to screen router (109 lines); `HomeScreen` extracted to `screens/home.py` (#51)
+- `?` keybinding overlay auto-generated from registry via `BaseScreen.show_help_overlay()`
+- `BaseScreen` ABC (`src/canvas_tui/screens/base.py`) providing keybinding help overlay support for all screens
+- RMP TUI screen (`src/canvas_tui/screens/rmp.py`): search → results → details professor ratings view; `R` keybinding opens from HomeScreen (#45, closes #43)
+
 - `src/canvas_tui/config_env.py`: centralised env-driven constants for all entry points.
   Fork users need only set `CANVAS_BASE_URL` and `CANVAS_TOKEN` to get a working install.
 - `.env.example`: documents all supported env vars with defaults.
