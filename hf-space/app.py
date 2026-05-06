@@ -240,27 +240,57 @@ def chat(message, history):
     return final
 
 
-THEME = gr.themes.Soft(
+THEME = gr.themes.Monochrome(
     primary_hue="red",
-    secondary_hue="slate",
-    neutral_hue="slate",
-    font=[gr.themes.GoogleFont("Inter"), "ui-sans-serif", "system-ui", "sans-serif"],
+    secondary_hue="neutral",
+    neutral_hue="neutral",
+    font=["Segoe UI", "system-ui", gr.themes.GoogleFont("Inter"), "sans-serif"],
+    font_mono=["Cascadia Code", "Consolas", "ui-monospace", "monospace"],
 ).set(
     body_background_fill="#0a0a0b",
     body_background_fill_dark="#0a0a0b",
-    block_background_fill="#15151a",
-    block_background_fill_dark="#15151a",
-    block_border_color="#27272f",
-    block_border_color_dark="#27272f",
-    body_text_color="#e5e7eb",
-    body_text_color_dark="#e5e7eb",
+    block_background_fill="#111114",
+    block_background_fill_dark="#111114",
+    block_border_color="#2e2e38",
+    block_border_color_dark="#2e2e38",
+    block_border_width="1px",
+    block_radius="6px",
+    body_text_color="#d4d4db",
+    body_text_color_dark="#d4d4db",
     button_primary_background_fill="#d63e36",
     button_primary_background_fill_dark="#d63e36",
     button_primary_background_fill_hover="#b83830",
     button_primary_background_fill_hover_dark="#b83830",
     button_primary_text_color="#ffffff",
     button_primary_text_color_dark="#ffffff",
+    button_secondary_background_fill="#1a1a1f",
+    button_secondary_background_fill_dark="#1a1a1f",
+    button_secondary_border_color="#2e2e38",
+    button_secondary_border_color_dark="#2e2e38",
+    input_background_fill="#111114",
+    input_background_fill_dark="#111114",
+    input_border_color="#2e2e38",
+    input_border_color_dark="#2e2e38",
+    chatbot_text_size="sm",
 )
+
+CUSTOM_CSS = """
+/* tighten overall page padding */
+.gradio-container { max-width: 860px !important; padding: 16px !important; }
+/* remove soft shadow blobs from blocks */
+.block { box-shadow: none !important; border-radius: 6px !important; }
+/* chatbot window: taller, tighter bubbles */
+#component-0 .chatbot { min-height: 380px; }
+.message-bubble-border { border-radius: 6px !important; }
+.user .message { background: #d63e36 !important; color: #fff !important; }
+.bot .message  { background: #1a1a1f !important; border: 1px solid #2e2e38 !important; }
+/* input row */
+.input-row textarea { border-radius: 4px !important; font-size: 0.85rem !important; }
+/* example buttons */
+.examples-holder button { border-radius: 4px !important; font-size: 0.78rem !important; }
+/* description text */
+.description { font-size: 0.82rem !important; line-height: 1.55 !important; color: #9ca3af !important; }
+"""
 
 DESCRIPTION_MD = """
 **Canvas LMS calendar + study-planning agent.** Fine-tuned Gemma-4-E2B-IT with DPO on a custom preference dataset (1,071 pairs, 90.3% reward accuracy, 0.22 train loss).
@@ -276,7 +306,7 @@ The model speaks the **native Gemma-4 tool-call protocol** for 18 tools — `can
 
 demo = gr.ChatInterface(
     fn=chat,
-    title="🎓 Canvas Calendar Agent",
+    title="Canvas Calendar Agent",
     description=DESCRIPTION_MD,
     examples=[
         "What assignments do I have due this week?",
@@ -288,6 +318,7 @@ demo = gr.ChatInterface(
     ],
     type="messages",
     theme=THEME,
+    css=CUSTOM_CSS,
     cache_examples=False,
 )
 

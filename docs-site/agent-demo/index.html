@@ -11,20 +11,21 @@
         extend: {
           colors: { canvas: { red: '#d63e36', dark: '#b83830' } },
           fontFamily: {
-            sans: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+            sans: ['Segoe UI', 'system-ui', '-apple-system', 'Roboto', 'sans-serif'],
           },
         },
       },
     };
   </script>
   <style>
-    .tool-card { background: #1f1f23; border: 1px solid #2e2e34; border-radius: 12px; }
+    /* chat bubble styles */
     .chat-bubble-user { background: #d63e36; color: white; }
-    .chat-bubble-agent { background: #1f1f23; border: 1px solid #2e2e34; }
+    .chat-bubble-agent { background: #1a1a1f; border: 1px solid #2e2e38; }
     pre { white-space: pre-wrap; word-break: break-word; }
     details summary { cursor: pointer; user-select: none; }
     details[open] summary svg { transform: rotate(90deg); }
     details summary svg { transition: transform 0.15s ease; }
+    /* typing indicator */
     .typing-dot { animation: typing 1.4s infinite; }
     .typing-dot:nth-child(2) { animation-delay: 0.2s; }
     .typing-dot:nth-child(3) { animation-delay: 0.4s; }
@@ -32,289 +33,362 @@
       0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
       30% { opacity: 1; transform: translateY(-3px); }
     }
-    /* 18-tool button grid */
+    /* tool card in chat bubbles */
+    .tool-card { background: #1a1a1f; border: 1px solid #2e2e38; border-radius: 6px; }
+    /* 18-tool grid */
     .tool-btn {
       display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
-      background: #1f1f23; border: 1px solid #2e2e34; border-radius: 10px;
-      padding: 10px 12px; cursor: pointer; text-align: left; transition: border-color 0.12s, background 0.12s;
+      background: #1a1a1f; border: 1px solid #2e2e38; border-radius: 6px;
+      padding: 8px 10px; cursor: pointer; text-align: left; transition: border-color 0.1s, background 0.1s;
       width: 100%;
     }
-    .tool-btn:hover { border-color: #d63e36; background: #26171a; }
-    .tool-btn:active { background: #2e1a1c; }
-    .tool-icon { font-size: 1.1rem; line-height: 1; }
-    .tool-name { font-size: 0.75rem; font-weight: 600; color: #e5e7eb; line-height: 1.3; }
-    .tool-id { font-size: 0.65rem; color: #6b7280; font-family: monospace; line-height: 1.2; }
-    .tool-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(155px, 1fr)); gap: 8px; margin-top: 8px; }
+    .tool-btn:hover { border-color: #d63e36; background: #221318; }
+    .tool-btn:active { background: #2a1618; }
+    .tool-icon { font-size: 1rem; line-height: 1; }
+    .tool-name { font-size: 0.73rem; font-weight: 600; color: #e5e7eb; line-height: 1.3; }
+    .tool-id { font-size: 0.63rem; color: #6b7280; font-family: 'Cascadia Code', 'Consolas', monospace; line-height: 1.2; }
+    .tool-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(148px, 1fr)); gap: 6px; margin-top: 6px; }
     .tool-family-header {
-      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
       letter-spacing: 0.07em; color: #6b7280; margin-bottom: 2px;
     }
     .tool-family-details > summary {
       list-style: none; display: flex; align-items: center; gap: 6px;
-      padding: 8px 0 4px; cursor: pointer;
+      padding: 6px 0 4px; cursor: pointer;
     }
     .tool-family-details > summary::-webkit-details-marker { display: none; }
     .tool-family-chevron { transition: transform 0.15s ease; display: inline-block; color: #d63e36; }
     .tool-family-details[open] .tool-family-chevron { transform: rotate(90deg); }
+    /* Chrome extension popup frame */
+    .ext-popup {
+      border: 1px solid #3a3a44;
+      border-radius: 8px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.55), 0 2px 8px rgba(0,0,0,0.4);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      background: #111114;
+    }
+    .ext-titlebar {
+      background: #222228;
+      border-bottom: 1px solid #3a3a44;
+      padding: 0 10px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .ext-icon {
+      width: 18px; height: 18px; border-radius: 3px;
+      background: #d63e36; display: flex; align-items: center;
+      justify-content: center; font-weight: 800; color: white; font-size: 10px;
+      flex-shrink: 0;
+    }
+    .ext-title { font-size: 0.78rem; font-weight: 600; color: #d4d4db; letter-spacing: 0.01em; }
+    .ext-badge {
+      margin-left: auto; font-size: 0.6rem; color: #6b7280;
+      border: 1px solid #3a3a44; border-radius: 3px; padding: 1px 5px;
+      letter-spacing: 0.04em; font-family: 'Cascadia Code', 'Consolas', monospace;
+    }
+    .ext-chat { flex: 1; overflow-y: auto; padding: 12px; }
+    .ext-chat::-webkit-scrollbar { width: 5px; }
+    .ext-chat::-webkit-scrollbar-track { background: transparent; }
+    .ext-chat::-webkit-scrollbar-thumb { background: #3a3a44; border-radius: 3px; }
+    .ext-input-bar {
+      border-top: 1px solid #2e2e38;
+      background: #161619;
+      padding: 8px 10px;
+      flex-shrink: 0;
+    }
   </style>
 </head>
 <body class="bg-gray-950 text-gray-100 font-sans min-h-screen">
 
-  <nav class="sticky top-0 z-40 bg-gray-950/95 backdrop-blur border-b border-gray-800">
-    <div class="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
-      <a href="../index.html" class="flex items-center gap-3">
-        <div class="w-8 h-8 rounded-lg bg-canvas-red flex items-center justify-center font-bold text-white text-sm">C</div>
-        <span class="font-semibold">Canvas Calendar Agent</span>
+  <nav class="sticky top-0 z-40 bg-gray-950/95 backdrop-blur border-b border-gray-800/60">
+    <div class="max-w-7xl mx-auto px-6 h-13 flex items-center justify-between" style="height:52px">
+      <a href="../index.html" class="flex items-center gap-2.5">
+        <div class="w-7 h-7 rounded bg-canvas-red flex items-center justify-center font-bold text-white text-xs">C</div>
+        <span class="font-semibold text-sm">Canvas Calendar Agent</span>
       </a>
-      <div class="flex items-center gap-6 text-sm text-gray-400">
-        <a href="../index.html" class="hover:text-white">Home</a>
-        <a href="../docs/architecture/" class="hover:text-white">Architecture</a>
-        <a href="https://github.com/kleinpanic/CS3704-Canvas-Project" target="_blank" rel="noopener" class="hover:text-white">GitHub</a>
-        <a href="https://huggingface.co/kleinpanic93/canvas-calendar-agent-v7-dpo" target="_blank" rel="noopener" class="hover:text-white">🤗 Model</a>
-        <a href="https://huggingface.co/datasets/kleinpanic93/canvas-calendar-preferences-v7" target="_blank" rel="noopener" class="hover:text-white">🤗 Dataset</a>
-        <a href="https://huggingface.co/spaces/kleinpanic93/canvas-calendar-agent-demo" target="_blank" rel="noopener" class="hover:text-white">🤗 Space</a>
+      <div class="flex items-center gap-5 text-xs text-gray-400">
+        <a href="../index.html" class="hover:text-white transition-colors">Home</a>
+        <a href="../docs/architecture/" class="hover:text-white transition-colors">Architecture</a>
+        <a href="https://github.com/kleinpanic/CS3704-Canvas-Project" target="_blank" rel="noopener" class="hover:text-white transition-colors">GitHub</a>
+        <a href="https://huggingface.co/kleinpanic93/canvas-calendar-agent-v7-dpo" target="_blank" rel="noopener" class="hover:text-white transition-colors">&#x1F917; Model</a>
+        <a href="https://huggingface.co/datasets/kleinpanic93/canvas-calendar-preferences-v7" target="_blank" rel="noopener" class="hover:text-white transition-colors">&#x1F917; Dataset</a>
+        <a href="https://huggingface.co/spaces/kleinpanic93/canvas-calendar-agent-demo" target="_blank" rel="noopener" class="hover:text-white transition-colors">&#x1F917; Space</a>
       </div>
     </div>
   </nav>
 
-  <header class="max-w-4xl mx-auto px-6 pt-12 pb-6">
-    <div class="inline-flex items-center gap-2 bg-canvas-red/10 border border-canvas-red/30 rounded-full px-3 py-1 text-canvas-red text-xs font-medium mb-4">
-      <span class="w-2 h-2 rounded-full bg-canvas-red animate-pulse"></span>
-      Live agent demo &mdash; runs in your browser
-    </div>
-    <h1 class="text-4xl md:text-5xl font-bold mb-4 leading-tight">
-      Talk to the Canvas<br/>Calendar Agent
-    </h1>
-    <p class="text-gray-400 text-lg leading-relaxed mb-2">
-      The Canvas Calendar Agent is a tutor-style assistant that knows about your Canvas
-      assignments, calendar, and study schedule. It speaks an 18-tool function-calling
-      protocol that the SDK parses and dispatches against live data.
-    </p>
-    <p class="text-gray-500 text-sm">
-      This page calls our fine-tuned Gemma4 v7-dpo model live, hosted on
-      HuggingFace Spaces &mdash; no API key, no setup.
-      <strong class="text-gray-300">Mock Canvas data only.</strong> Tool calls return
-      pre-baked sample results.
-    </p>
-  </header>
+  <main class="max-w-7xl mx-auto px-6 pt-8 pb-14">
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 items-start">
 
-  <section class="max-w-4xl mx-auto px-6 pb-6">
-    <div class="bg-gray-900 border border-canvas-red/40 rounded-2xl p-5 mb-4">
-      <p class="text-sm text-gray-200 leading-relaxed">
-        🤗 Powered by our fine-tuned
-        <a href="https://huggingface.co/kleinpanic93/canvas-calendar-agent-v7-dpo" target="_blank" rel="noopener" class="text-canvas-red hover:underline font-medium">Gemma-4-E2B-IT DPO model</a>
-        hosted on
-        <a href="https://huggingface.co/spaces/kleinpanic93/canvas-calendar-agent-demo" target="_blank" rel="noopener" class="text-canvas-red hover:underline">HuggingFace Spaces</a>.
-        No API key required.
-      </p>
-      <p class="text-xs text-gray-500 mt-2">
-        ⏱ Heads up: the first request after a quiet period takes ~30&nbsp;seconds while the
-        Space spins up from sleep on the free tier. Subsequent requests are fast.
-      </p>
-    </div>
+      <!-- ── Left info column ──────────────────────────────────────── -->
+      <div class="lg:col-span-2 space-y-4">
 
-    <div class="bg-gray-900 border border-gray-800 rounded-2xl mb-4">
-      <div class="px-5 py-3 border-b border-gray-800 flex items-center justify-between">
-        <div class="text-sm font-medium text-gray-300">Sample questions</div>
-        <button id="clear-btn" class="text-xs text-gray-500 hover:text-gray-300">Clear chat</button>
-      </div>
-      <div class="px-5 py-4 flex flex-wrap gap-2" id="samples"></div>
-    </div>
+        <!-- Hero -->
+        <div>
+          <div class="inline-flex items-center gap-2 bg-canvas-red/10 border border-canvas-red/30 rounded px-3 py-1 text-canvas-red text-xs font-medium mb-3">
+            <span class="w-1.5 h-1.5 rounded-full bg-canvas-red animate-pulse"></span>
+            Live agent demo &mdash; powered by HF Space
+          </div>
+          <h1 class="text-3xl font-bold mb-3 leading-tight">
+            Canvas Calendar<br/>Agent
+          </h1>
+          <p class="text-gray-400 text-sm leading-relaxed">
+            Fine-tuned Gemma-4-E2B-IT with DPO on 1,071 preference pairs.
+            Speaks an 18-tool function-calling protocol for Canvas LMS,
+            calendar scheduling, and study planning.
+          </p>
+        </div>
 
-    <div class="bg-gray-900 border border-gray-800 rounded-2xl mb-4">
-      <div class="px-5 py-3 border-b border-gray-800 flex items-center justify-between">
-        <div class="text-sm font-medium text-gray-300">18 tools &mdash; click any to send a sample prompt</div>
-        <button id="toggle-tools-btn" class="text-xs text-gray-500 hover:text-gray-300">Hide</button>
-      </div>
-      <div id="tool-grid-panel" class="px-5 pb-5">
+        <!-- HF info -->
+        <div class="bg-gray-900/60 border border-gray-800 rounded-lg p-4">
+          <p class="text-xs text-gray-300 leading-relaxed">
+            Powered by
+            <a href="https://huggingface.co/kleinpanic93/canvas-calendar-agent-v7-dpo" target="_blank" rel="noopener" class="text-canvas-red hover:underline font-medium">Gemma-4-E2B-IT v7-dpo</a>
+            on
+            <a href="https://huggingface.co/spaces/kleinpanic93/canvas-calendar-agent-demo" target="_blank" rel="noopener" class="text-canvas-red hover:underline">HuggingFace Spaces</a>.
+            Tool results are mocked &mdash; no Canvas credentials.
+          </p>
+          <p class="text-xs text-gray-600 mt-2">
+            &#9200; First request after idle takes ~30&nbsp;s (ZeroGPU cold start). Subsequent requests are fast.
+          </p>
+        </div>
 
-        <!-- canvas (8) -->
-        <details class="tool-family-details" open>
-          <summary>
-            <span class="tool-family-chevron">&#9654;</span>
-            <span class="tool-family-header">canvas &mdash; 8 tools</span>
+        <!-- Sample questions -->
+        <div class="bg-gray-900/60 border border-gray-800 rounded-lg overflow-hidden">
+          <div class="px-4 py-2.5 border-b border-gray-800 flex items-center justify-between">
+            <span class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Sample questions</span>
+            <button id="clear-btn" class="text-xs text-gray-600 hover:text-gray-400 transition-colors">Clear chat</button>
+          </div>
+          <div class="px-4 py-3 flex flex-wrap gap-1.5" id="samples"></div>
+        </div>
+
+        <!-- 18 tools grid -->
+        <div class="bg-gray-900/60 border border-gray-800 rounded-lg overflow-hidden">
+          <div class="px-4 py-2.5 border-b border-gray-800 flex items-center justify-between">
+            <span class="text-xs font-semibold text-gray-400 uppercase tracking-wide">18 tools</span>
+            <button id="toggle-tools-btn" class="text-xs text-gray-600 hover:text-gray-400 transition-colors">Show</button>
+          </div>
+          <div id="tool-grid-panel" class="px-4 pb-4" style="display:none">
+
+            <!-- canvas (8) -->
+            <details class="tool-family-details">
+              <summary>
+                <span class="tool-family-chevron">&#9654;</span>
+                <span class="tool-family-header">canvas &mdash; 8 tools</span>
+              </summary>
+              <div class="tool-grid">
+                <button class="tool-btn" data-prompt="What assignments are due this week?" data-tool="canvas.get_assignments" aria-label="canvas.get_assignments">
+                  <span class="tool-icon">&#x1F4CB;</span>
+                  <span class="tool-name">Get Assignments</span>
+                  <span class="tool-id">canvas.get_assignments</span>
+                </button>
+                <button class="tool-btn" data-prompt="Tell me about my CS 3704 course" data-tool="canvas.get_course" aria-label="canvas.get_course">
+                  <span class="tool-icon">&#x1F393;</span>
+                  <span class="tool-name">Get Course</span>
+                  <span class="tool-id">canvas.get_course</span>
+                </button>
+                <button class="tool-btn" data-prompt="What are my current grades?" data-tool="canvas.get_grades" aria-label="canvas.get_grades">
+                  <span class="tool-icon">&#x1F4CA;</span>
+                  <span class="tool-name">Get Grades</span>
+                  <span class="tool-id">canvas.get_grades</span>
+                </button>
+                <button class="tool-btn" data-prompt="Show me the syllabus for ECE 3574" data-tool="canvas.get_syllabus" aria-label="canvas.get_syllabus">
+                  <span class="tool-icon">&#x1F4C4;</span>
+                  <span class="tool-name">Get Syllabus</span>
+                  <span class="tool-id">canvas.get_syllabus</span>
+                </button>
+                <button class="tool-btn" data-prompt="What's on my Canvas todo list?" data-tool="canvas.get_todo" aria-label="canvas.get_todo">
+                  <span class="tool-icon">&#x2705;</span>
+                  <span class="tool-name">Get Todo</span>
+                  <span class="tool-id">canvas.get_todo</span>
+                </button>
+                <button class="tool-btn" data-prompt="Any new announcements in my courses?" data-tool="canvas.list_announcements" aria-label="canvas.list_announcements">
+                  <span class="tool-icon">&#x1F4E3;</span>
+                  <span class="tool-name">List Announcements</span>
+                  <span class="tool-id">canvas.list_announcements</span>
+                </button>
+                <button class="tool-btn" data-prompt="List all my enrolled courses this term" data-tool="canvas.list_courses" aria-label="canvas.list_courses">
+                  <span class="tool-icon">&#x1F4DA;</span>
+                  <span class="tool-name">List Courses</span>
+                  <span class="tool-id">canvas.list_courses</span>
+                </button>
+                <button class="tool-btn" data-prompt="Show me my planner for the next 7 days" data-tool="canvas.list_planner_items" aria-label="canvas.list_planner_items">
+                  <span class="tool-icon">&#x1F5D3;&#xFE0F;</span>
+                  <span class="tool-name">List Planner Items</span>
+                  <span class="tool-id">canvas.list_planner_items</span>
+                </button>
+              </div>
+            </details>
+
+            <!-- calendar (5) -->
+            <details class="tool-family-details">
+              <summary>
+                <span class="tool-family-chevron">&#9654;</span>
+                <span class="tool-family-header">calendar &mdash; 5 tools</span>
+              </summary>
+              <div class="tool-grid">
+                <button class="tool-btn" data-prompt="Create a study block tomorrow at 3pm for 90 minutes" data-tool="calendar.create_event" aria-label="calendar.create_event">
+                  <span class="tool-icon">&#x2795;</span>
+                  <span class="tool-name">Create Event</span>
+                  <span class="tool-id">calendar.create_event</span>
+                </button>
+                <button class="tool-btn" data-prompt="Cancel my Friday office hours visit" data-tool="calendar.delete_event" aria-label="calendar.delete_event">
+                  <span class="tool-icon">&#x1F5D1;&#xFE0F;</span>
+                  <span class="tool-name">Delete Event</span>
+                  <span class="tool-id">calendar.delete_event</span>
+                </button>
+                <button class="tool-btn" data-prompt="Find me a 2-hour block to study tomorrow" data-tool="calendar.find_free_blocks" aria-label="calendar.find_free_blocks">
+                  <span class="tool-icon">&#x1F50D;</span>
+                  <span class="tool-name">Find Free Blocks</span>
+                  <span class="tool-id">calendar.find_free_blocks</span>
+                </button>
+                <button class="tool-btn" data-prompt="What's on my calendar this week?" data-tool="calendar.list_events" aria-label="calendar.list_events">
+                  <span class="tool-icon">&#x1F4C5;</span>
+                  <span class="tool-name">List Events</span>
+                  <span class="tool-id">calendar.list_events</span>
+                </button>
+                <button class="tool-btn" data-prompt="Move my CS office hours to Wednesday at 4pm" data-tool="calendar.modify_event" aria-label="calendar.modify_event">
+                  <span class="tool-icon">&#x270F;&#xFE0F;</span>
+                  <span class="tool-name">Modify Event</span>
+                  <span class="tool-id">calendar.modify_event</span>
+                </button>
+              </div>
+            </details>
+
+            <!-- reranker (1) -->
+            <details class="tool-family-details">
+              <summary>
+                <span class="tool-family-chevron">&#9654;</span>
+                <span class="tool-family-header">reranker &mdash; 1 tool</span>
+              </summary>
+              <div class="tool-grid">
+                <button class="tool-btn" data-prompt="Rank my todos by what I should do first" data-tool="reranker.priority_hint" aria-label="reranker.priority_hint">
+                  <span class="tool-icon">&#x1F3C6;</span>
+                  <span class="tool-name">Priority Hint</span>
+                  <span class="tool-id">reranker.priority_hint</span>
+                </button>
+              </div>
+            </details>
+
+            <!-- study (4) -->
+            <details class="tool-family-details">
+              <summary>
+                <span class="tool-family-chevron">&#9654;</span>
+                <span class="tool-family-header">study &mdash; 4 tools</span>
+              </summary>
+              <div class="tool-grid">
+                <button class="tool-btn" data-prompt="Build me an exam-prep bracket for the May 12 final" data-tool="study.exam_bracket" aria-label="study.exam_bracket">
+                  <span class="tool-icon">&#x1F3D7;&#xFE0F;</span>
+                  <span class="tool-name">Exam Bracket</span>
+                  <span class="tool-id">study.exam_bracket</span>
+                </button>
+                <button class="tool-btn" data-prompt="What study block size should I use for a 4-credit physics class?" data-tool="study.recommend_block_size" aria-label="study.recommend_block_size">
+                  <span class="tool-icon">&#x23F1;&#xFE0F;</span>
+                  <span class="tool-name">Recommend Block Size</span>
+                  <span class="tool-id">study.recommend_block_size</span>
+                </button>
+                <button class="tool-btn" data-prompt="Plan a study schedule for my whole semester" data-tool="study.semester_schedule" aria-label="study.semester_schedule">
+                  <span class="tool-icon">&#x1F5FA;&#xFE0F;</span>
+                  <span class="tool-name">Semester Schedule</span>
+                  <span class="tool-id">study.semester_schedule</span>
+                </button>
+                <button class="tool-btn" data-prompt="Compute Cepeda spacing intervals for my exam in 12 days" data-tool="study.spaced_schedule" aria-label="study.spaced_schedule">
+                  <span class="tool-icon">&#x1F9E0;</span>
+                  <span class="tool-name">Spaced Schedule</span>
+                  <span class="tool-id">study.spaced_schedule</span>
+                </button>
+              </div>
+            </details>
+
+            <p class="text-xs text-gray-700 mt-3">18 tools &bull; click any to pre-fill and submit</p>
+          </div>
+        </div>
+
+        <!-- How it works -->
+        <details class="bg-gray-900/60 border border-gray-800 rounded-lg overflow-hidden group">
+          <summary class="px-4 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wide cursor-pointer hover:text-gray-300 flex items-center gap-2">
+            <svg class="w-3 h-3 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+            How it works
           </summary>
-          <div class="tool-grid">
-            <button class="tool-btn" data-prompt="What assignments are due this week?" data-tool="canvas.get_assignments" aria-label="canvas.get_assignments — What assignments are due this week?">
-              <span class="tool-icon">&#x1F4CB;</span>
-              <span class="tool-name">Get Assignments</span>
-              <span class="tool-id">canvas.get_assignments</span>
-            </button>
-            <button class="tool-btn" data-prompt="Tell me about my CS 3704 course" data-tool="canvas.get_course" aria-label="canvas.get_course — Tell me about my CS 3704 course">
-              <span class="tool-icon">&#x1F393;</span>
-              <span class="tool-name">Get Course</span>
-              <span class="tool-id">canvas.get_course</span>
-            </button>
-            <button class="tool-btn" data-prompt="What are my current grades?" data-tool="canvas.get_grades" aria-label="canvas.get_grades — What are my current grades?">
-              <span class="tool-icon">&#x1F4CA;</span>
-              <span class="tool-name">Get Grades</span>
-              <span class="tool-id">canvas.get_grades</span>
-            </button>
-            <button class="tool-btn" data-prompt="Show me the syllabus for ECE 3574" data-tool="canvas.get_syllabus" aria-label="canvas.get_syllabus — Show me the syllabus for ECE 3574">
-              <span class="tool-icon">&#x1F4C4;</span>
-              <span class="tool-name">Get Syllabus</span>
-              <span class="tool-id">canvas.get_syllabus</span>
-            </button>
-            <button class="tool-btn" data-prompt="What's on my Canvas todo list?" data-tool="canvas.get_todo" aria-label="canvas.get_todo — What's on my Canvas todo list?">
-              <span class="tool-icon">&#x2705;</span>
-              <span class="tool-name">Get Todo</span>
-              <span class="tool-id">canvas.get_todo</span>
-            </button>
-            <button class="tool-btn" data-prompt="Any new announcements in my courses?" data-tool="canvas.list_announcements" aria-label="canvas.list_announcements — Any new announcements in my courses?">
-              <span class="tool-icon">&#x1F4E3;</span>
-              <span class="tool-name">List Announcements</span>
-              <span class="tool-id">canvas.list_announcements</span>
-            </button>
-            <button class="tool-btn" data-prompt="List all my enrolled courses this term" data-tool="canvas.list_courses" aria-label="canvas.list_courses — List all my enrolled courses this term">
-              <span class="tool-icon">&#x1F4DA;</span>
-              <span class="tool-name">List Courses</span>
-              <span class="tool-id">canvas.list_courses</span>
-            </button>
-            <button class="tool-btn" data-prompt="Show me my planner for the next 7 days" data-tool="canvas.list_planner_items" aria-label="canvas.list_planner_items — Show me my planner for the next 7 days">
-              <span class="tool-icon">&#x1F5D3;&#xFE0F;</span>
-              <span class="tool-name">List Planner Items</span>
-              <span class="tool-id">canvas.list_planner_items</span>
-            </button>
+          <div class="px-4 pb-4">
+            <pre class="text-xs text-gray-500 bg-gray-950 border border-gray-800/60 rounded p-3 overflow-x-auto mt-2">
+Browser → CF Worker proxy → HF Space (Gemma4 v7-dpo)
+          ↑                         ↓
+    render answer       tool-call loop + mock data</pre>
+            <p class="text-xs text-gray-500 mt-2 leading-relaxed">
+              The Worker holds the HF token server-side. The model runs the same
+              18-tool protocol as the Python SDK &mdash; same parser, same DPO weights.
+            </p>
+            <pre class="text-xs text-gray-400 bg-gray-950 border border-gray-800/60 rounded p-3 mt-2 overflow-x-auto">pip install canvas-sdk[autodownload]
+
+python -c "from canvas_sdk import CanvasAgent; print(CanvasAgent.auto().run('what is due?'))"</pre>
           </div>
         </details>
 
-        <!-- calendar (5) -->
-        <details class="tool-family-details" open>
-          <summary>
-            <span class="tool-family-chevron">&#9654;</span>
-            <span class="tool-family-header">calendar &mdash; 5 tools</span>
-          </summary>
-          <div class="tool-grid">
-            <button class="tool-btn" data-prompt="Create a study block tomorrow at 3pm for 90 minutes" data-tool="calendar.create_event" aria-label="calendar.create_event — Create a study block tomorrow at 3pm for 90 minutes">
-              <span class="tool-icon">&#x2795;</span>
-              <span class="tool-name">Create Event</span>
-              <span class="tool-id">calendar.create_event</span>
-            </button>
-            <button class="tool-btn" data-prompt="Cancel my Friday office hours visit" data-tool="calendar.delete_event" aria-label="calendar.delete_event — Cancel my Friday office hours visit">
-              <span class="tool-icon">&#x1F5D1;&#xFE0F;</span>
-              <span class="tool-name">Delete Event</span>
-              <span class="tool-id">calendar.delete_event</span>
-            </button>
-            <button class="tool-btn" data-prompt="Find me a 2-hour block to study tomorrow" data-tool="calendar.find_free_blocks" aria-label="calendar.find_free_blocks — Find me a 2-hour block to study tomorrow">
-              <span class="tool-icon">&#x1F50D;</span>
-              <span class="tool-name">Find Free Blocks</span>
-              <span class="tool-id">calendar.find_free_blocks</span>
-            </button>
-            <button class="tool-btn" data-prompt="What's on my calendar this week?" data-tool="calendar.list_events" aria-label="calendar.list_events — What's on my calendar this week?">
-              <span class="tool-icon">&#x1F4C5;</span>
-              <span class="tool-name">List Events</span>
-              <span class="tool-id">calendar.list_events</span>
-            </button>
-            <button class="tool-btn" data-prompt="Move my CS office hours to Wednesday at 4pm" data-tool="calendar.modify_event" aria-label="calendar.modify_event — Move my CS office hours to Wednesday at 4pm">
-              <span class="tool-icon">&#x270F;&#xFE0F;</span>
-              <span class="tool-name">Modify Event</span>
-              <span class="tool-id">calendar.modify_event</span>
-            </button>
+      </div><!-- /left column -->
+
+      <!-- ── Right: Chrome extension popup ──────────────────────────── -->
+      <div class="lg:col-span-3 lg:sticky lg:top-20">
+
+        <!-- "browser chrome" context bar above popup -->
+        <div class="bg-gray-800/70 border border-gray-700/60 border-b-0 rounded-t-lg px-3 py-2 flex items-center gap-2">
+          <div class="flex gap-1.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-gray-600"></span>
+            <span class="w-2.5 h-2.5 rounded-full bg-gray-600"></span>
+            <span class="w-2.5 h-2.5 rounded-full bg-gray-600"></span>
           </div>
-        </details>
-
-        <!-- reranker (1) -->
-        <details class="tool-family-details" open>
-          <summary>
-            <span class="tool-family-chevron">&#9654;</span>
-            <span class="tool-family-header">reranker &mdash; 1 tool</span>
-          </summary>
-          <div class="tool-grid">
-            <button class="tool-btn" data-prompt="Rank my todos by what I should do first" data-tool="reranker.priority_hint" aria-label="reranker.priority_hint — Rank my todos by what I should do first">
-              <span class="tool-icon">&#x1F3C6;</span>
-              <span class="tool-name">Priority Hint</span>
-              <span class="tool-id">reranker.priority_hint</span>
-            </button>
+          <div class="flex-1 bg-gray-700/50 rounded px-3 py-0.5 text-xs text-gray-500 font-mono truncate">
+            canvas.vt.edu/calendar
           </div>
-        </details>
+          <div class="w-5 h-5 rounded bg-canvas-red flex items-center justify-center font-bold text-white text-xs flex-shrink-0" title="Canvas Calendar Agent extension">C</div>
+        </div>
 
-        <!-- study (4) -->
-        <details class="tool-family-details" open>
-          <summary>
-            <span class="tool-family-chevron">&#9654;</span>
-            <span class="tool-family-header">study &mdash; 4 tools</span>
-          </summary>
-          <div class="tool-grid">
-            <button class="tool-btn" data-prompt="Build me an exam-prep bracket for the May 12 final" data-tool="study.exam_bracket" aria-label="study.exam_bracket — Build me an exam-prep bracket for the May 12 final">
-              <span class="tool-icon">&#x1F3D7;&#xFE0F;</span>
-              <span class="tool-name">Exam Bracket</span>
-              <span class="tool-id">study.exam_bracket</span>
-            </button>
-            <button class="tool-btn" data-prompt="What study block size should I use for a 4-credit physics class?" data-tool="study.recommend_block_size" aria-label="study.recommend_block_size — What study block size should I use for a 4-credit physics class?">
-              <span class="tool-icon">&#x23F1;&#xFE0F;</span>
-              <span class="tool-name">Recommend Block Size</span>
-              <span class="tool-id">study.recommend_block_size</span>
-            </button>
-            <button class="tool-btn" data-prompt="Plan a study schedule for my whole semester" data-tool="study.semester_schedule" aria-label="study.semester_schedule — Plan a study schedule for my whole semester">
-              <span class="tool-icon">&#x1F5FA;&#xFE0F;</span>
-              <span class="tool-name">Semester Schedule</span>
-              <span class="tool-id">study.semester_schedule</span>
-            </button>
-            <button class="tool-btn" data-prompt="Compute Cepeda spacing intervals for my exam in 12 days" data-tool="study.spaced_schedule" aria-label="study.spaced_schedule — Compute Cepeda spacing intervals for my exam in 12 days">
-              <span class="tool-icon">&#x1F9E0;</span>
-              <span class="tool-name">Spaced Schedule</span>
-              <span class="tool-id">study.spaced_schedule</span>
-            </button>
+        <!-- Extension popup -->
+        <div class="ext-popup" style="height: 540px;">
+          <!-- Extension title bar -->
+          <div class="ext-titlebar">
+            <div class="ext-icon">C</div>
+            <span class="ext-title">Canvas Calendar Agent</span>
+            <span class="ext-badge">v7-dpo &bull; HF Space</span>
           </div>
-        </details>
 
-        <p class="text-xs text-gray-600 mt-4 text-center">18 tools &bull; all live via HF Space &mdash; click any button to pre-fill and submit</p>
-      </div>
-    </div>
+          <!-- Chat window (flex-fill, scrollable) -->
+          <div id="chat" class="ext-chat space-y-3">
+            <div class="text-gray-600 text-xs text-center py-6" id="chat-empty">
+              Ask about your Canvas assignments, calendar, or study plan.
+            </div>
+          </div>
 
-    <div id="chat" class="bg-gray-900 border border-gray-800 rounded-2xl min-h-[280px] p-5 space-y-4 mb-4">
-      <div class="text-gray-500 text-sm text-center py-8" id="chat-empty">
-        Try a sample question above, or ask anything about Canvas / your schedule.
-      </div>
-    </div>
+          <!-- Input bar (pinned to bottom of popup) -->
+          <div class="ext-input-bar">
+            <form id="chat-form" class="flex gap-2">
+              <textarea
+                id="input"
+                rows="2"
+                placeholder="Ask about assignments, schedule, grades&hellip;"
+                class="flex-1 bg-gray-900 border border-gray-700 rounded text-xs focus:outline-none focus:border-canvas-red resize-none px-3 py-2 text-gray-200 placeholder-gray-600"
+                style="font-family: inherit;"
+              ></textarea>
+              <button type="submit" id="send-btn"
+                      class="bg-canvas-red hover:bg-canvas-dark text-white font-semibold px-4 rounded text-xs disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex-shrink-0">
+                Send
+              </button>
+            </form>
+          </div>
+        </div><!-- /ext-popup -->
 
-    <form id="chat-form" class="flex gap-2">
-      <textarea
-        id="input"
-        rows="2"
-        placeholder="Ask the agent &mdash; e.g. 'plan study blocks for finals week'"
-        class="flex-1 bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-canvas-red resize-none"
-      ></textarea>
-      <button type="submit" id="send-btn"
-              class="bg-canvas-red hover:bg-canvas-dark text-white font-semibold px-6 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed">
-        Send
-      </button>
-    </form>
-  </section>
+      </div><!-- /right column -->
 
-  <section class="max-w-4xl mx-auto px-6 py-12 border-t border-gray-800">
-    <h2 class="text-2xl font-bold mb-4">How it works</h2>
-    <pre class="text-xs text-gray-400 bg-gray-900 border border-gray-800 rounded-xl p-5 overflow-x-auto">
-+---------------------+   user msg    +---------------------------+
-|  Browser (this UI)  | ------------> |  HF Space (Gradio)        |
-|  + chat history     |               |  hosts Gemma4 v7-dpo      |
-+----------+----------+               +-------------+-------------+
-           ^                                        | response.data[0]
-           | rendered final answer                  | = {final_answer,
-           |                                        |    transcript,
-           |                                        |    tool_calls}
-           |                                        v
-           |                       +---------------------------+
-           +---------------------- |  parse tool_calls + render|
-                                   |  dispatchMock(name, args) |
-                                   +---------------------------+
-</pre>
-    <p class="text-gray-400 text-sm leading-relaxed mt-4">
-      The HF Space runs the same fine-tuned <code>gemma-4-e2b-it</code> v7-dpo weights
-      that the Python SDK auto-downloads from HuggingFace Hub on first run. Same parser,
-      same 18 tools, same contract &mdash; the demo and the SDK both call the canonical
-      DPO model.
-    </p>
-    <p class="text-gray-400 text-sm leading-relaxed mt-3">
-      Run it yourself:
-    </p>
-    <pre class="text-xs text-gray-300 bg-gray-900 border border-gray-800 rounded-xl p-5 mt-2 overflow-x-auto">pip install canvas-sdk[autodownload]
+    </div><!-- /grid -->
+  </main>
 
-python -c "from canvas_sdk import CanvasAgent; print(CanvasAgent.auto().run('what is due this week?'))"</pre>
-  </section>
-
-  <footer class="border-t border-gray-900 py-8 text-center text-gray-600 text-sm">
-    <p>CS3704 Canvas Calendar Agent &mdash; demo runs entirely in your browser.</p>
+  <footer class="border-t border-gray-900 py-6 text-center text-gray-700 text-xs">
+    CS3704 Canvas Calendar Agent &mdash; demo runs entirely in your browser via HuggingFace Spaces.
   </footer>
 
   <script>
@@ -341,10 +415,6 @@ python -c "from canvas_sdk import CanvasAgent; print(CanvasAgent.auto().run('wha
     {n:"study.exam_bracket",d:"Bracket pre-exam study time + cooldown around an exam slot."},
     {n:"reranker.priority_hint",d:"Rerank a list of upcoming items by urgency / weight / grade."}
   ];
-
-  // The HF Space already hosts the fine-tuned Gemma4 v7-dpo model with the
-  // tool-calling system prompt baked in. The browser only needs to send the
-  // user message and render the structured response.
 
   // -----------------------------------------------------------------
   // Mock Canvas data (week of 2026-05-04)
@@ -448,10 +518,6 @@ python -c "from canvas_sdk import CanvasAgent; print(CanvasAgent.auto().run('wha
   // -----------------------------------------------------------------
   // Cloudflare Worker proxy → HuggingFace Space (auth lives server-side)
   // -----------------------------------------------------------------
-  // The Worker holds HF_TOKEN as a Cloudflare secret, calls the Space's
-  // /gradio_api/call/chat endpoint with Bearer auth, and returns a clean
-  // JSON shape: { final_answer, tool_calls: [{tool, args, result}] }.
-  // No tokens are baked into this public JS file.
   const PROXY_URL = "https://cs3704-demo-proxy.kleinpanic.workers.dev/chat";
 
   async function callHFSpace(userMessage) {
@@ -471,7 +537,7 @@ python -c "from canvas_sdk import CanvasAgent; print(CanvasAgent.auto().run('wha
   }
 
   // -----------------------------------------------------------------
-  // UI (no innerHTML for untrusted content — use createElement / textContent)
+  // UI (no innerHTML for untrusted content)
   // -----------------------------------------------------------------
   const chat = document.getElementById("chat");
   const chatEmpty = document.getElementById("chat-empty");
@@ -490,7 +556,7 @@ python -c "from canvas_sdk import CanvasAgent; print(CanvasAgent.auto().run('wha
   ];
   for (const s of SAMPLES) {
     const btn = document.createElement("button");
-    btn.className = "text-xs px-3 py-1.5 rounded-full bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-700";
+    btn.className = "text-xs px-2.5 py-1 rounded bg-gray-800 hover:bg-gray-700 text-gray-400 border border-gray-700 transition-colors";
     btn.textContent = s;
     btn.addEventListener("click", () => { input.value = s; input.focus(); });
     samplesEl.appendChild(btn);
@@ -509,7 +575,6 @@ python -c "from canvas_sdk import CanvasAgent; print(CanvasAgent.auto().run('wha
     const summary = document.createElement("summary");
     summary.className = "px-3 py-2 flex items-center gap-2 text-gray-300";
 
-    // chevron
     const sumIcon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     sumIcon.setAttribute("class", "w-3 h-3 text-canvas-red");
     sumIcon.setAttribute("fill", "none");
@@ -529,7 +594,7 @@ python -c "from canvas_sdk import CanvasAgent; print(CanvasAgent.auto().run('wha
     summary.appendChild(nameSpan);
 
     const argsLabel = document.createElement("span");
-    argsLabel.className = "text-gray-500";
+    argsLabel.className = "text-gray-600";
     argsLabel.textContent = `(${Object.keys(tc.args).length} args)`;
     summary.appendChild(argsLabel);
 
@@ -540,7 +605,7 @@ python -c "from canvas_sdk import CanvasAgent; print(CanvasAgent.auto().run('wha
 
     const argsRow = document.createElement("div");
     const argsLab = document.createElement("span");
-    argsLab.className = "text-gray-500";
+    argsLab.className = "text-gray-600";
     argsLab.textContent = "args: ";
     const argsCode = document.createElement("code");
     argsCode.className = "text-gray-300";
@@ -551,7 +616,7 @@ python -c "from canvas_sdk import CanvasAgent; print(CanvasAgent.auto().run('wha
 
     const resRow = document.createElement("div");
     const resLab = document.createElement("span");
-    resLab.className = "text-gray-500";
+    resLab.className = "text-gray-600";
     resLab.textContent = "result:";
     resRow.appendChild(resLab);
     const resPre = document.createElement("pre");
@@ -571,19 +636,19 @@ python -c "from canvas_sdk import CanvasAgent; print(CanvasAgent.auto().run('wha
 
     const bubble = document.createElement("div");
     bubble.className = role === "user"
-      ? "chat-bubble-user max-w-[75%] rounded-2xl px-4 py-2.5"
-      : "chat-bubble-agent max-w-[85%] rounded-2xl px-4 py-3 text-gray-100";
+      ? "chat-bubble-user max-w-[80%] rounded px-3 py-2 text-xs"
+      : "chat-bubble-agent max-w-[90%] rounded px-3 py-2.5 text-gray-100";
 
     if (toolCalls && toolCalls.length) {
       const toolWrap = document.createElement("div");
-      toolWrap.className = "space-y-2 mb-2";
+      toolWrap.className = "space-y-1.5 mb-2";
       for (const tc of toolCalls) toolWrap.appendChild(makeToolCard(tc));
       bubble.appendChild(toolWrap);
     }
 
     if (content) {
       const text = document.createElement("div");
-      text.className = "text-sm leading-relaxed whitespace-pre-wrap";
+      text.className = "text-xs leading-relaxed whitespace-pre-wrap";
       text.textContent = content;
       bubble.appendChild(text);
     }
@@ -599,10 +664,10 @@ python -c "from canvas_sdk import CanvasAgent; print(CanvasAgent.auto().run('wha
     wrap.className = "flex justify-start";
     wrap.id = "typing";
     const bubble = document.createElement("div");
-    bubble.className = "chat-bubble-agent rounded-2xl px-4 py-3 text-sm flex gap-1.5";
+    bubble.className = "chat-bubble-agent rounded px-3 py-2.5 text-xs flex gap-1.5";
     for (let i = 0; i < 3; i++) {
       const dot = document.createElement("span");
-      dot.className = "typing-dot w-2 h-2 rounded-full bg-gray-500";
+      dot.className = "typing-dot w-1.5 h-1.5 rounded-full bg-gray-500";
       bubble.appendChild(dot);
     }
     wrap.appendChild(bubble);
@@ -614,8 +679,6 @@ python -c "from canvas_sdk import CanvasAgent; print(CanvasAgent.auto().run('wha
     if (t) t.remove();
   }
 
-  // Normalize a tool_call entry from the HF Space response into the
-  // {tool, args, result} shape that makeToolCard() expects.
   function normalizeToolCall(tc) {
     return {
       tool: tc.tool || tc.name || "(unknown)",
@@ -636,7 +699,7 @@ python -c "from canvas_sdk import CanvasAgent; print(CanvasAgent.auto().run('wha
         payload = await callHFSpace(userMsg);
       } catch (err) {
         hideTyping();
-        renderMessage("agent", `Error calling HF Space: ${err.message} (the Space may be cold-starting; try again in ~30s)`);
+        renderMessage("agent", `Error: ${err.message}\n(Space may be cold-starting — try again in ~30s)`);
         return;
       }
       hideTyping();
@@ -650,7 +713,7 @@ python -c "from canvas_sdk import CanvasAgent; print(CanvasAgent.auto().run('wha
     }
   }
 
-  // 18-tool button grid: click -> pre-fill textarea -> submit
+  // 18-tool buttons: click -> pre-fill -> submit
   document.querySelectorAll(".tool-btn").forEach(btn => {
     btn.addEventListener("click", () => {
       input.value = btn.dataset.prompt;
@@ -659,7 +722,7 @@ python -c "from canvas_sdk import CanvasAgent; print(CanvasAgent.auto().run('wha
     });
   });
 
-  // Toggle show/hide the tool grid panel
+  // Toggle tools panel
   const toggleToolsBtn = document.getElementById("toggle-tools-btn");
   const toolGridPanel = document.getElementById("tool-grid-panel");
   toggleToolsBtn.addEventListener("click", () => {
@@ -685,9 +748,9 @@ python -c "from canvas_sdk import CanvasAgent; print(CanvasAgent.auto().run('wha
     history = [];
     while (chat.firstChild) chat.removeChild(chat.firstChild);
     const empty = document.createElement("div");
-    empty.className = "text-gray-500 text-sm text-center py-8";
+    empty.className = "text-gray-600 text-xs text-center py-6";
     empty.id = "chat-empty";
-    empty.textContent = "Chat cleared. Try a sample question above.";
+    empty.textContent = "Chat cleared. Ask about assignments, schedule, or study plan.";
     chat.appendChild(empty);
   });
   </script>
