@@ -9,26 +9,36 @@ Usage (Chrome registers this via the host manifest):
   python -m canvas_sdk.host
 """
 
+import dataclasses
 import json
 import struct
 import sys
 from typing import Any
 
-from canvas_sdk.canvas import Canvas
+from canvas_sdk.client import CanvasClient
 
 
 # ── Serialization ─────────────────────────────────────────────────────────────
 
 
 def _serialize(obj: Any) -> Any:
-    """Recursively convert CanvasObject / PaginatedList to plain dicts/lists."""
+    """Recursively convert dataclasses / plain objects to plain dicts/lists."""
     if obj is None or isinstance(obj, (str, int, float, bool)):
         return obj
     if isinstance(obj, dict):
         return {k: _serialize(v) for k, v in obj.items()}
     if isinstance(obj, list):
         return [_serialize(i) for i in obj]
-    # CanvasObject — attrs are instance vars; skip private + _date variants
+    if dataclasses.is_dataclass(obj) and not isinstance(obj, type):
+        out = {}
+        for f in dataclasses.fields(obj):
+            if f.name == "extra_fields":
+                for ek, ev in (getattr(obj, "extra_fields", None) or {}).items():
+                    out[ek] = _serialize(ev)
+            else:
+                out[f.name] = _serialize(getattr(obj, f.name))
+        return out
+    # Plain object — attrs are instance vars; skip private + _date variants
     if hasattr(obj, "__dict__"):
         out = {}
         for k, v in vars(obj).items():
@@ -40,7 +50,7 @@ def _serialize(obj: Any) -> Any:
 
 
 def _drain(paginated, limit: int = 100) -> list:
-    """Pull up to `limit` items from a PaginatedList and serialize."""
+    """Pull up to `limit` items from a list/iterable and serialize."""
     results = []
     for item in paginated:
         results.append(_serialize(item))
@@ -80,7 +90,7 @@ def _handle(msg: dict) -> dict:
     if not token:
         return {"ok": False, "error": "No token"}
 
-    canvas = Canvas(base_url, token)
+    canvas = CanvasClient(base_url, token)
 
     if method == "getUser":
         user = canvas.get_current_user()
@@ -99,7 +109,7 @@ def _handle(msg: dict) -> dict:
         return {"ok": True, "data": _drain(courses)}
 
     if method == "getUpcomingAssignments":
-        events = canvas.get_upcoming_events(per_page=50)
+        events = canvas.get_upcoming_events()
         return {"ok": True, "data": _drain(events)}
 
     if method == "getTodo":
@@ -115,35 +125,31 @@ def _handle(msg: dict) -> dict:
         return {"ok": False, "error": "courseId required"}
 
     if method == "getCourseAssignments":
-        course = canvas.get_course(course_id)
-        assignments = course.get_assignments(
+        assignments = canvas.get_assignments(
+            course_id,
             include=["submission"],
             per_page=50,
         )
         return {"ok": True, "data": _drain(assignments)}
 
     if method == "getCourseGrades":
-        # Returns enrollment with current_score, final_score, computed_current_grade
-        course = canvas.get_course(course_id)
-        enrollments = course.get_enrollments(
+        enrollments = canvas.get_enrollments(
+            course_id,
             user_id="self",
             include=["current_points", "final_grade"],
         )
         return {"ok": True, "data": _drain(enrollments)}
 
     if method == "getCourseAnnouncements":
-        course = canvas.get_course(course_id)
-        topics = course.get_discussion_topics(only_announcements=True, per_page=25)
+        topics = canvas.get_discussion_topics(course_id, only_announcements=True)
         return {"ok": True, "data": _drain(topics)}
 
     if method == "getCourseModules":
-        course = canvas.get_course(course_id)
-        modules = course.get_modules(per_page=100)
+        modules = canvas.get_modules(course_id)
         return {"ok": True, "data": _drain(modules)}
 
     if method == "getCourseFiles":
-        course = canvas.get_course(course_id)
-        files = course.get_files(per_page=50)
+        files = canvas.get_files(course_id)
         return {"ok": True, "data": _drain(files)}
 
     return {"ok": False, "error": f"Unknown method: {method}"}
