@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>How the Model Was Trained — Canvas Calendar Agent</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: { canvas: { red: '#d63e36', dark: '#b83830' } },
+          fontFamily: {
+            sans: ['Segoe UI', 'system-ui', '-apple-system', 'Roboto', 'sans-serif'],
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    pre { white-space: pre-wrap; word-break: break-word; }
+    .method-badge {
+      display: inline-block; font-size: 0.62rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.06em;
+      border-radius: 3px; padding: 1px 6px;
+    }
+    .guardrail-card {
+      background: #111116; border: 1px solid #2e2e38; border-radius: 6px;
+      padding: 10px 12px;
+    }
+    .pair-card {
+      background: #111116; border: 1px solid #2e2e38; border-radius: 6px;
+      padding: 12px 14px;
+    }
+    table { border-collapse: collapse; width: 100%; }
+    th { background: #111116; }
+    th, td { border: 1px solid #2e2e38; padding: 8px 12px; text-align: left; vertical-align: top; }
+    tr:nth-child(even) td { background: #0d0d12; }
+    .sft-row td { background: #1a0d0d !important; border-color: #d63e36 !important; }
+  </style>
+</head>
+<body class="bg-gray-950 text-gray-100 font-sans min-h-screen">
+
+  <nav class="sticky top-0 z-40 bg-gray-950/95 backdrop-blur border-b border-gray-800/60">
+    <div class="max-w-7xl mx-auto px-6 flex items-center justify-between" style="height:52px">
+      <a href="../index.html" class="flex items-center gap-2.5">
+        <div class="w-7 h-7 rounded bg-canvas-red flex items-center justify-center font-bold text-white text-xs">C</div>
+        <span class="font-semibold text-sm">Canvas Calendar Agent</span>
+      </a>
+      <div class="flex items-center gap-5 text-xs text-gray-400">
+        <a href="../index.html" class="hover:text-white transition-colors">Home</a>
+        <a href="index.html" class="hover:text-white transition-colors">Agent Demo</a>
+        <a href="../docs/architecture/" class="hover:text-white transition-colors">Architecture</a>
+        <span class="text-white">How it Works</span>
+        <a href="https://github.com/kleinpanic/CS3704-Canvas-Project" target="_blank" rel="noopener" class="hover:text-white transition-colors">GitHub</a>
+        <a href="https://huggingface.co/spaces/kleinpanic93/canvas-calendar-agent-demo" target="_blank" rel="noopener" class="hover:text-white transition-colors">&#x1F917; HF Space</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="max-w-4xl mx-auto px-6 pt-12 pb-20 space-y-14">
+
+    <!-- ── 1. Hero ──────────────────────────────────────────────────── -->
+    <section>
+      <div class="inline-flex items-center gap-2 bg-canvas-red/10 border border-canvas-red/30 rounded px-3 py-1 text-canvas-red text-xs font-medium mb-4">
+        <span class="w-1.5 h-1.5 rounded-full bg-canvas-red animate-pulse"></span>
+        Deployed: v7-DPO &nbsp;&bull;&nbsp;
+        <a href="https://huggingface.co/kleinpanic93/canvas-calendar-agent-v7-dpo" target="_blank" rel="noopener" class="underline underline-offset-2">HF Space</a>
+      </div>
+      <h1 class="text-4xl font-bold mb-4 leading-tight">How the Model Was Trained</h1>
+      <p class="text-gray-400 text-base leading-relaxed max-w-2xl">
+        v7-DPO is a fine-tuned Gemma-4-E2B-IT optimized for 18-tool function calling
+        across Canvas LMS, calendar scheduling, and study planning. This page documents
+        the full training methodology: SFT trajectory collection, DPO preference
+        optimization, the 9-method ablation matrix, pre-execution guardrails, and
+        the bench harness used to validate results.
+      </p>
+    </section>
+
+    <!-- ── 2. The Model ─────────────────────────────────────────────── -->
+    <section id="model">
+      <h2 class="text-xl font-bold mb-4" style="color:#d63e36">The Base Model</h2>
+      <div class="bg-gray-900/60 border border-gray-800 rounded-lg p-6 flex flex-col sm:flex-row gap-6">
+        <div class="flex-1 space-y-3">
+          <div class="flex items-center gap-3 mb-1">
+            <span class="text-lg font-bold">Gemma-4-E2B-IT</span>
+            <span class="method-badge" style="background:#1a2a1a;color:#4ade80;border:1px solid #166534">base</span>
+          </div>
+          <p class="text-sm text-gray-400 leading-relaxed">
+            Google's MatFormer architecture — a nested transformer where the same
+            weights serve multiple effective parameter counts. At the 2B extraction
+            point the model is multimodal (text + vision tokens) and instruction-tuned.
+            Fine-tuning inherits the instruction-following alignment without catastrophic
+            forgetting of general capabilities.
+          </p>
+          <a href="https://huggingface.co/google/gemma-4-e2b-it" target="_blank" rel="noopener"
+             class="inline-flex items-center gap-1.5 text-xs text-canvas-red hover:underline mt-1">
+            &#x1F917; google/gemma-4-e2b-it on HuggingFace
+          </a>
+        </div>
+        <div class="shrink-0 grid grid-cols-2 gap-3 text-center text-xs text-gray-400 self-start sm:self-center">
+          <div class="bg-gray-950 border border-gray-800 rounded p-3">
+            <div class="text-xl font-bold text-white">2B</div>
+            <div>effective params</div>
+          </div>
+          <div class="bg-gray-950 border border-gray-800 rounded p-3">
+            <div class="text-xl font-bold text-white">18</div>
+            <div>tools</div>
+          </div>
+          <div class="bg-gray-950 border border-gray-800 rounded p-3">
+            <div class="text-xl font-bold text-white">MatFormer</div>
+            <div>architecture</div>
+          </div>
+          <div class="bg-gray-950 border border-gray-800 rounded p-3">
+            <div class="text-xl font-bold text-white">multimodal</div>
+            <div>text + vision</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 3. SFT ───────────────────────────────────────────────────── -->
+    <section id="sft">
+      <h2 class="text-xl font-bold mb-1" style="color:#d63e36">Supervised Fine-Tuning (SFT)</h2>
+      <p class="text-sm text-gray-500 mb-4">Phase 1 — teaches the model what a correct tool call looks like</p>
+
+      <div class="bg-gray-900/60 border border-gray-800 rounded-lg p-6 space-y-5">
+        <p class="text-sm text-gray-300 leading-relaxed">
+          SFT trains on 400–500 human-curated tool-call trajectories. Each trajectory
+          is a full user-turn → model-turn sequence where the model outputs one or more
+          native Gemma-4 tool calls followed by a synthesized answer. The model learns
+          correct syntax, correct tool selection, and correct argument structure from
+          direct imitation.
+        </p>
+
+        <div>
+          <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Native Gemma-4 tool-call format</p>
+          <pre class="bg-gray-950 border border-gray-800/60 rounded text-xs text-gray-400 p-4 overflow-x-auto">&lt;|tool_call&gt;call:canvas.get_assignments{course_id: "CS3704", days_ahead: 7}&lt;tool_call|&gt;</pre>
+          <p class="text-xs text-gray-600 mt-2">
+            The <code class="text-gray-500">&lt;|tool_call&gt;</code> / <code class="text-gray-500">&lt;tool_call|&gt;</code> sentinel
+            tokens are part of Gemma-4's native vocabulary. The parser mirrors the Python SDK's
+            <code class="text-gray-500">tool_parser.py</code> exactly — same regex, same round-trip guarantee.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+          <div class="bg-gray-950 border border-gray-800 rounded p-4 space-y-1">
+            <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Dataset shape</div>
+            <div class="flex justify-between text-xs"><span class="text-gray-500">Trajectories</span><span class="text-gray-200">400–500</span></div>
+            <div class="flex justify-between text-xs"><span class="text-gray-500">Tools covered</span><span class="text-gray-200">18 (all)</span></div>
+            <div class="flex justify-between text-xs"><span class="text-gray-500">Min per tool</span><span class="text-gray-200">30</span></div>
+            <div class="flex justify-between text-xs"><span class="text-gray-500">Distribution CV</span><span class="text-gray-200">≤ 0.3</span></div>
+          </div>
+          <div class="bg-gray-950 border border-gray-800 rounded p-4 space-y-1">
+            <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Distribution constraint</div>
+            <p class="text-xs text-gray-400 leading-relaxed">
+              CV ≤ 0.3 prevents the model from over-indexing on high-frequency tools
+              (e.g. <code class="text-gray-500">canvas.get_assignments</code>) at the cost of rare ones
+              (e.g. <code class="text-gray-500">reranker.priority_hint</code>). Enforced by guardrail G4.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 4. DPO ───────────────────────────────────────────────────── -->
+    <section id="dpo">
+      <h2 class="text-xl font-bold mb-1" style="color:#d63e36">Direct Preference Optimization (DPO)</h2>
+      <p class="text-sm text-gray-500 mb-4">Phase 2 — teaches the model what a <em>better</em> tool call looks like</p>
+
+      <div class="bg-gray-900/60 border border-gray-800 rounded-lg p-6 space-y-6">
+        <div class="space-y-3">
+          <p class="text-sm text-gray-300 leading-relaxed">
+            DPO (Rafailov et al. 2023,
+            <a href="https://arxiv.org/abs/2305.18290" target="_blank" rel="noopener" class="text-canvas-red hover:underline">arXiv:2305.18290</a>)
+            replaces the RLHF reward model with a closed-form loss derived directly from the
+            Bradley-Terry preference model. Given a preference pair (chosen, rejected), DPO
+            increases the log-probability of the chosen completion relative to the rejected one,
+            weighted by how much the current policy has already diverged from the reference.
+          </p>
+          <div class="bg-gray-950 border border-gray-800/60 rounded p-4">
+            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Reference model role</p>
+            <p class="text-xs text-gray-400 leading-relaxed">
+              The reference model is the <strong class="text-gray-200">SFT checkpoint</strong> — it acts as a KL-divergence
+              anchor, not a teacher. The DPO objective penalizes moving too far from the SFT
+              distribution, preventing mode collapse on easy preferences. With β = 0.3
+              (stronger regularization), this is critical for small-N datasets (&lt; 2000 pairs)
+              where overfitting is the primary failure mode.
+            </p>
+          </div>
+        </div>
+
+        <div>
+          <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Four preference pair types</p>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+
+            <div class="pair-card">
+              <div class="flex items-center gap-2 mb-2">
+                <span class="method-badge" style="background:#1a1a0d;color:#facc15;border:1px solid #713f12">parsimony</span>
+              </div>
+              <p class="text-xs text-gray-400 leading-relaxed">
+                <strong class="text-gray-200">Chosen:</strong> 1 minimal tool call<br/>
+                <strong class="text-gray-200">Rejected:</strong> 4+ chained calls for same outcome<br/>
+                Trains the model to prefer the shortest correct solution.
+              </p>
+            </div>
+
+            <div class="pair-card">
+              <div class="flex items-center gap-2 mb-2">
+                <span class="method-badge" style="background:#1a0d0d;color:#f87171;border:1px solid #7f1d1d">wrong_tool</span>
+              </div>
+              <p class="text-xs text-gray-400 leading-relaxed">
+                <strong class="text-gray-200">Chosen:</strong> correct tool name from SDK registry<br/>
+                <strong class="text-gray-200">Rejected:</strong> hallucinated tool name<br/>
+                Trains the model to stay within the 18-tool manifest.
+              </p>
+            </div>
+
+            <div class="pair-card">
+              <div class="flex items-center gap-2 mb-2">
+                <span class="method-badge" style="background:#0d0d1a;color:#818cf8;border:1px solid #312e81">wrong_args</span>
+              </div>
+              <p class="text-xs text-gray-400 leading-relaxed">
+                <strong class="text-gray-200">Chosen:</strong> correct, complete argument set<br/>
+                <strong class="text-gray-200">Rejected:</strong> missing or semantically wrong args<br/>
+                Trains argument fidelity independently of tool selection.
+              </p>
+            </div>
+
+            <div class="pair-card">
+              <div class="flex items-center gap-2 mb-2">
+                <span class="method-badge" style="background:#0d1a0d;color:#86efac;border:1px solid #14532d">format</span>
+              </div>
+              <p class="text-xs text-gray-400 leading-relaxed">
+                <strong class="text-gray-200">Chosen:</strong> native <code class="text-gray-300">&lt;|tool_call&gt;</code> syntax<br/>
+                <strong class="text-gray-200">Rejected:</strong> natural-language description of a tool call<br/>
+                Reinforces structured output over prose fallback.
+              </p>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 5. 9-Method Matrix ───────────────────────────────────────── -->
+    <section id="matrix">
+      <h2 class="text-xl font-bold mb-1" style="color:#d63e36">9-Method Ablation Matrix</h2>
+      <p class="text-sm text-gray-500 mb-4">Every method trained on the same data split — only the loss function changes</p>
+
+      <div class="bg-gray-900/60 border border-gray-800 rounded-lg overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="text-xs text-gray-300">
+            <thead>
+              <tr>
+                <th class="text-gray-400 font-semibold text-xs uppercase tracking-wide">Method</th>
+                <th class="text-gray-400 font-semibold text-xs uppercase tracking-wide">Dataset format</th>
+                <th class="text-gray-400 font-semibold text-xs uppercase tracking-wide">Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="sft-row">
+                <td><strong class="text-white">SFT</strong> <span class="method-badge ml-1" style="background:#d63e3622;color:#d63e36;border:1px solid #d63e3644">baseline</span></td>
+                <td>trajectory data<br/><code class="text-gray-500">{prompt, completion}</code></td>
+                <td>Direct imitation of correct tool-call sequences. Reference checkpoint for all DPO variants.</td>
+              </tr>
+              <tr>
+                <td><strong>LoRA</strong></td>
+                <td>SFT trajectory data</td>
+                <td>PEFT wrapper over SFT. Low-rank adapter only; base weights frozen. Faster iteration.</td>
+              </tr>
+              <tr>
+                <td><strong>QLoRA</strong></td>
+                <td>SFT trajectory data</td>
+                <td>LoRA + 4-bit NF4 quantization. Reduces VRAM by ~60%. Quality delta vs LoRA is the ablation question.</td>
+              </tr>
+              <tr>
+                <td><strong>DPO</strong></td>
+                <td>preference pairs<br/><code class="text-gray-500">{prompt, chosen, rejected}</code></td>
+                <td>Rafailov 2023. β=0.3. Reference = SFT checkpoint. Primary production method.</td>
+              </tr>
+              <tr>
+                <td><strong>IPO</strong></td>
+                <td>preference pairs</td>
+                <td>Identity Preference Optimization (Azar et al.). Removes Bradley-Terry assumption; theoretically better on near-equal pairs.</td>
+              </tr>
+              <tr>
+                <td><strong>APO-Zero</strong></td>
+                <td>preference pairs</td>
+                <td>Anchored Preference Optimization with zero anchor. Stabilizes training when reference model is weak.</td>
+              </tr>
+              <tr>
+                <td><strong>SPPO</strong></td>
+                <td>preference pairs</td>
+                <td>Self-Play Preference Optimization. Iterative; each round re-ranks pairs using the current policy.</td>
+              </tr>
+              <tr>
+                <td><strong>NCA</strong></td>
+                <td>preference pairs</td>
+                <td>Noise-Contrastive Alignment. Treats rejected as noise; contrastive loss formulation.</td>
+              </tr>
+              <tr>
+                <td><strong>KTO</strong></td>
+                <td>unpaired desirability<br/><code class="text-gray-500">{prompt, completion, label}</code></td>
+                <td>Kahneman-Tversky Optimization (Ethayarajh et al.). Works without paired comparisons — useful when pairing is ambiguous.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="px-4 py-2.5 border-t border-gray-800 text-xs text-gray-600">
+          DPO/IPO/APO-Zero/SPPO/NCA all use the same 4-type preference pairs; only <code>loss_type</code> differs in the TRL trainer config.
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 6. Pre-execution Guardrails ─────────────────────────────── -->
+    <section id="guardrails">
+      <h2 class="text-xl font-bold mb-1" style="color:#d63e36">Pre-execution Guardrails (G1–G13)</h2>
+      <p class="text-sm text-gray-500 mb-2">Automated fail-stop CLI checks that run before every training job</p>
+      <p class="text-sm text-gray-400 mb-5 leading-relaxed">
+        Each guardrail encodes a specific failure mode discovered during prior training runs.
+        Every check is deterministic and exits non-zero on violation — no training job starts
+        if any guardrail fails. <code class="text-xs text-gray-500">canvas-train --check</code> runs all 13 in sequence.
+      </p>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+
+        <div class="guardrail-card">
+          <div class="flex items-center gap-2 mb-1.5">
+            <span class="text-xs font-bold" style="color:#d63e36">G1</span>
+            <span class="text-xs font-semibold text-gray-300">Tool-call token coverage</span>
+          </div>
+          <p class="text-xs text-gray-500 leading-relaxed">≥80% of chosen/rejected completions must contain the <code>&lt;|tool_call&gt;</code> sentinel. Catches data pipelines that drop the token.</p>
+        </div>
+
+        <div class="guardrail-card">
+          <div class="flex items-center gap-2 mb-1.5">
+            <span class="text-xs font-bold" style="color:#d63e36">G2</span>
+            <span class="text-xs font-semibold text-gray-300">Eval dataset required</span>
+          </div>
+          <p class="text-xs text-gray-500 leading-relaxed">eval_dataset must exist and be item-disjoint from train. Prevents eval contamination and silent overfitting.</p>
+        </div>
+
+        <div class="guardrail-card">
+          <div class="flex items-center gap-2 mb-1.5">
+            <span class="text-xs font-bold" style="color:#d63e36">G3</span>
+            <span class="text-xs font-semibold text-gray-300">Base model bench sanity</span>
+          </div>
+          <p class="text-xs text-gray-500 leading-relaxed">Quick bench against base model must show ≥20% first-tool accuracy. If base is already broken, no fine-tune will fix it.</p>
+        </div>
+
+        <div class="guardrail-card">
+          <div class="flex items-center gap-2 mb-1.5">
+            <span class="text-xs font-bold" style="color:#d63e36">G4</span>
+            <span class="text-xs font-semibold text-gray-300">Tool distribution CV ≤ 0.3</span>
+          </div>
+          <p class="text-xs text-gray-500 leading-relaxed">Coefficient of variation across 18 tools must be ≤ 0.3, with min 30 examples per tool. Prevents distribution skew.</p>
+        </div>
+
+        <div class="guardrail-card">
+          <div class="flex items-center gap-2 mb-1.5">
+            <span class="text-xs font-bold" style="color:#d63e36">G5</span>
+            <span class="text-xs font-semibold text-gray-300">Preflight grad norm</span>
+          </div>
+          <p class="text-xs text-gray-500 leading-relaxed">1-step dry run: grad_norm must be &lt; 1.0. Catches numerical instability (NaN/Inf in activations) before a full run wastes GPU hours.</p>
+        </div>
+
+        <div class="guardrail-card">
+          <div class="flex items-center gap-2 mb-1.5">
+            <span class="text-xs font-bold" style="color:#d63e36">G6</span>
+            <span class="text-xs font-semibold text-gray-300">Pipeline shrinkage ≤ 30%</span>
+          </div>
+          <p class="text-xs text-gray-500 leading-relaxed">Each processing stage (tokenize → filter → pair) must retain ≥ 70% of its input. Excessive shrinkage signals a pipeline bug, not a data quality issue.</p>
+        </div>
+
+        <div class="guardrail-card">
+          <div class="flex items-center gap-2 mb-1.5">
+            <span class="text-xs font-bold" style="color:#d63e36">G7</span>
+            <span class="text-xs font-semibold text-gray-300">Tool name registry check</span>
+          </div>
+          <p class="text-xs text-gray-500 leading-relaxed">Every tool name in the dataset must appear in the SDK tool registry. Catches stale or renamed tool references before they poison the model.</p>
+        </div>
+
+        <div class="guardrail-card">
+          <div class="flex items-center gap-2 mb-1.5">
+            <span class="text-xs font-bold" style="color:#d63e36">G8</span>
+            <span class="text-xs font-semibold text-gray-300">Serializer round-trip</span>
+          </div>
+          <p class="text-xs text-gray-500 leading-relaxed">Parser → serializer → parser round-trip must pass 100% of samples. A round-trip failure means the model will emit unparseable output.</p>
+        </div>
+
+        <div class="guardrail-card">
+          <div class="flex items-center gap-2 mb-1.5">
+            <span class="text-xs font-bold" style="color:#d63e36">G9</span>
+            <span class="text-xs font-semibold text-gray-300">Behavioral reward margins</span>
+          </div>
+          <p class="text-xs text-gray-500 leading-relaxed">Micro-bench verifies reward margins move in the correct direction per pair type — parsimony pairs should widen the parsimony margin, not the format margin.</p>
+        </div>
+
+        <div class="guardrail-card">
+          <div class="flex items-center gap-2 mb-1.5">
+            <span class="text-xs font-bold" style="color:#d63e36">G10</span>
+            <span class="text-xs font-semibold text-gray-300">Docker container smoke test</span>
+          </div>
+          <p class="text-xs text-gray-500 leading-relaxed"><code>canvas-train --help</code> inside the training container must exit 0. Catches broken dependencies and mis-built images before a multi-hour run.</p>
+        </div>
+
+        <div class="guardrail-card">
+          <div class="flex items-center gap-2 mb-1.5">
+            <span class="text-xs font-bold" style="color:#d63e36">G11</span>
+            <span class="text-xs font-semibold text-gray-300">Sequence length budget</span>
+          </div>
+          <p class="text-xs text-gray-500 leading-relaxed">&lt;1% of rows may exceed max_length=2048. Rows above the limit are silently truncated during training — high truncation rates indicate dataset construction errors.</p>
+        </div>
+
+        <div class="guardrail-card">
+          <div class="flex items-center gap-2 mb-1.5">
+            <span class="text-xs font-bold" style="color:#d63e36">G12</span>
+            <span class="text-xs font-semibold text-gray-300">Minimum dataset sizes</span>
+          </div>
+          <p class="text-xs text-gray-500 leading-relaxed">DPO/KTO methods require ≥ 1000 preference pairs; SFT requires ≥ 200 trajectories. Below these thresholds overfitting is near-certain.</p>
+        </div>
+
+        <div class="guardrail-card sm:col-span-2 lg:col-span-3">
+          <div class="flex items-center gap-2 mb-1.5">
+            <span class="text-xs font-bold" style="color:#d63e36">G13</span>
+            <span class="text-xs font-semibold text-gray-300">Trajectory tool repetition</span>
+          </div>
+          <p class="text-xs text-gray-500 leading-relaxed">No single tool may appear more than 3× in one trajectory. Excessive repetition teaches the model to loop rather than complete — a failure mode we observed directly in pre-v7 runs.</p>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ── 7. Bench Harness ─────────────────────────────────────────── -->
+    <section id="bench">
+      <h2 class="text-xl font-bold mb-1" style="color:#d63e36">Bench Harness</h2>
+      <p class="text-sm text-gray-500 mb-4">Offline evaluation protocol used to select the production checkpoint</p>
+
+      <div class="bg-gray-900/60 border border-gray-800 rounded-lg p-6 space-y-5">
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center text-xs text-gray-400">
+          <div class="bg-gray-950 border border-gray-800 rounded p-4">
+            <div class="text-2xl font-bold text-white">500+</div>
+            <div class="mt-1">evaluation prompts</div>
+          </div>
+          <div class="bg-gray-950 border border-gray-800 rounded p-4">
+            <div class="text-2xl font-bold text-white">18</div>
+            <div class="mt-1">tools covered</div>
+          </div>
+          <div class="bg-gray-950 border border-gray-800 rounded p-4">
+            <div class="text-2xl font-bold text-white">≥25×</div>
+            <div class="mt-1">each tool as expected_tools[0]</div>
+          </div>
+          <div class="bg-gray-950 border border-gray-800 rounded p-4">
+            <div class="text-2xl font-bold text-white">95%</div>
+            <div class="mt-1">Wilson CI per result</div>
+          </div>
+        </div>
+
+        <div class="space-y-3">
+          <div>
+            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Metrics</p>
+            <ul class="text-sm text-gray-400 space-y-1.5">
+              <li class="flex gap-2"><span class="text-canvas-red shrink-0">&#x2192;</span><span><strong class="text-gray-300">Tool selection accuracy</strong> — did the model call the correct tool as its first action? Measured per tool, per method.</span></li>
+              <li class="flex gap-2"><span class="text-canvas-red shrink-0">&#x2192;</span><span><strong class="text-gray-300">Argument accuracy</strong> — ToolBench-style partial match on required arguments (exact for IDs, fuzzy for natural-language fields).</span></li>
+              <li class="flex gap-2"><span class="text-canvas-red shrink-0">&#x2192;</span><span><strong class="text-gray-300">Wilson 95% CI</strong> — each per-tool accuracy estimate comes with a Wilson score confidence interval. Small per-tool samples (&lt;40) are flagged as low-confidence.</span></li>
+              <li class="flex gap-2"><span class="text-canvas-red shrink-0">&#x2192;</span><span><strong class="text-gray-300">Parsimony rate</strong> — fraction of correct responses that use the minimum-cardinality tool set. DPO should improve this vs SFT baseline.</span></li>
+            </ul>
+          </div>
+          <div>
+            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Checkpoint selection</p>
+            <p class="text-sm text-gray-400 leading-relaxed">
+              The production checkpoint is the epoch that maximizes macro-average tool selection
+              accuracy on the eval split, subject to a constraint that no individual tool falls
+              below 40% (tool-floor constraint). This prevents selecting a checkpoint that is
+              strong on common tools but has regressed on rare ones.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="border-t border-gray-900 py-6 text-center text-gray-700 text-xs">
+    CS3704 Canvas Calendar Agent &mdash; v7-DPO methodology. Model weights on
+    <a href="https://huggingface.co/kleinpanic93/canvas-calendar-agent-v7-dpo" target="_blank" rel="noopener" class="hover:text-gray-500 underline">HuggingFace</a>.
+  </footer>
+
+</body>
+</html>
