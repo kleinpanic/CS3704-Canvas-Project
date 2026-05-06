@@ -186,7 +186,7 @@ flowchart LR
 ```
 
 Contract: **the extension is GUI; the SDK is the only agent. Never duplicate tool parsing or
-agent loops in the extension.** See [`REVIEW-extension-sdk.md`](REVIEW-extension-sdk.md).
+agent loops in the extension.**
 
 ### High-level system design
 

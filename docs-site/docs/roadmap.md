@@ -21,7 +21,7 @@ Recently completed:
 ### 2. SDK agent tools
 - 18-tool agent registry is now live (PR #83)
 - calendar adapter implemented
-- remaining SDK surface area documented in REVIEWS.md and codebase
+- remaining SDK surface area documented in the codebase
 
 ### 3. Docs and site maintenance
 - keep MkDocs pages aligned with current architecture
