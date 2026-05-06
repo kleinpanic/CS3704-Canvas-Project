@@ -1,83 +1,63 @@
-# Browser Extension Architecture
+# Browser Extension
 
-This page documents the current browser extension architecture after the shared-client refactor landed on `main`.
+**Canvas Deadline Tracker** is a Manifest V3 Chrome extension targeting `canvas.vt.edu`.
 
-## Current Status
+Source lives under `extension/`.
 
-The browser extension is now a real part of the project, not just a future placeholder.
+## Popup
 
-Implemented pieces:
-- MV3 browser extension source under `extension/`
-- popup UI for upcoming assignments and course filtering
-- background service worker for sync, badge updates, and notifications
-- IndexedDB cache adapter for stale-while-revalidate behavior
-- shared extension-side Canvas client layer
-- shared runtime contract between popup and background code
+The popup has four top-level tabs:
 
-## What Changed Recently
+- **Upcoming** — assignments due within a configurable window, with course filter, dismiss, and quick-open links
+- **Courses** — full course list; clicking a course opens a detail view with sub-tabs for Assignments, Announcements, and Modules, plus a RateMyProfessors rating for the professor
+- **Grades** — per-course grade summaries
+- **Ask AI** — chat interface with 18 preset tool buttons (see below)
 
-The extension no longer keeps raw Canvas access logic scattered across UI files.
+A settings panel (gear icon) handles API token entry, theme, and days-ahead window.
 
-Instead, the browser-facing stack is organized like this:
+## Ask AI Tab
 
-```text
-popup UI
-  -> extension-api.js
-  -> extension-contract.js
-  -> background.js
-  -> canvas-client.js
-  -> Canvas REST API
-```
+The agent tab has a free-text input and 18 preset tool buttons grouped by family:
+
+| Family | Count | Examples |
+|--------|-------|---------|
+| canvas | 8 | get_assignments, get_grades, get_syllabus, list_announcements |
+| calendar | 5 | create_event, find_free_blocks, list_events |
+| reranker | 1 | priority_hint |
+| study | 4 | exam_bracket, spaced_schedule, semester_schedule |
+
+Agent queries hit the Cloudflare Worker proxy. If the native messaging host (`com.cs3704.canvas_tracker`) is installed locally, complex queries can fall through to it.
+
+## Background Service Worker
+
+- Fetches from the Canvas REST API through `canvas-client.js`
+- Caches results in IndexedDB with stale-while-revalidate so the popup opens instantly
+- Sets the toolbar badge to the count of non-dismissed upcoming assignments
+- Fires notifications at 24h and 1h before each deadline
+
+## Permissions
+
+| Permission | Purpose |
+|-----------|---------|
+| `activeTab` | Read current tab URL |
+| `storage` | Persist settings and cache |
+| `notifications` | Deadline reminders |
+| `nativeMessaging` | Connect to local `com.cs3704.canvas_tracker` host |
+| host: `canvas.vt.edu` | Canvas REST API calls |
+| host: `ratemyprofessors.com` | Professor rating in course detail view |
 
 ## Key Files
 
 | File | Role |
 |------|------|
-| `extension/src/lib/canvas-client.js` | Shared Canvas domain client for browser-side code |
-| `extension/src/lib/extension-contract.js` | Central message-type contract |
-| `extension/src/lib/extension-api.js` | Shared runtime bridge used by popup/content code |
-| `extension/src/background.js` | Service worker orchestration, cache access, notifications, badge refresh |
-| `extension/src/lib/cache.js` | IndexedDB cache and stale-while-revalidate helpers |
+| `extension/src/lib/canvas-client.js` | Canvas REST client (auth, endpoints) |
+| `extension/src/lib/extension-contract.js` | Shared message-type constants |
+| `extension/src/lib/extension-api.js` | Runtime bridge used by popup code |
+| `extension/src/lib/cache.js` | IndexedDB helpers and stale-while-revalidate |
+| `extension/src/lib/reranker.js` | JS port of the Python reranker pipeline |
+| `extension/src/lib/native-host.js` | Native messaging bridge to local host |
+| `extension/src/background.js` | Service worker: cache, badge, notifications, agent |
 | `extension/src/popup/app.js` | Popup UI logic |
-| `extension/src/popup/styles.css` | Popup visual system |
+| `extension/src/popup/styles.css` | Popup styles |
 
-## Why This Matters
-
-Before the refactor, raw endpoint knowledge and runtime message details leaked into more than one layer.
-
-Now:
-- Canvas auth and endpoint access are centralized in `canvas-client.js`
-- popup code talks through a shared runtime bridge instead of raw message strings
-- runtime message names are defined once in `extension-contract.js`
-- background logic is thinner and easier to extend
-
-That gives the project:
-- cleaner maintenance
-- fewer UI-to-background coupling mistakes
-- easier future extension features
-- a better path toward testable shared browser logic
-
-## Current Constraints
-
-The browser extension does **not** use the Python SDK directly.
-
-That is expected.
-
-A browser extension cannot natively consume the Python package in the same way the TUI does. The correct browser-side equivalent is a shared JS client layer, which is what this project now uses.
-
-## Next Recommended Steps
-
-1. Extend the shared client for more Canvas domains as features expand
-2. Add tests around the browser-side runtime contract and client methods
-3. Reduce any remaining direct Chrome runtime assumptions outside the bridge layer
-4. Decide whether content scripts should also consume `extension-api.js`
-5. Document token/auth strategy more explicitly if OAuth replaces manual tokens later
-
-## Relationship to the TUI
-
-The TUI and browser extension are still separate runtime stacks, but the extension is now closer to the same architectural discipline:
-- domain access centralized
-- cache isolated
-- UI and transport separated
-
-That is the right intermediate step before any deeper shared-core unification.
+The extension does not call the Python SDK. `canvas-client.js` is the JS-side equivalent of `canvas_sdk`.
