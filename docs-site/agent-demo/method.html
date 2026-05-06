@@ -128,14 +128,59 @@
         Deployed: v7-DPO &nbsp;&bull;&nbsp;
         <a href="https://huggingface.co/kleinpanic93/canvas-calendar-agent-v7-dpo" target="_blank" rel="noopener" class="underline underline-offset-2">HF Model</a>
       </div>
-      <h1 class="text-4xl font-bold mb-4 leading-tight fade-up visible d1">How the Model Was Trained</h1>
-      <p class="text-gray-400 text-base leading-relaxed max-w-2xl mb-8 fade-up visible d2">
-        v7-DPO is a fine-tuned Gemma-4-E2B-IT optimized for 18-tool function calling
+      <h1 class="text-4xl font-bold mb-4 leading-tight fade-up visible d1">How the Model Is Being Trained</h1>
+      <p class="text-gray-400 text-base leading-relaxed max-w-2xl mb-6 fade-up visible d2">
+        v7-DPO is a fine-tuned Gemma-4-E2B-IT targeting 18-tool function calling
         across Canvas LMS, calendar scheduling, and study planning. This page documents
-        the full training methodology: SFT trajectory collection, DPO preference
-        optimization, the 9-method ablation matrix, pre-execution guardrails, and
-        the bench harness used to validate results.
+        the training methodology in two states: <strong class="text-gray-200">what's shipped today</strong>
+        (the v7-DPO checkpoint on HF Hub) and <strong class="text-gray-200">what's planned for v7-2</strong>
+        (the rebuild that addresses the v7-broken retrospective). Sections marked
+        <span class="method-badge" style="background:#1a2a1a;color:#4ade80;border:1px solid #166534">shipped</span>
+        describe deployed artifacts; sections marked
+        <span class="method-badge" style="background:#1a1a0d;color:#facc15;border:1px solid #713f12">planned</span>
+        describe the locked design that has not yet executed.
+        <small class="block mt-2 text-gray-500 text-xs">[source: <a href="https://github.com/kleinpanic/CS3704-DPO-SSOT/blob/main/.planning/MILESTONE-v3.0-AUDIT.md" class="underline">MILESTONE-v3.0-AUDIT.md</a>, <a href="https://github.com/kleinpanic/CS3704-DPO-SSOT/blob/main/.planning/ROADMAP.md" class="underline">ROADMAP.md</a>]</small>
       </p>
+
+      <!-- ── Current State vs Planned timeline (C9) ─────────────── -->
+      <div class="bg-gray-900/60 border border-gray-800 rounded-lg p-5 mb-8 fade-up visible d2">
+        <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Current state vs planned</p>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+          <div>
+            <div class="flex items-center gap-2 mb-2">
+              <span class="method-badge" style="background:#1a2a1a;color:#4ade80;border:1px solid #166534">shipped today</span>
+            </div>
+            <ul class="space-y-1.5 text-gray-400 leading-relaxed">
+              <li>&bull; v7-DPO checkpoint on HF Hub (<code class="text-gray-300">kleinpanic93/canvas-calendar-agent-v7-dpo</code>) — only v7 model artifact live</li>
+              <li>&bull; Canvas SDK + Chrome extension (this repo)</li>
+              <li>&bull; HF Space demo (mock tools, no Canvas creds)</li>
+            </ul>
+          </div>
+          <div>
+            <div class="flex items-center gap-2 mb-2">
+              <span class="method-badge" style="background:#1a1a0d;color:#facc15;border:1px solid #713f12">in flight (v7-2)</span>
+            </div>
+            <ul class="space-y-1.5 text-gray-400 leading-relaxed">
+              <li>&bull; Phase 1 — SFT trajectory rebuild (per-tool quotas, item-disjoint, PII scrub) — NOT STARTED</li>
+              <li>&bull; Phase 2 — DPO 16-axis preference dataset (NO judge model) — NOT STARTED</li>
+              <li>&bull; Phase 3 — KTO binary-feedback dataset — NOT STARTED</li>
+              <li>&bull; Phase 4 — Benchmark expansion 1000+ — NOT STARTED</li>
+              <li>&bull; Phase 5 — Training matrix (sequential, &beta;=0.3, eval_dataset) — NOT STARTED</li>
+              <li>&bull; Phase 6 — Release — NOT STARTED</li>
+            </ul>
+          </div>
+          <div>
+            <div class="flex items-center gap-2 mb-2">
+              <span class="method-badge" style="background:#1a0d0d;color:#f87171;border:1px solid #7f1d1d">archived (v7-broken)</span>
+            </div>
+            <ul class="space-y-1.5 text-gray-400 leading-relaxed">
+              <li>&bull; 9-method matrix shipped infra, but model was empirically a no-op for tool calling: v7-dpo predictions were 23/25 byte-identical to v7-sft on bench.</li>
+              <li>&bull; Reference: <a href="https://github.com/kleinpanic/CS3704-DPO-SSOT/blob/main/.planning/MILESTONE-v3.0-AUDIT.md" class="underline text-gray-300">MILESTONE-v3.0-AUDIT.md</a></li>
+            </ul>
+          </div>
+        </div>
+        <small class="block mt-3 text-gray-500 text-xs">[source: <a href="https://github.com/kleinpanic/CS3704-DPO-SSOT/blob/main/.planning/ROADMAP.md" class="underline">ROADMAP.md L32-L45</a>]</small>
+      </div>
 
       <!-- Training pipeline visualization -->
       <div class="fade-up visible d3">
@@ -164,17 +209,17 @@
           <div class="pipeline-stage" data-step="4">
             <div class="pipeline-connector"></div>
             <div class="pipeline-dot">04</div>
-            <div class="pipeline-label">Preference<br/>Pairs (×4)</div>
+            <div class="pipeline-label">Preference<br/>16-axis</div>
           </div>
           <div class="pipeline-stage" data-step="5">
             <div class="pipeline-connector"></div>
             <div class="pipeline-dot">DPO</div>
-            <div class="pipeline-label">DPO Training<br/>β = 0.1</div>
+            <div class="pipeline-label">DPO Training<br/>β = 0.3 (planned)</div>
           </div>
           <div class="pipeline-stage" data-step="6">
             <div class="pipeline-connector"></div>
             <div class="pipeline-dot">05</div>
-            <div class="pipeline-label">Bench Eval<br/>500+ prompts</div>
+            <div class="pipeline-label">Bench Eval<br/>1000+ (planned)</div>
           </div>
           <div class="pipeline-stage" data-step="7">
             <div class="pipeline-connector"></div>
@@ -229,16 +274,20 @@
 
     <!-- ── 3. SFT ───────────────────────────────────────────────────── -->
     <section id="sft">
-      <h2 class="text-xl font-bold mb-1 fade-left" style="color:#d63e36">Supervised Fine-Tuning (SFT)</h2>
+      <h2 class="text-xl font-bold mb-1 fade-left" style="color:#d63e36">
+        Supervised Fine-Tuning (SFT)
+        <span class="method-badge align-middle ml-2" style="background:#1a1a0d;color:#facc15;border:1px solid #713f12">phase 1 — not started</span>
+      </h2>
       <p class="text-sm text-gray-500 mb-4 fade-up d1">Phase 1 — teaches the model what a correct tool call looks like</p>
 
       <div class="bg-gray-900/60 border border-gray-800 rounded-lg p-6 space-y-5 fade-up d2">
         <p class="text-sm text-gray-300 leading-relaxed">
-          SFT trains on 181 human-curated tool-call trajectories (post-anonymization). Each trajectory
-          is a full user-turn → model-turn sequence where the model outputs one or more
-          native Gemma-4 tool calls followed by a synthesized answer. The model learns
-          correct syntax, correct tool selection, and correct argument structure from
-          direct imitation.
+          SFT will train on multi-turn tool-call trajectories (post-anonymization, item-disjoint
+          train/test splits). Each trajectory is a full user-turn &rarr; model-turn sequence where
+          the model outputs one or more native Gemma-4 tool calls followed by a synthesized answer.
+          The model learns correct syntax, correct tool selection, and correct argument structure
+          from direct imitation.
+          <small class="block mt-2 text-gray-500 text-xs">[source: <a href="https://github.com/kleinpanic/CS3704-DPO-SSOT/blob/main/.planning/ROADMAP.md" class="underline">ROADMAP.md L39</a>]</small>
         </p>
 
         <div>
@@ -253,28 +302,38 @@
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
           <div class="bg-gray-950 border border-gray-800 rounded p-4 space-y-1">
-            <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Dataset shape</div>
-            <div class="flex justify-between text-xs"><span class="text-gray-500">Trajectories</span><span class="text-gray-200">181</span></div>
+            <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Dataset shape (target)</div>
+            <div class="flex justify-between text-xs"><span class="text-gray-500">Trajectories (train)</span><span class="text-gray-200">400&ndash;500 <span class="text-gray-500">(TBD post-phase-1)</span></span></div>
+            <div class="flex justify-between text-xs"><span class="text-gray-500">Trajectories (test)</span><span class="text-gray-200">80&ndash;100 <span class="text-gray-500">(TBD post-phase-1)</span></span></div>
             <div class="flex justify-between text-xs"><span class="text-gray-500">Tools covered</span><span class="text-gray-200">18 (all)</span></div>
-            <div class="flex justify-between text-xs"><span class="text-gray-500">Min per tool</span><span class="text-gray-200">30</span></div>
-            <div class="flex justify-between text-xs"><span class="text-gray-500">Distribution CV</span><span class="text-gray-200">≤ 0.3</span></div>
+            <div class="flex justify-between text-xs"><span class="text-gray-500">Min per tool</span><span class="text-gray-200">&ge; 30</span></div>
+            <div class="flex justify-between text-xs"><span class="text-gray-500">Distribution CV</span><span class="text-gray-200">&le; 0.3</span></div>
           </div>
           <div class="bg-gray-950 border border-gray-800 rounded p-4 space-y-1">
             <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Distribution constraint</div>
             <p class="text-xs text-gray-400 leading-relaxed">
-              CV ≤ 0.3 prevents the model from over-indexing on high-frequency tools
+              CV &le; 0.3 prevents the model from over-indexing on high-frequency tools
               (e.g. <code class="text-gray-500">canvas.get_assignments</code>) at the cost of rare ones
               (e.g. <code class="text-gray-500">reranker.priority_hint</code>). Enforced by guardrail G4.
             </p>
           </div>
         </div>
+        <p class="text-xs text-gray-500 italic leading-relaxed">
+          Note on the prior &ldquo;181 trajectories&rdquo; figure: that was v7-broken's post-shrinkage count
+          (952 trajectory turns &rarr; 181 used after pipeline filtering) &mdash; exactly the bug
+          phase 1 is fixing. New phase 1 enforces shrinkage budget via guardrail G6.
+          <small class="block mt-1 text-gray-500 text-xs">[source: <a href="https://github.com/kleinpanic/CS3704-DPO-SSOT/blob/main/.planning/ROADMAP.md" class="underline">ROADMAP.md L39</a>, <a href="https://github.com/kleinpanic/CS3704-DPO-SSOT/blob/main/.planning/PRE-EXECUTION-GUARDRAILS.md" class="underline">PRE-EXECUTION-GUARDRAILS.md G6</a>]</small>
+        </p>
       </div>
     </section>
 
     <!-- ── 4. DPO ───────────────────────────────────────────────────── -->
     <section id="dpo">
-      <h2 class="text-xl font-bold mb-1 fade-left" style="color:#d63e36">Direct Preference Optimization (DPO)</h2>
-      <p class="text-sm text-gray-500 mb-4 fade-up d1">Phase 2 — teaches the model what a <em>better</em> tool call looks like</p>
+      <h2 class="text-xl font-bold mb-1 fade-left" style="color:#d63e36">
+        Direct Preference Optimization (DPO)
+        <span class="method-badge align-middle ml-2" style="background:#1a1a0d;color:#facc15;border:1px solid #713f12">phase 2 — not started</span>
+      </h2>
+      <p class="text-sm text-gray-500 mb-4 fade-up d1">Phase 2 &mdash; teaches the model what a <em>better</em> tool call looks like</p>
 
       <div class="bg-gray-900/60 border border-gray-800 rounded-lg p-6 space-y-6 fade-up d2">
         <div class="space-y-3">
@@ -287,75 +346,105 @@
             weighted by how much the current policy has already diverged from the reference.
           </p>
           <div class="bg-gray-950 border border-gray-800/60 rounded p-4">
-            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Reference model role</p>
+            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Reference model role &amp; &beta; selection</p>
             <p class="text-xs text-gray-400 leading-relaxed">
-              The reference model is the <strong class="text-gray-200">SFT checkpoint</strong> — it acts as a KL-divergence
-              anchor, not a teacher. The DPO objective penalizes moving too far from the SFT
-              distribution, preventing mode collapse on easy preferences. At β = 0.1,
-              the policy is allowed to move further from the SFT reference — appropriate
-              for small-N datasets (&lt; 2000 pairs) where the DPO signal should dominate.
+              The reference model is the <strong class="text-gray-200">SFT checkpoint</strong> &mdash; it acts as a KL-divergence
+              anchor, not a teacher. Phase 5 locks <strong class="text-gray-200">&beta; = 0.3</strong> (not the TRL default 0.1):
+              for small-N preference datasets (N &asymp; 1000&ndash;4000 pairs) the higher &beta; acts as a
+              stronger regularizer, preventing the policy from destroying its SFT capabilities to
+              aggressively optimize a small preference set. v7-broken used &beta; = 0.1; the v7-2
+              rewrite raises it to 0.3 along with <code class="text-gray-500">precompute_ref_log_probs=True</code>.
+              <small class="block mt-2 text-gray-500 text-xs">[source: <a href="https://github.com/kleinpanic/CS3704-DPO-SSOT/blob/main/.planning/research/v3.1/DPO-RESEARCH-SYNTHESIS.md" class="underline">DPO-RESEARCH-SYNTHESIS.md L58, L90</a>]</small>
             </p>
           </div>
         </div>
 
         <div>
-          <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Four preference pair types</p>
-          <p class="text-xs text-gray-600 italic mb-3">Methodology framework for v8 retraining. v7 dataset uses <code>standard</code> and <code>hard_negative</code> labels internally.</p>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Preference pairs (16-axis programmatic)</p>
+          <p class="text-xs text-gray-600 italic mb-3">
+            8 binary axes &times; 2 (right/wrong) = 16 pair categories. Each pair shows the model
+            what &ldquo;good&rdquo; looks like vs a SPECIFIC failure mode. Generation is
+            <strong class="text-gray-300">programmatic (mutation-based)</strong> &mdash;
+            <strong class="text-gray-300">NO judge model</strong>. Chosen / rejected are true by
+            construction.
+            <small class="block mt-1 text-gray-500 text-xs">[source: <a href="https://github.com/kleinpanic/CS3704-DPO-SSOT/blob/main/.planning/DATASET-LIFECYCLE.md" class="underline">DATASET-LIFECYCLE.md L79-L127</a>]</small>
+          </p>
 
-            <div class="pair-card fade-up d1">
-              <div class="flex items-center gap-2 mb-2">
-                <span class="method-badge" style="background:#1a1a0d;color:#facc15;border:1px solid #713f12">parsimony</span>
-              </div>
-              <p class="text-xs text-gray-400 leading-relaxed">
-                <strong class="text-gray-200">Chosen:</strong> 1 minimal tool call<br/>
-                <strong class="text-gray-200">Rejected:</strong> 4+ chained calls for same outcome<br/>
-                Trains the model to prefer the shortest correct solution.
-              </p>
-            </div>
-
-            <div class="pair-card fade-up d2">
-              <div class="flex items-center gap-2 mb-2">
-                <span class="method-badge" style="background:#1a0d0d;color:#f87171;border:1px solid #7f1d1d">wrong_tool</span>
-              </div>
-              <p class="text-xs text-gray-400 leading-relaxed">
-                <strong class="text-gray-200">Chosen:</strong> correct tool name from SDK registry<br/>
-                <strong class="text-gray-200">Rejected:</strong> hallucinated tool name<br/>
-                Trains the model to stay within the 18-tool manifest.
-              </p>
-            </div>
-
-            <div class="pair-card fade-up d3">
-              <div class="flex items-center gap-2 mb-2">
-                <span class="method-badge" style="background:#0d0d1a;color:#818cf8;border:1px solid #312e81">wrong_args</span>
-              </div>
-              <p class="text-xs text-gray-400 leading-relaxed">
-                <strong class="text-gray-200">Chosen:</strong> correct, complete argument set<br/>
-                <strong class="text-gray-200">Rejected:</strong> missing or semantically wrong args<br/>
-                Trains argument fidelity independently of tool selection.
-              </p>
-            </div>
-
-            <div class="pair-card fade-up d4">
-              <div class="flex items-center gap-2 mb-2">
-                <span class="method-badge" style="background:#0d1a0d;color:#86efac;border:1px solid #14532d">format</span>
-              </div>
-              <p class="text-xs text-gray-400 leading-relaxed">
-                <strong class="text-gray-200">Chosen:</strong> native <code class="text-gray-300">&lt;|tool_call&gt;</code> syntax<br/>
-                <strong class="text-gray-200">Rejected:</strong> natural-language description of a tool call<br/>
-                Reinforces structured output over prose fallback.
-              </p>
-            </div>
-
+          <div class="overflow-x-auto bg-gray-950 border border-gray-800/60 rounded">
+            <table class="text-xs text-gray-300">
+              <thead>
+                <tr>
+                  <th class="text-gray-400 font-semibold text-xs uppercase tracking-wide">#</th>
+                  <th class="text-gray-400 font-semibold text-xs uppercase tracking-wide">Axis</th>
+                  <th class="text-gray-400 font-semibold text-xs uppercase tracking-wide">Right (chosen)</th>
+                  <th class="text-gray-400 font-semibold text-xs uppercase tracking-wide">Wrong (rejected)</th>
+                  <th class="text-gray-400 font-semibold text-xs uppercase tracking-wide">Train</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="matrix-row"><td>1</td><td><strong>Tool selection</strong></td><td>correct tool name from SDK registry</td><td>hallucinated tool name (e.g. <code class="text-gray-500">canvas.list_assignments</code>)</td><td>200</td></tr>
+                <tr class="matrix-row d1"><td>2</td><td><strong>Argument keys</strong></td><td>required args present, correct names</td><td>missing required args, or invented keys</td><td>200</td></tr>
+                <tr class="matrix-row d2"><td>3</td><td><strong>Argument values</strong></td><td>sane types/ranges (e.g. <code class="text-gray-500">course_id: 4264</code>)</td><td>wrong types or unparseable (e.g. <code class="text-gray-500">course_id: "all"</code>)</td><td>200</td></tr>
+                <tr class="matrix-row d3"><td>4</td><td><strong>Parsimony / cardinality</strong></td><td>1 minimal call resolves the user&rsquo;s question</td><td>4+ chained redundant calls (the v7-broken over-call pattern)</td><td>600</td></tr>
+                <tr class="matrix-row d4"><td>5</td><td><strong>Timing / ordering</strong></td><td>calls in correct dependency order (e.g. <code class="text-gray-500">find_free_blocks</code> before <code class="text-gray-500">create_event</code>)</td><td>wrong order (e.g. <code class="text-gray-500">create_event</code> before <code class="text-gray-500">find_free_blocks</code>)</td><td>200</td></tr>
+                <tr class="matrix-row d5"><td>6</td><td><strong>Format / envelope</strong></td><td>native Gemma-4 <code class="text-gray-500">&lt;|tool_call&gt;...&lt;tool_call|&gt;</code> format</td><td>natural-language description (&ldquo;I will call canvas...&rdquo;) or malformed envelope</td><td>200</td></tr>
+                <tr class="matrix-row d6"><td>7</td><td><strong>Domain fit</strong></td><td>tool matches user&rsquo;s actual question (calendar query &rarr; calendar tool)</td><td>tool family mismatch (calendar query &rarr; canvas tool)</td><td>200</td></tr>
+                <tr class="matrix-row d7"><td>8</td><td><strong>Termination</strong></td><td>model stops after sufficient info gathered + composes final answer</td><td>model keeps calling tools indefinitely (the &ldquo;random shit in random quick succession&rdquo; failure)</td><td>600</td></tr>
+                <tr class="matrix-row d8"><td colspan="4"><em class="text-gray-500">Plus 800&ndash;1600 mixed-axis pairs (chosen/rejected differ on more than one axis &mdash; realistic of how the SFT model fails in practice)</em></td><td>~1200</td></tr>
+                <tr class="matrix-row d9"><td colspan="4"><strong>Total (target)</strong></td><td><strong>3200&ndash;4000 train / 400&ndash;500 test</strong></td></tr>
+              </tbody>
+            </table>
           </div>
+
+          <p class="text-xs text-gray-500 italic leading-relaxed mt-3">
+            <strong class="text-gray-400">Why 16 axes (not 4)?</strong> v7-broken's harness reduced
+            over-calling 16&rarr;2&ndash;3 via runtime caps, but the underlying model still didn't
+            UNDERSTAND why fewer is better. With 16 axes, every failure mode the model exhibits in
+            production has at least 200 training pairs explicitly teaching against it.
+            <strong class="text-gray-400">No judge model</strong> &mdash; chosen and rejected are
+            true by construction (mutation-based generation from SFT trajectories that pass G1/G4/G7/G8).
+            <small class="block mt-1 text-gray-500 text-xs">[source: <a href="https://github.com/kleinpanic/CS3704-DPO-SSOT/blob/main/.planning/DATASET-LIFECYCLE.md" class="underline">DATASET-LIFECYCLE.md#expanded-16-category-pair-taxonomy</a>]</small>
+          </p>
         </div>
       </div>
     </section>
 
-    <!-- ── 5. 9-Method Matrix ───────────────────────────────────────── -->
+    <!-- ── 5. 9-Method Training Matrix ──────────────────────────────── -->
     <section id="matrix">
-      <h2 class="text-xl font-bold mb-1 fade-left" style="color:#d63e36">9-Method Ablation Matrix</h2>
-      <p class="text-sm text-gray-500 mb-4 fade-up d1">Every method trained on the same data split — only the loss function changes</p>
+      <h2 class="text-xl font-bold mb-1 fade-left" style="color:#d63e36">
+        9-Method Training Matrix
+        <span class="method-badge align-middle ml-2" style="background:#1a1a0d;color:#facc15;border:1px solid #713f12">phase 5 — not started</span>
+      </h2>
+      <p class="text-sm text-gray-500 mb-4 fade-up d1">
+        A comparison across 9 training objectives &mdash; <strong class="text-gray-300">not</strong> an
+        ablation: each method family eats a <strong class="text-gray-300">different</strong> dataset
+        schema (see table below). Phase 5 runs them sequentially with per-method gates.
+        <small class="block mt-2 text-gray-500 text-xs">[source: <a href="https://github.com/kleinpanic/CS3704-DPO-SSOT/blob/main/.planning/ROADMAP.md" class="underline">ROADMAP.md L47-L61</a>, <a href="https://github.com/kleinpanic/CS3704-DPO-SSOT/blob/main/.planning/MILESTONE-v3.0-AUDIT.md" class="underline">MILESTONE-v3.0-AUDIT.md L54-L66</a>]</small>
+      </p>
+
+      <!-- Method-family schema table (C4) -->
+      <div class="bg-gray-900/60 border border-gray-800 rounded-lg overflow-hidden fade-up d2 mb-4">
+        <div class="px-4 py-2.5 border-b border-gray-800 text-xs text-gray-500">
+          Method family &rarr; dataset schema (per-family, NOT shared)
+        </div>
+        <div class="overflow-x-auto">
+          <table class="text-xs text-gray-300">
+            <thead>
+              <tr>
+                <th class="text-gray-400 font-semibold text-xs uppercase tracking-wide">Method family</th>
+                <th class="text-gray-400 font-semibold text-xs uppercase tracking-wide">Eats which dataset</th>
+                <th class="text-gray-400 font-semibold text-xs uppercase tracking-wide">Schema</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="matrix-row"><td><strong>SFT, LoRA, QLoRA</strong></td><td>Phase 1 (SFT trajectory)</td><td><code class="text-gray-500">(messages)</code> conversational</td></tr>
+              <tr class="matrix-row d1"><td><strong>DPO, IPO, APO-Zero, SPPO, NCA</strong></td><td>Phase 2 (preference pairs, 16-axis)</td><td><code class="text-gray-500">(prompt, chosen, rejected, tools)</code> TRL conversational</td></tr>
+              <tr class="matrix-row d2"><td><strong>KTO</strong></td><td>Phase 3 (binary feedback)</td><td><code class="text-gray-500">(prompt, completion, label)</code> unpaired</td></tr>
+              <tr class="matrix-row d3"><td><em>All 9 evaluated against</em></td><td>Phase 4 (benchmark)</td><td><code class="text-gray-500">(prompt, expected_tools[], expected_args[])</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
 
       <div class="bg-gray-900/60 border border-gray-800 rounded-lg overflow-hidden fade-up d2">
         <div class="overflow-x-auto">
@@ -370,66 +459,73 @@
             <tbody>
               <tr class="sft-row matrix-row">
                 <td><strong class="text-white">SFT</strong> <span class="method-badge ml-1" style="background:#d63e3622;color:#d63e36;border:1px solid #d63e3644">baseline</span></td>
-                <td>trajectory data<br/><code class="text-gray-500">{prompt, completion}</code></td>
+                <td>Phase 1 trajectory data<br/><code class="text-gray-500">(messages)</code></td>
                 <td>Direct imitation of correct tool-call sequences. Reference checkpoint for all DPO variants.</td>
               </tr>
               <tr class="matrix-row d1">
                 <td><strong>LoRA</strong></td>
-                <td>SFT trajectory data</td>
+                <td>Phase 1 trajectory data</td>
                 <td>PEFT wrapper over SFT. Low-rank adapter only; base weights frozen. Faster iteration.</td>
               </tr>
               <tr class="matrix-row d2">
                 <td><strong>QLoRA</strong></td>
-                <td>SFT trajectory data</td>
-                <td>LoRA + 4-bit NF4 quantization. Reduces VRAM by ~60%. Quality delta vs LoRA is the ablation question.</td>
+                <td>Phase 1 trajectory data</td>
+                <td>LoRA + 4-bit NF4 quantization. Reduces VRAM by ~60%. Quality delta vs LoRA is the comparison question.</td>
               </tr>
               <tr class="matrix-row d3">
                 <td><strong>DPO</strong></td>
-                <td>preference pairs<br/><code class="text-gray-500">{prompt, chosen, rejected}</code></td>
-                <td>Rafailov 2023. β=0.1. Reference = SFT checkpoint. Primary production method.</td>
+                <td>Phase 2 preference pairs<br/><code class="text-gray-500">(prompt, chosen, rejected, tools)</code></td>
+                <td>Rafailov 2023. <strong class="text-gray-200">&beta; = 0.3</strong> (small-N regularizer; was 0.1 in v7-broken). Reference = SFT checkpoint. Primary production method.</td>
               </tr>
               <tr class="matrix-row d4">
                 <td><strong>IPO</strong></td>
-                <td>preference pairs</td>
+                <td>Phase 2 preference pairs</td>
                 <td>Identity Preference Optimization (Azar et al.). Removes Bradley-Terry assumption; theoretically better on near-equal pairs.</td>
               </tr>
               <tr class="matrix-row d5">
                 <td><strong>APO-Zero</strong></td>
-                <td>preference pairs</td>
+                <td>Phase 2 preference pairs</td>
                 <td>Anchored Preference Optimization with zero anchor. Stabilizes training when reference model is weak.</td>
               </tr>
               <tr class="matrix-row d6">
                 <td><strong>SPPO</strong></td>
-                <td>preference pairs</td>
+                <td>Phase 2 preference pairs</td>
                 <td>Self-Play Preference Optimization. Iterative; each round re-ranks pairs using the current policy.</td>
               </tr>
               <tr class="matrix-row d7">
                 <td><strong>NCA</strong></td>
-                <td>preference pairs</td>
+                <td>Phase 2 preference pairs</td>
                 <td>Noise-Contrastive Alignment. Treats rejected as noise; contrastive loss formulation.</td>
               </tr>
               <tr class="matrix-row d8">
                 <td><strong>KTO</strong></td>
-                <td>unpaired desirability<br/><code class="text-gray-500">{prompt, completion, label}</code></td>
-                <td>Kahneman-Tversky Optimization (Ethayarajh et al.). Works without paired comparisons — useful when pairing is ambiguous.</td>
+                <td>Phase 3 unpaired binary<br/><code class="text-gray-500">(prompt, completion, label)</code></td>
+                <td>Kahneman-Tversky Optimization (Ethayarajh et al.). Works without paired comparisons. Phase 3 enforces N &ge; 1000 (G12) to avoid v7-broken's grad_norm=290 instability at N=146.</td>
               </tr>
             </tbody>
           </table>
         </div>
         <div class="px-4 py-2.5 border-t border-gray-800 text-xs text-gray-600">
-          DPO/IPO/APO-Zero/SPPO/NCA all use the same 4-type preference pairs; only <code>loss_type</code> differs in the TRL trainer config.
+          Phase 5 is sequential per-method execution with per-method gates (G1&ndash;G13 + behavioral
+          reward-margin checks). Methods that no-op on tool calling (the v7-broken DPO failure mode)
+          are rejected by gate G9 before they reach the bench.
+          <small class="block mt-1 text-gray-500 text-xs">[source: <a href="https://github.com/kleinpanic/CS3704-DPO-SSOT/blob/main/.planning/ROADMAP.md" class="underline">ROADMAP.md L47-L48</a>]</small>
         </div>
       </div>
     </section>
 
     <!-- ── 6. Pre-execution Guardrails ─────────────────────────────── -->
     <section id="guardrails">
-      <h2 class="text-xl font-bold mb-1 fade-left" style="color:#d63e36">Pre-execution Guardrails (G1–G13)</h2>
+      <h2 class="text-xl font-bold mb-1 fade-left" style="color:#d63e36">Pre-execution Guardrails (G1&ndash;G13)</h2>
       <p class="text-sm text-gray-500 mb-2 fade-up d1">Automated fail-stop CLI checks that run before every training job</p>
       <p class="text-sm text-gray-400 mb-5 leading-relaxed fade-up d2">
-        Each guardrail encodes a specific failure mode discovered during prior training runs.
-        Every check is deterministic and exits non-zero on violation — no training job starts
-        if any guardrail fails. <code class="text-xs text-gray-500">canvas-train --check</code> runs all 13 in sequence.
+        Each guardrail encodes a SPECIFIC failure mode discovered in v7-broken or in cross-AI
+        audits. Every check is deterministic and exits non-zero on violation &mdash; no training
+        job starts if any guardrail fails. <code class="text-xs text-gray-500">canvas-train --check</code>
+        runs all 13 in sequence. Each card lists <strong class="text-gray-300">WHAT</strong> the
+        gate checks and <strong class="text-gray-300">WHY</strong> it exists (the v7-broken
+        motivation).
+        <small class="block mt-2 text-gray-500 text-xs">[source: <a href="https://github.com/kleinpanic/CS3704-DPO-SSOT/blob/main/.planning/PRE-EXECUTION-GUARDRAILS.md" class="underline">PRE-EXECUTION-GUARDRAILS.md</a>]</small>
       </p>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -439,71 +535,80 @@
             <span class="text-xs font-bold" style="color:#d63e36">G1</span>
             <span class="text-xs font-semibold text-gray-300">Tool-call token coverage</span>
           </div>
-          <p class="text-xs text-gray-500 leading-relaxed">≥80% of chosen/rejected completions must contain the <code>&lt;|tool_call&gt;</code> sentinel. Catches data pipelines that drop the token.</p>
+          <p class="text-xs text-gray-500 leading-relaxed mb-1.5"><strong class="text-gray-400">What:</strong> &ge; 80% of <code>chosen</code> AND <code>rejected</code> strings must contain <code>&lt;|tool_call&gt;</code>.</p>
+          <p class="text-xs text-gray-500 leading-relaxed"><strong class="text-gray-400">Why:</strong> v7-broken had 0/1071 rows containing tool calls &mdash; DPO trained on the wrong objective entirely (urgency-prioritization rationales instead of tool calls).</p>
         </div>
 
         <div class="guardrail-card fade-scale d2">
           <div class="flex items-center gap-2 mb-1.5">
             <span class="text-xs font-bold" style="color:#d63e36">G2</span>
-            <span class="text-xs font-semibold text-gray-300">Eval dataset required</span>
+            <span class="text-xs font-semibold text-gray-300">Eval dataset required &amp; disjoint</span>
           </div>
-          <p class="text-xs text-gray-500 leading-relaxed">eval_dataset must exist and be item-disjoint from train. Prevents eval contamination and silent overfitting.</p>
+          <p class="text-xs text-gray-500 leading-relaxed mb-1.5"><strong class="text-gray-400">What:</strong> DPO/KTO/IPO/etc trainer must receive a non-empty <code>eval_dataset</code>, item-disjoint from train.</p>
+          <p class="text-xs text-gray-500 leading-relaxed"><strong class="text-gray-400">Why:</strong> v7-broken passed only <code>train_dataset</code>; reported &ldquo;eval&rdquo; metrics were train-set artifacts &mdash; silent overfit invisible from the loss curves.</p>
         </div>
 
         <div class="guardrail-card fade-scale d3">
           <div class="flex items-center gap-2 mb-1.5">
             <span class="text-xs font-bold" style="color:#d63e36">G3</span>
-            <span class="text-xs font-semibold text-gray-300">Base model bench sanity</span>
+            <span class="text-xs font-semibold text-gray-300">Base model bench sanity &ge; 20%</span>
           </div>
-          <p class="text-xs text-gray-500 leading-relaxed">Quick bench against base model must show ≥20% first-tool accuracy. If base is already broken, no fine-tune will fix it.</p>
+          <p class="text-xs text-gray-500 leading-relaxed mb-1.5"><strong class="text-gray-400">What:</strong> Bench harness against base Gemma-4 must score &ge; 20% before testing fine-tunes.</p>
+          <p class="text-xs text-gray-500 leading-relaxed"><strong class="text-gray-400">Why:</strong> v7-broken's <code>bench.py</code> was missing the system prompt and used <code>skip_special_tokens=True</code>, which stripped the tool envelope. Base scored 0% &mdash; a harness artifact, not a model failure.</p>
         </div>
 
         <div class="guardrail-card fade-scale d4">
           <div class="flex items-center gap-2 mb-1.5">
             <span class="text-xs font-bold" style="color:#d63e36">G4</span>
-            <span class="text-xs font-semibold text-gray-300">Tool distribution CV ≤ 0.3</span>
+            <span class="text-xs font-semibold text-gray-300">Tool distribution &ge; 30, CV &le; 0.3</span>
           </div>
-          <p class="text-xs text-gray-500 leading-relaxed">Coefficient of variation across 18 tools must be ≤ 0.3, with min 30 examples per tool. Prevents distribution skew.</p>
+          <p class="text-xs text-gray-500 leading-relaxed mb-1.5"><strong class="text-gray-400">What:</strong> Every tool appears &ge; 30 times AND coefficient-of-variation across the 18 tools &le; 0.3.</p>
+          <p class="text-xs text-gray-500 leading-relaxed"><strong class="text-gray-400">Why:</strong> v7-broken: <code>calendar.create_event = 218</code> vs <code>canvas.list_announcements = 8</code>; CV = 1.27. The model couldn't learn rare tools.</p>
         </div>
 
         <div class="guardrail-card fade-scale d5">
           <div class="flex items-center gap-2 mb-1.5">
             <span class="text-xs font-bold" style="color:#d63e36">G5</span>
-            <span class="text-xs font-semibold text-gray-300">Preflight grad norm</span>
+            <span class="text-xs font-semibold text-gray-300">Numerical stability: grad_norm &lt; 1.0</span>
           </div>
-          <p class="text-xs text-gray-500 leading-relaxed">1-step dry run: grad_norm must be &lt; 1.0. Catches numerical instability (NaN/Inf in activations) before a full run wastes GPU hours.</p>
+          <p class="text-xs text-gray-500 leading-relaxed mb-1.5"><strong class="text-gray-400">What:</strong> 1-step dry run: <code>grad_norm &lt; 1.0</code>, no NaN / Inf in activations or logits.</p>
+          <p class="text-xs text-gray-500 leading-relaxed"><strong class="text-gray-400">Why:</strong> v7-broken KTO: <code>grad_norm = 290</code>, logits at e+08 scale. Tightened from 5.0 &rarr; 1.0 in the gemini cross-AI audit.</p>
         </div>
 
         <div class="guardrail-card fade-scale d6">
           <div class="flex items-center gap-2 mb-1.5">
             <span class="text-xs font-bold" style="color:#d63e36">G6</span>
-            <span class="text-xs font-semibold text-gray-300">Pipeline shrinkage ≤ 30%</span>
+            <span class="text-xs font-semibold text-gray-300">Pipeline shrinkage &lt; 30% per stage</span>
           </div>
-          <p class="text-xs text-gray-500 leading-relaxed">Each processing stage (tokenize → filter → pair) must retain ≥ 70% of its input. Excessive shrinkage signals a pipeline bug, not a data quality issue.</p>
+          <p class="text-xs text-gray-500 leading-relaxed mb-1.5"><strong class="text-gray-400">What:</strong> Each pipeline stage retains &ge; 70% of its input rows, else require explicit <code>--allow-shrinkage &lt;reason&gt;</code>.</p>
+          <p class="text-xs text-gray-500 leading-relaxed"><strong class="text-gray-400">Why:</strong> v7-broken: 3000 raw &rarr; 1849 labeled (39% loss) &rarr; 1071 final (42% loss); 952 trajectory turns &rarr; 181 used. No audit, no warning.</p>
         </div>
 
         <div class="guardrail-card fade-scale d7">
           <div class="flex items-center gap-2 mb-1.5">
             <span class="text-xs font-bold" style="color:#d63e36">G7</span>
-            <span class="text-xs font-semibold text-gray-300">Tool name registry check</span>
+            <span class="text-xs font-semibold text-gray-300">Tool registry check (no hallucinated names)</span>
           </div>
-          <p class="text-xs text-gray-500 leading-relaxed">Every tool name in the dataset must appear in the SDK tool registry. Catches stale or renamed tool references before they poison the model.</p>
+          <p class="text-xs text-gray-500 leading-relaxed mb-1.5"><strong class="text-gray-400">What:</strong> Every tool name in the dataset must exist in the SDK registry.</p>
+          <p class="text-xs text-gray-500 leading-relaxed"><strong class="text-gray-400">Why:</strong> v7-broken: model emitted hallucinated <code>canvas.list_assignments</code> (real name: <code>canvas.get_assignments</code>) &mdash; the dataset itself contained the wrong name.</p>
         </div>
 
         <div class="guardrail-card fade-scale d8">
           <div class="flex items-center gap-2 mb-1.5">
             <span class="text-xs font-bold" style="color:#d63e36">G8</span>
-            <span class="text-xs font-semibold text-gray-300">Serializer round-trip</span>
+            <span class="text-xs font-semibold text-gray-300">Serializer &harr; parser round-trip</span>
           </div>
-          <p class="text-xs text-gray-500 leading-relaxed">Parser → serializer → parser round-trip must pass 100% of samples. A round-trip failure means the model will emit unparseable output.</p>
+          <p class="text-xs text-gray-500 leading-relaxed mb-1.5"><strong class="text-gray-400">What:</strong> Every row round-trips through <code>_tool_call_to_gemma4</code> &rarr; <code>tool_parser.parse_gemma4_output</code> with 100% fidelity.</p>
+          <p class="text-xs text-gray-500 leading-relaxed"><strong class="text-gray-400">Why:</strong> v7-broken serializer used Python <code>str(v)</code>; parser expects JSON. 29 trajectory + 30 KTO rows failed round-trip silently.</p>
         </div>
 
         <div class="guardrail-card fade-scale d9">
           <div class="flex items-center gap-2 mb-1.5">
             <span class="text-xs font-bold" style="color:#d63e36">G9</span>
-            <span class="text-xs font-semibold text-gray-300">Behavioral reward margins</span>
+            <span class="text-xs font-semibold text-gray-300">Behavioral test (real reward margins)</span>
           </div>
-          <p class="text-xs text-gray-500 leading-relaxed">Micro-bench verifies reward margins move in the correct direction per pair type — parsimony pairs should widen the parsimony margin, not the format margin.</p>
+          <p class="text-xs text-gray-500 leading-relaxed mb-1.5"><strong class="text-gray-400">What:</strong> Tests construct trainer, run a mini-train, assert reward margins move in the correct direction per pair type.</p>
+          <p class="text-xs text-gray-500 leading-relaxed"><strong class="text-gray-400">Why:</strong> v7-broken's <code>test_training_config.py</code> froze source-text strings &mdash; it would pass while DPO trained on the wrong objective forever.</p>
         </div>
 
         <div class="guardrail-card fade-scale d1">
@@ -511,31 +616,35 @@
             <span class="text-xs font-bold" style="color:#d63e36">G10</span>
             <span class="text-xs font-semibold text-gray-300">Docker container smoke test</span>
           </div>
-          <p class="text-xs text-gray-500 leading-relaxed"><code>canvas-train --help</code> inside the training container must exit 0. Catches broken dependencies and mis-built images before a multi-hour run.</p>
+          <p class="text-xs text-gray-500 leading-relaxed mb-1.5"><strong class="text-gray-400">What:</strong> <code>docker build</code> + <code>docker run canvas-train --help</code> exits 0 in CI.</p>
+          <p class="text-xs text-gray-500 leading-relaxed"><strong class="text-gray-400">Why:</strong> v7-broken had <code>ENTRYPOINT ["canvas-train"]</code> + <code>command: sh -c "..."</code> &mdash; the two collided and argparse rejected at runtime.</p>
         </div>
 
         <div class="guardrail-card fade-scale d2">
           <div class="flex items-center gap-2 mb-1.5">
             <span class="text-xs font-bold" style="color:#d63e36">G11</span>
-            <span class="text-xs font-semibold text-gray-300">Sequence length budget</span>
+            <span class="text-xs font-semibold text-gray-300">Sequence-length budget</span>
           </div>
-          <p class="text-xs text-gray-500 leading-relaxed">&lt;1% of rows may exceed max_length=2048. Rows above the limit are silently truncated during training — high truncation rates indicate dataset construction errors.</p>
+          <p class="text-xs text-gray-500 leading-relaxed mb-1.5"><strong class="text-gray-400">What:</strong> &lt; 1% of rows exceed <code>max_length = 1024</code> after tokenization.</p>
+          <p class="text-xs text-gray-500 leading-relaxed"><strong class="text-gray-400">Why:</strong> Gemini cross-AI audit WARN: TRL silently truncates &mdash; multi-call trajectories with tool results easily exceed 1024 tokens.</p>
         </div>
 
         <div class="guardrail-card fade-scale d3">
           <div class="flex items-center gap-2 mb-1.5">
             <span class="text-xs font-bold" style="color:#d63e36">G12</span>
-            <span class="text-xs font-semibold text-gray-300">Minimum dataset sizes</span>
+            <span class="text-xs font-semibold text-gray-300">Hard minimum N per method</span>
           </div>
-          <p class="text-xs text-gray-500 leading-relaxed">DPO/KTO methods require ≥ 1000 preference pairs; SFT requires ≥ 200 trajectories. Below these thresholds overfitting is near-certain.</p>
+          <p class="text-xs text-gray-500 leading-relaxed mb-1.5"><strong class="text-gray-400">What:</strong> KTO &ge; 1000, DPO &ge; 1000, etc. Job aborts before training if N is below threshold.</p>
+          <p class="text-xs text-gray-500 leading-relaxed"><strong class="text-gray-400">Why:</strong> Gemini cross-AI audit WARN: KTO blew up partly because N = 146 was too small &mdash; numerical instability is near-certain at that scale.</p>
         </div>
 
         <div class="guardrail-card sm:col-span-2 lg:col-span-3 fade-scale d4">
           <div class="flex items-center gap-2 mb-1.5">
             <span class="text-xs font-bold" style="color:#d63e36">G13</span>
-            <span class="text-xs font-semibold text-gray-300">Trajectory tool repetition</span>
+            <span class="text-xs font-semibold text-gray-300">Trajectory tool repetition &le; 3&times;</span>
           </div>
-          <p class="text-xs text-gray-500 leading-relaxed">No single tool may appear more than 3× in one trajectory. Excessive repetition teaches the model to loop rather than complete — a failure mode we observed directly in pre-v7 runs.</p>
+          <p class="text-xs text-gray-500 leading-relaxed mb-1.5"><strong class="text-gray-400">What:</strong> No single tool appears more than 3&times; in any one trajectory's assistant turns.</p>
+          <p class="text-xs text-gray-500 leading-relaxed"><strong class="text-gray-400">Why:</strong> v7-broken AUDIT: ~25% of multi-call trajectories had redundant calls (<code>canvas.get_todo</code> 7&times; in one response). Excessive repetition trains the model to loop instead of terminating.</p>
         </div>
 
       </div>
@@ -543,15 +652,23 @@
 
     <!-- ── 7. Bench Harness ─────────────────────────────────────────── -->
     <section id="bench">
-      <h2 class="text-xl font-bold mb-1 fade-left" style="color:#d63e36">Bench Harness</h2>
+      <h2 class="text-xl font-bold mb-1 fade-left" style="color:#d63e36">
+        Bench Harness
+        <span class="method-badge align-middle ml-2" style="background:#1a1a0d;color:#facc15;border:1px solid #713f12">phase 4 — not started</span>
+      </h2>
       <p class="text-sm text-gray-500 mb-4 fade-up d1">Offline evaluation protocol used to select the production checkpoint</p>
 
       <div class="bg-gray-900/60 border border-gray-800 rounded-lg p-6 space-y-5 fade-up d2">
-        <p class="text-xs text-gray-600 italic mb-3">Design targets — the bench harness is fully implemented; coverage numbers reflect the full evaluation spec.</p>
+        <p class="text-xs text-gray-600 italic mb-3">
+          Design targets &mdash; phase 4 (BIER-style benchmark expansion) is NOT STARTED. The numbers
+          below are targets, not measurements.
+          <small class="block mt-1 text-gray-500 text-xs">[source: <a href="https://github.com/kleinpanic/CS3704-DPO-SSOT/blob/main/.planning/ROADMAP.md" class="underline">ROADMAP.md L45</a>]</small>
+        </p>
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center text-xs text-gray-400">
           <div class="bg-gray-950 border border-gray-800 rounded p-4 fade-scale d1">
-            <div class="text-2xl font-bold text-white" data-count="500" data-suffix="+">0</div>
-            <div class="mt-1">evaluation prompts</div>
+            <div class="text-2xl font-bold text-white">1000+</div>
+            <div class="mt-1">evaluation prompts <span class="text-gray-500">(target)</span></div>
+            <div class="text-xs text-gray-600 mt-1">TBD post-phase-4</div>
           </div>
           <div class="bg-gray-950 border border-gray-800 rounded p-4 fade-scale d2">
             <div class="text-2xl font-bold text-white" data-count="18">0</div>
@@ -571,10 +688,10 @@
           <div>
             <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Metrics</p>
             <ul class="text-sm text-gray-400 space-y-1.5">
-              <li class="flex gap-2"><span class="text-canvas-red shrink-0">&#x2192;</span><span><strong class="text-gray-300">Tool selection accuracy</strong> — did the model call the correct tool as its first action? Measured per tool, per method.</span></li>
-              <li class="flex gap-2"><span class="text-canvas-red shrink-0">&#x2192;</span><span><strong class="text-gray-300">Argument accuracy</strong> — ToolBench-style partial match on required arguments (exact for IDs, fuzzy for natural-language fields).</span></li>
-              <li class="flex gap-2"><span class="text-canvas-red shrink-0">&#x2192;</span><span><strong class="text-gray-300">Wilson 95% CI</strong> — each per-tool accuracy estimate comes with a Wilson score confidence interval. Small per-tool samples (&lt;40) are flagged as low-confidence.</span></li>
-              <li class="flex gap-2"><span class="text-canvas-red shrink-0">&#x2192;</span><span><strong class="text-gray-300">Parsimony rate</strong> — fraction of correct responses that use the minimum-cardinality tool set. DPO should improve this vs SFT baseline.</span></li>
+              <li class="flex gap-2"><span class="text-canvas-red shrink-0">&#x2192;</span><span><strong class="text-gray-300">Tool selection accuracy</strong> &mdash; did the model call the correct tool as its first action? Measured per tool, per method.</span></li>
+              <li class="flex gap-2"><span class="text-canvas-red shrink-0">&#x2192;</span><span><strong class="text-gray-300">Argument accuracy</strong> &mdash; ToolBench-style partial match on required arguments (exact for IDs, fuzzy for natural-language fields).</span></li>
+              <li class="flex gap-2"><span class="text-canvas-red shrink-0">&#x2192;</span><span><strong class="text-gray-300">Wilson 95% CI</strong> &mdash; each per-tool accuracy estimate comes with a Wilson score confidence interval. Small per-tool samples (&lt; 40) are flagged as low-confidence.</span></li>
+              <li class="flex gap-2"><span class="text-canvas-red shrink-0">&#x2192;</span><span><strong class="text-gray-300">Parsimony rate</strong> &mdash; fraction of correct responses that use the minimum-cardinality tool set. DPO should improve this vs SFT baseline.</span></li>
             </ul>
           </div>
           <div>
@@ -587,6 +704,37 @@
             </p>
           </div>
         </div>
+      </div>
+    </section>
+
+    <!-- ── 8. PII / Data anonymization (C8) ─────────────────────────── -->
+    <section id="pii">
+      <h2 class="text-xl font-bold mb-1 fade-left" style="color:#d63e36">PII Handling</h2>
+      <p class="text-sm text-gray-500 mb-4 fade-up d1">How student-data PII is scrubbed before training</p>
+
+      <div class="bg-gray-900/60 border border-gray-800 rounded-lg p-6 space-y-3 fade-up d2">
+        <p class="text-sm text-gray-300 leading-relaxed">
+          PII is scrubbed via
+          <a href="https://huggingface.co/iiiorg/piiranha-v1-detect-personal-information" target="_blank" rel="noopener" class="text-canvas-red hover:underline">Piiranha</a>,
+          a HuggingFace-hosted PII detection model run inside an isolated worker container before
+          the train / test split. Anonymization is enforced as a phase-1 acceptance gate &mdash; a
+          trajectory cannot enter the dataset if Piiranha flags any token in it as personal
+          information.
+        </p>
+        <div class="bg-gray-950 border border-gray-800/60 rounded p-4">
+          <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Implementation</p>
+          <ul class="text-xs text-gray-400 space-y-1.5">
+            <li>&bull; Model: <a href="https://huggingface.co/iiiorg/piiranha-v1-detect-personal-information" target="_blank" rel="noopener" class="underline text-gray-300">iiiorg/piiranha-v1-detect-personal-information</a></li>
+            <li>&bull; Worker: <a href="https://github.com/kleinpanic/CS3704-DPO-SSOT/blob/main/src/dataset/anon_worker_piiranha.py" target="_blank" rel="noopener" class="underline text-gray-300"><code>src/dataset/anon_worker_piiranha.py</code></a></li>
+            <li>&bull; Container: <a href="https://github.com/kleinpanic/CS3704-DPO-SSOT/blob/main/src/docker/Dockerfile.anon-piiranha" target="_blank" rel="noopener" class="underline text-gray-300"><code>src/docker/Dockerfile.anon-piiranha</code></a></li>
+            <li>&bull; Source repo: <a href="https://github.com/kleinpanic/CS3704-DPO-SSOT" target="_blank" rel="noopener" class="underline text-gray-300">kleinpanic/CS3704-DPO-SSOT</a> (training pipeline)</li>
+          </ul>
+        </div>
+        <p class="text-xs text-gray-500 italic leading-relaxed">
+          The HF Space demo never touches real student data &mdash; it ships with mocked Canvas tools
+          and no Canvas credentials. PII handling is only relevant to the training pipeline.
+          <small class="block mt-1 text-gray-500 text-xs">[source: <a href="https://github.com/kleinpanic/CS3704-DPO-SSOT/blob/main/src/dataset/anon_worker_piiranha.py" class="underline">anon_worker_piiranha.py</a>, <a href="https://github.com/kleinpanic/CS3704-DPO-SSOT/blob/main/src/docker/Dockerfile.anon-piiranha" class="underline">Dockerfile.anon-piiranha</a>]</small>
+        </p>
       </div>
     </section>
 
