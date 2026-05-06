@@ -49,8 +49,9 @@ jobs:
             site/extension/src/popup/index.html
 
       # HF token lives in CF Worker secret (see proxy/) — not in GH Actions.
-      # TODO: move fetch_canvas_data.py behind a CF Worker so CANVAS_API_TOKEN
-      #       can be removed from GH Actions (same pattern as HF token migration).
+      # Live iframe Canvas calls now also route through the CF Worker (/canvas route,
+      # CANVAS_TOKEN secret). The build-time snapshot fetch below still uses the GHA
+      # secret until fetch_canvas_data.py is moved behind the Worker.
 
       # Pre-fetch live Canvas data and bake as static JSON
       - name: Fetch Canvas data snapshot
