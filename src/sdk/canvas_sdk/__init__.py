@@ -1,22 +1,54 @@
 __all__ = [
-    "Canvas",
+    "CanvasClient",
+    "Course",
+    "Assignment",
+    "DiscussionTopic",
+    "Todo",
+    "PlannerNote",
+    "Enrollment",
+    "User",
+    "CanvasException",
+    "InvalidAccessToken",
+    "Forbidden",
+    "ResourceNotFound",
+    "Conflict",
+    "UnprocessableEntity",
+    "RateLimitExceeded",
+    "CanvasServerError",
     "CanvasAgent",
     "GeminiBackend",
     "Gemma4Backend",
     "ensure_model",
 ]
 
-__version__ = "1.0.0"
+__version__ = "2.0.0"
 
 
 def __getattr__(name):
-    """Lazy import so submodules with optional deps (arrow, httpx, google) don't
-    break ``import canvas_sdk`` for consumers that only need the agent harness.
+    """Lazy import so submodules with optional deps (httpx, google) don't
+    break ``import canvas_sdk`` for consumers that only need part of the SDK.
     """
-    if name == "Canvas":
-        from canvas_sdk.canvas import Canvas
+    if name == "CanvasClient":
+        from canvas_sdk.client import CanvasClient
 
-        return Canvas
+        return CanvasClient
+    if name in ("Course", "Assignment", "DiscussionTopic", "Todo", "PlannerNote", "Enrollment", "User"):
+        import canvas_sdk.entities as _entities
+
+        return getattr(_entities, name)
+    if name in (
+        "CanvasException",
+        "InvalidAccessToken",
+        "Forbidden",
+        "ResourceNotFound",
+        "Conflict",
+        "UnprocessableEntity",
+        "RateLimitExceeded",
+        "CanvasServerError",
+    ):
+        import canvas_sdk.exceptions as _exceptions
+
+        return getattr(_exceptions, name)
     if name == "CanvasAgent":
         from canvas_sdk.agent import CanvasAgent
 
