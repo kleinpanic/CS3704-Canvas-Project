@@ -43,6 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Quick-checks + pip caching**: added cleanup workflow and changelog tooling (#92)
 
 ### Fixed
+- **release.yml require-ci result-encoding**: `'escape'` → `'string'` (only `string` or `json` are valid for `actions/github-script@v9`). Latent from #132's overhaul; surfaced on first `v*` tag push. (#171)
 - **Empty-send guard + example-btn color + Ask AI height overflow** (#160, #163)
 - **release.yml**: replaced phantom `build` job dependency with `build-sdk-linux` (#165)
 - **branch-name policy regex**: now allows `feat/*` branches (#142)
