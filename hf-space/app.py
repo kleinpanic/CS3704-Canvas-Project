@@ -561,15 +561,18 @@ button.example-btn:hover { border-color: #d63e36 !important; background: #1f1010
 #calendar-pane { background: #111114; border: 1px solid #2e2e38; border-radius: 8px; min-height: 440px; max-height: 600px; overflow-y: auto; }
 """
 
+_MODEL_URL = "https://huggingface.co/kleinpanic93/canvas-calendar-agent-v7-dpo"
+_DATASET_URL = "https://huggingface.co/datasets/kleinpanic93/canvas-calendar-preferences-v7"
+_COLLECTION_URL = "https://huggingface.co/collections/kleinpanic93/canvas-calendar-agent-v30-69fa6462f697e0342b21dfe0"
+_GITHUB_URL = "https://github.com/kleinpanic/CS3704-Canvas-Project"
+_DOCS_URL = "https://kleinpanic.github.io/CS3704-Canvas-Project/agent-demo/method.html"
+
 DESCRIPTION_MD = """
 Fine-tuned **Gemma-4-E2B-IT** with DPO (β=0.3, small-N regularization). Speaks the native Gemma-4 tool protocol for **18 tools** across 4 families. _Trajectory counts and bench scores are TBD post-phase-1/4; numbers shown in v7-broken artifacts are pre-rebuild and not verified. See [How it Works](https://kleinpanic.github.io/CS3704-Canvas-Project/agent-demo/method.html) for the cited methodology._
 
 `canvas.*` assignments · grades · syllabi · planner &nbsp;|&nbsp; `calendar.*` scheduling · free blocks &nbsp;|&nbsp; `reranker.*` priority hints &nbsp;|&nbsp; `study.*` exam prep · spaced repetition
 
 > ⚠️ **Mock data** — no Canvas credentials in this Space. Calendar uses a **session-local in-memory backend** (mirrors `canvas_sdk.backends.calendar_adapter.InMemoryCalendarBackend`) so create/delete/modify/list round-trips behave coherently within a single browser tab. For live data: `pip install canvas-sdk[autodownload]`.
-> ⏱ Cold-start after inactivity ~30 s (ZeroGPU). Subsequent responses are fast.
-
-[Model](https://huggingface.co/kleinpanic93/canvas-calendar-agent-v7-dpo) · [Dataset](https://huggingface.co/datasets/kleinpanic93/canvas-calendar-preferences-v7) · [Collection](https://huggingface.co/collections/kleinpanic93/canvas-calendar-agent-v30-69fa6462f697e0342b21dfe0) · [GitHub](https://github.com/kleinpanic/CS3704-Canvas-Project) · [Docs](https://kleinpanic.github.io/CS3704-Canvas-Project/agent-demo/method.html)
 """
 
 
@@ -602,7 +605,52 @@ RERANKER_EXAMPLES = [
 
 
 with gr.Blocks(theme=THEME, css=CUSTOM_CSS, title="Canvas Calendar Agent") as demo:
-    gr.Markdown("# Canvas Calendar Agent")
+    gr.HTML("""
+    <div style="background:#1a0a0a;border:1px solid #d63e36;border-radius:6px;
+                padding:10px 14px;margin-bottom:8px;font-size:0.82rem;color:#d4d4db;">
+      <strong style="color:#d63e36;">&#9200; Cold-start notice:</strong>
+      The first message after a quiet period takes ~30&nbsp;s while the GPU warms up
+      (ZeroGPU free tier). Subsequent messages are fast.
+    </div>
+    """)
+    gr.HTML(f"""
+    <div style="background:#111114;border:1px solid #2e2e38;border-radius:8px;
+                padding:14px 18px;margin-bottom:12px;display:flex;flex-wrap:wrap;
+                align-items:center;gap:16px;">
+      <div style="flex:1;min-width:200px;">
+        <div style="color:#d63e36;font-weight:700;font-size:1.05rem;">
+          Canvas Calendar Agent
+        </div>
+        <div style="color:#9ca3af;font-size:0.78rem;margin-top:2px;">
+          Fine-tuned Gemma-4-E2B-IT &middot; DPO &beta;=0.3 &middot;
+          <span style="background:#2e2e38;color:#d63e36;border-radius:4px;
+                       padding:1px 6px;font-size:0.72rem;">v7-DPO</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:20px;flex-wrap:wrap;">
+        <div style="text-align:center;">
+          <div style="color:#d63e36;font-weight:700;font-size:1.2rem;">1,071</div>
+          <div style="color:#9ca3af;font-size:0.7rem;">DPO pairs</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="color:#d63e36;font-weight:700;font-size:1.2rem;">18</div>
+          <div style="color:#9ca3af;font-size:0.7rem;">tools</div>
+        </div>
+      </div>
+      <div style="font-size:0.78rem;display:flex;gap:10px;flex-wrap:wrap;">
+        <a href="{_MODEL_URL}" target="_blank"
+           style="color:#d63e36;text-decoration:none;">Model</a>
+        <a href="{_DATASET_URL}" target="_blank"
+           style="color:#d63e36;text-decoration:none;">Dataset</a>
+        <a href="{_COLLECTION_URL}" target="_blank"
+           style="color:#d63e36;text-decoration:none;">Collection</a>
+        <a href="{_GITHUB_URL}" target="_blank"
+           style="color:#d63e36;text-decoration:none;">GitHub</a>
+        <a href="{_DOCS_URL}" target="_blank"
+           style="color:#d63e36;text-decoration:none;">How it Works</a>
+      </div>
+    </div>
+    """)
     gr.Markdown(DESCRIPTION_MD, elem_classes=["description"])
 
     state = gr.State(value=init_state)
