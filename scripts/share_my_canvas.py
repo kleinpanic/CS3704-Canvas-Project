@@ -262,7 +262,7 @@ def main():
     course_snaps = [r for r in records if r.get("type") == "course_snapshot"]
     total_asgn = sum(len(r.get("assignments", [])) for r in course_snaps)
     print(f"\nWrote {len(records)} records ({len(course_snaps)} courses, {total_asgn} assignments) to {out}")
-    print("Submit this file via PR (see CONTRIBUTING-DATA.md for instructions).")
+    print("Submit this file via PR (see docs/contributing-data.md for instructions).")
 
 
 if __name__ == "__main__":

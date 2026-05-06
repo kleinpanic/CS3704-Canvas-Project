@@ -30,9 +30,7 @@ nav:
   - Reviews:
       - PM3 Review: pm3-review.md
       - Release Checklist: release-checklist.md
-      - Claims Audit: CLAIMS-AUDIT.md
       - Robustness: ROBUSTNESS.md
-      - Visual Audit: VISUAL-AUDIT.md
 
 plugins:
   - search
