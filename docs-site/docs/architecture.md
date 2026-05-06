@@ -79,6 +79,52 @@ The two surfaces do **not** share a runtime cache implementation today, but they
 - `docs/architecture/complex-architecture.mmd`
 - `docs/architecture/sync-sequence.mmd`
 
+## Security Architecture
+
+### Browser demo: no tokens in client JS
+
+The live demo at `kleinpanic.github.io/CS3704-Canvas-Project/demo/` calls the
+fine-tuned Gemma4 v7-dpo model on a private HuggingFace Space. To do this
+without exposing the HF token to the public:
+
+```
+Browser  ----POST /chat---->  Cloudflare Worker  ----Bearer HF_TOKEN---->  HF Space
+                                  ^
+                                  |
+                              HF_TOKEN held as a Cloudflare secret
+                              (set via `wrangler secret put HF_TOKEN`)
+                              never reaches the browser, never in code
+```
+
+The Worker source lives at [`proxy/worker.js`](https://github.com/kleinpanic/CS3704-Canvas-Project/blob/main/proxy/worker.js).
+Deploy procedure and rotation steps: [`proxy/README.md`](https://github.com/kleinpanic/CS3704-Canvas-Project/blob/main/proxy/README.md).
+
+### Why this exists
+
+An earlier build pipeline (pre-v3.0) injected secrets into a deployed JS file
+via `sed` substitution at GitHub-Pages-deploy time. Because the secret never
+entered the git index, gitleaks could not detect the leak — but `curl` against
+the deployed site exposed the tokens in plaintext. Both leaked tokens were
+rotated; the build-time injection was removed; the Worker pattern took its
+place. The release checklist now requires a deployed-site grep verification
+step before any release announcement.
+
+### Properties of this design
+
+- HF_TOKEN never reaches the browser; cannot be extracted from public JS.
+- CORS whitelist restricts which origins may use the proxy.
+- Body length cap (4000 chars) blocks trivial abuse.
+- Free-tier Cloudflare (100k req/day, 10ms CPU per request) handles class
+  demo load comfortably; the heavy lifting is on the HF Space.
+- Rotation is one command (`wrangler secret put HF_TOKEN`), no code change
+  and no redeploy.
+
+### Zero-infra alternative
+
+If the Worker is not deployed, [`proxy/iframe-fallback.html`](https://github.com/kleinpanic/CS3704-Canvas-Project/blob/main/proxy/iframe-fallback.html)
+embeds the HF Space directly in an iframe. Still no tokens anywhere, but
+loses the polished chat UI.
+
 ## Current Reality vs Future Goal
 
 ### Current reality

@@ -14,10 +14,38 @@ A maintainable, team-ready **Canvas LMS productivity client** with a Textual TUI
 
 ## Live demo
 
-Try the fine-tuned Canvas Calendar Agent in your browser — no install required:
+Try the fine-tuned Canvas Calendar Agent in your browser — no install required, no tokens needed:
 
 - **Browser chat UI** (mock Canvas data): https://kleinpanic.github.io/CS3704-Canvas-Project/demo/
 - **HF Space (full model, mock tools)**: https://huggingface.co/spaces/kleinpanic93/canvas-calendar-agent-demo
+- **HF Collection (v3.0 method matrix)**: https://huggingface.co/collections/kleinpanic93/canvas-calendar-agent-v30-69fa6462f697e0342b21dfe0
+
+### Demo architecture (no tokens in client JS)
+
+```
+Browser  ->  Cloudflare Worker  ->  HF Space (ZeroGPU)
+              ^                       ^
+              |                       |
+              | HF_TOKEN held as      | Gemma4 v7-dpo behind
+              | Cloudflare secret     | gradio 5 ChatInterface +
+              | (never reaches the    | 18 mock tool dispatchers
+              | browser)              |
+```
+
+The HF token is stored as a Cloudflare Worker secret. Public clients only
+see the proxy URL (`cs3704-demo-proxy.kleinpanic.workers.dev`); they never
+receive any credential. See [`proxy/README.md`](proxy/README.md) for the
+deploy procedure and [`proxy/iframe-fallback.html`](proxy/iframe-fallback.html)
+for a zero-infra alternative that embeds the Space directly.
+
+### v3.0 fine-tuning matrix
+
+The published **9-method matrix** (Gemma-4-E2B-IT trained on the same v7
+dataset, varying only the loss/method) currently ships **DPO**. The remaining
+**8 methods** (SFT, KTO, IPO, APO-Zero, SPPO, NCA, LoRA, QLoRA) plus the
+12-quant GGUF expansion are queued — recipes and exact commands live in
+[`MINIMAX-HANDOFF-v3.md`](https://github.com/kleinpanic/CS3704-DPO-SSOT/blob/main/.planning/MINIMAX-HANDOFF-v3.md)
+in the SSOT repo.
 
 ## ML/AI components
 
@@ -62,9 +90,10 @@ print(agent.run("What's due this week?"))
 
 ### Try the agent right now
 
-The fine-tuned **v7-dpo Gemma4** weights are hosted as a live HuggingFace Space —
-no API key required to try the demo, and the Python SDK auto-downloads the same
-weights from HuggingFace Hub on first run.
+The fine-tuned **v7-dpo Gemma4** weights are hosted as a live HuggingFace Space.
+The browser demo uses a Cloudflare Worker proxy to call the Space — no token
+ever reaches the client. The Python SDK auto-downloads the same weights from
+HuggingFace Hub on first run for local use against your real Canvas token.
 
 - **Browser demo** (mock Canvas data, hosted DPO model): [kleinpanic.github.io/CS3704-Canvas-Project/agent-demo/](https://kleinpanic.github.io/CS3704-Canvas-Project/agent-demo/)
 - **Python SDK** (real Canvas data via your token):
@@ -92,6 +121,13 @@ weights from HuggingFace Hub on first run.
   2. Local cache at `~/.cache/canvas-agent/v7-dpo/` (spawns vLLM on :8765)
   3. Download `kleinpanic/canvas-calendar-agent-v7-dpo` from HF, then (2)
   4. Fall back to Gemini (`gemini-2.5-flash` by default)
+
+> **Token policy:** the SDK reads `CANVAS_TOKEN` and `GOOGLE_API_KEY` from
+> your local environment. Tokens never enter the published browser demo,
+> the GH Pages site, or any committed file. The Cloudflare Worker proxy is
+> the only place an HF token is held, and it sits server-side as a Cloudflare
+> secret. If you fork this project and host your own demo, follow the same
+> pattern — see [`proxy/README.md`](proxy/README.md).
 
 ---
 
