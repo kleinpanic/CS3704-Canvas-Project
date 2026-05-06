@@ -2,6 +2,28 @@
 
 A maintainable, team-ready **Canvas LMS productivity client** with a Textual TUI frontend, Chrome extension, Python SDK, and a fine-tuned calendar agent — with a documented shared-core architecture.
 
+---
+
+<!-- hero: Phase 10 -->
+> **Canvas Tracker** — the fastest path from Canvas API token to a local calendar agent,
+> polished TUI, and contribution-ready dataset pipeline.
+
+<!-- asciinema cast: docs-site/casts/tui-demo.cast -->
+<!-- TODO: record cast with `asciinema rec docs-site/casts/tui-demo.cast` + upload to asciinema.org -->
+<!-- Static screenshot fallback: -->
+![TUI demo](docs-site/screenshots/01-home-live.png)
+
+| Deploy | Link |
+|--------|------|
+| PyPI (SDK) | [![PyPI canvas-sdk](https://img.shields.io/pypi/v/canvas-sdk?label=canvas-sdk)](https://pypi.org/project/canvas-sdk/) |
+| Codespaces | [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/kleinpanic/CS3704-Canvas-Project) |
+| HF Space | [![Open in HF Spaces](https://huggingface.co/datasets/huggingface/badges/resolve/main/open-in-hf-spaces-sm.svg)](https://huggingface.co/spaces/kleinpanic93/canvas-calendar-agent-demo) |
+| Docker | [![ghcr.io](https://img.shields.io/badge/ghcr.io-canvas--tui-2496ED?logo=docker&logoColor=white)](https://github.com/kleinpanic/CS3704-Canvas-Project/pkgs/container/canvas-tui) |
+
+See [Quick Start](docs/QUICKSTART.md) · [Examples](examples/) · [Public Roadmap](ROADMAP.md)
+
+---
+
 <!-- badges: CI/CD | Distribution | Repo health | Tooling | HF/ML | Dev buttons (Phase 9) -->
 [![CI](https://img.shields.io/github/actions/workflow/status/kleinpanic/CS3704-Canvas-Project/ci.yml?branch=main&label=CI)](https://github.com/kleinpanic/CS3704-Canvas-Project/actions/workflows/ci.yml)
 [![Security](https://img.shields.io/github/actions/workflow/status/kleinpanic/CS3704-Canvas-Project/security.yml?branch=main&label=Security)](https://github.com/kleinpanic/CS3704-Canvas-Project/actions/workflows/security.yml)
