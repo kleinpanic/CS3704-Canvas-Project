@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### BREAKING CHANGES
+
+- `CANVAS_BASE_URL` is now required at all entry points; the previous silent default
+  (`https://canvas.vt.edu`) has been removed. Set this env var to your institution's
+  Canvas URL before running any command or importing the SDK.
+  Migration: `export CANVAS_BASE_URL=https://canvas.yourschool.edu`
+
+### Fixed
+
+- **DPO model namespace**: `DEFAULT_HF_REPO` corrected from `kleinpanic/canvas-calendar-agent-v7-dpo`
+  to `kleinpanic93/canvas-calendar-agent-v7-dpo`. SDK users without `CANVAS_LLM_ENDPOINT` set
+  were getting 404 errors on model download.
+
+### Added
+
+- `src/canvas_tui/config_env.py`: centralised env-driven constants for all entry points.
+  Fork users need only set `CANVAS_BASE_URL` and `CANVAS_TOKEN` to get a working install.
+- `.env.example`: documents all supported env vars with defaults.
+- Fork-friendly CI secret guards (`HAS_CANVAS_TOKEN`, `HAS_HF_TOKEN`, `HAS_PYPI_TOKEN`):
+  forked repos see yellow (skipped) CI jobs rather than red failures when secrets are absent.
+- Branch policy loosened to `^[a-z]+/[a-z0-9._-]+$` — any lowercase prefix is accepted.
+
 ## [1.2.3] — 2026-05-06
 
 ### Fixed

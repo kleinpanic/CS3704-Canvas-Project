@@ -17,6 +17,9 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      HAS_CANVAS_TOKEN: ${{ secrets.CANVAS_API_TOKEN != '' }}
+      HAS_HF_TOKEN: ${{ secrets.HF_TOKEN != '' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -60,11 +63,17 @@ jobs:
 
       # Pre-fetch live Canvas data and bake as static JSON (PII-scrubbed)
       - name: Fetch Canvas data snapshot
+        if: ${{ env.HAS_CANVAS_TOKEN == 'true' }}
         env:
           CANVAS_TOKEN: ${{ secrets.CANVAS_API_TOKEN }}
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          CANVAS_BASE_URL: ${{ secrets.CANVAS_BASE_URL }}
         run: |
           python3 docs-site/fetch_canvas_data.py --out site/data
+
+      - name: Skip notice (fork — no CANVAS_API_TOKEN)
+        if: ${{ env.HAS_CANVAS_TOKEN != 'true' }}
+        run: echo "fork: skipping Canvas data fetch (CANVAS_API_TOKEN not configured); see CONTRIBUTING.md"
 
       # Place the Tailwind homepage at site root
       - name: Install homepage

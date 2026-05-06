@@ -376,6 +376,8 @@ jobs:
     needs: [release, build-sdk-linux]
     if: ${{ !contains(needs.build-sdk-linux.outputs.version, '-') }}
     runs-on: ubuntu-latest
+    env:
+      HAS_PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN != '' }}
     environment:
       name: pypi
       url: https://pypi.org/project/canvas-sdk/${{ needs.build-sdk-linux.outputs.version }}/
@@ -395,8 +397,13 @@ jobs:
           ls -la dist/
 
       - name: Publish to PyPI
+        if: ${{ env.HAS_PYPI_TOKEN == 'true' }}
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           skip-existing: true
           packages-dir: dist/
           password: ${{ secrets.PYPI_API_TOKEN }}
+
+      - name: Skip notice (fork — no PYPI_API_TOKEN)
+        if: ${{ env.HAS_PYPI_TOKEN != 'true' }}
+        run: echo "fork: skipping PyPI publish (PYPI_API_TOKEN not configured); see CONTRIBUTING.md"
