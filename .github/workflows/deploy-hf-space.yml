@@ -20,20 +20,16 @@ jobs:
           fetch-depth: 0
 
       - name: Install huggingface_hub
-        run: pip install huggingface_hub
+        run: pip install "huggingface_hub[cli]>=0.23"
 
-      - name: Push hf-space/ to HuggingFace Space
+      - name: Upload hf-space/ to HuggingFace Space
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-          GITHUB_SHA_SHORT: ${{ github.sha }}
         run: |
-          cd hf-space
-          git init
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git config user.name "github-actions[bot]"
-          git add -A
-          git commit -m "deploy: $GITHUB_SHA_SHORT" || echo "Nothing to commit"
-          git push https://kleinpanic93:$HF_TOKEN@huggingface.co/spaces/kleinpanic93/canvas-calendar-agent-demo main --force
+          huggingface-cli upload kleinpanic93/canvas-calendar-agent-demo \
+            hf-space/ . \
+            --repo-type space \
+            --commit-message "deploy: ${{ github.sha }}"
 
       - name: Print logs URL on failure
         if: failure()
