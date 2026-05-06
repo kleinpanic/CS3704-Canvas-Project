@@ -41,7 +41,10 @@ class PriorityHint:
             from canvas_tui.reranker import LocalReranker, RANK_PROMPT_FORMAT_SHA, RANK_PROMPT_TEMPLATE
             from canvas_tui.config import load_config
         except ImportError:
-            return {"winner": None, "rationale": "canvas_tui not installed — reranker unavailable in standalone SDK mode"}
+            return {
+                "winner": None,
+                "rationale": "canvas_tui not installed — reranker unavailable in standalone SDK mode",
+            }
 
         cfg = load_config()
         if not getattr(cfg, "use_ai_reranker", False) or not getattr(cfg, "model_path", None):
