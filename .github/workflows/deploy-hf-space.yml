@@ -7,6 +7,7 @@ on:
     branches: [main]
     paths:
       - "hf-space/**"
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -26,7 +27,7 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          huggingface-cli upload kleinpanic93/canvas-calendar-agent-demo \
+          hf upload kleinpanic93/canvas-calendar-agent-demo \
             hf-space/ . \
             --repo-type space \
             --commit-message "deploy: ${{ github.sha }}"
