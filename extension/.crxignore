@@ -1,0 +1,7 @@
+node_modules/
+tests/
+jest.config.cjs
+babel.config.cjs
+package.json
+package-lock.json
+.crxignore

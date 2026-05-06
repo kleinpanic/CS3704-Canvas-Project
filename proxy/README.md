@@ -1,6 +1,6 @@
-# Cloudflare Worker proxy — GH Pages → HF Space
+# Cloudflare Worker proxy — GH Pages → HF Space + Canvas API
 
-Holds the HF_TOKEN server-side. Browsers only see the proxy URL.
+Holds `HF_TOKEN` and `CANVAS_TOKEN` server-side. Browsers only see the proxy URL.
 
 ## One-time deploy
 
@@ -15,9 +15,10 @@ wrangler login
 cd proxy
 wrangler deploy
 
-# 4. Set the HF token as a secret (NOT in code, NOT in wrangler.toml)
+# 4. Set secrets (NOT in code, NOT in wrangler.toml)
 wrangler secret put HF_TOKEN
-# (paste the token when prompted)
+wrangler secret put CANVAS_TOKEN
+# (paste each token when prompted)
 ```
 
 The worker will be live at `https://cs3704-demo-proxy.kleinpanic.workers.dev`.
@@ -28,7 +29,15 @@ The worker will be live at `https://cs3704-demo-proxy.kleinpanic.workers.dev`.
 wrangler deploy   # redeploys worker.js
 ```
 
-## Test
+## Routes
+
+### POST /chat
+
+Proxies a message to the HuggingFace Space demo agent.
+
+Request body: `{ "message": string }` (max 4000 chars)
+
+Response: `{ "final_answer": string, "tool_calls": [...] }`
 
 ```bash
 curl -X POST https://cs3704-demo-proxy.kleinpanic.workers.dev/chat \
@@ -36,22 +45,39 @@ curl -X POST https://cs3704-demo-proxy.kleinpanic.workers.dev/chat \
   -d '{"message":"What is due this week?"}'
 ```
 
-Expected response shape:
+### POST /canvas
+
+Proxies a Canvas API call to `https://canvas.vt.edu` with server-side auth.
+Used by the live demo iframe — the extension in its native context still uses
+the user's own stored token directly.
+
+Request body:
 ```json
 {
-  "final_answer": "...",
-  "tool_calls": [
-    {"tool":"canvas.get_assignments","args":{},"result":{"items":[...]}}
-  ]
+  "endpoint": "/api/v1/courses",
+  "method": "GET",
+  "body": null
 }
+```
+
+- `endpoint` must start with `/api/v1/` (enforced; rejects anything else)
+- `method` defaults to `GET`; allowed values: GET, POST, PUT, PATCH, DELETE
+- `body` is optional; serialized size capped at 4000 chars
+- Canvas's HTTP status code is forwarded as-is (401, 404, etc.)
+
+```bash
+curl -X POST https://cs3704-demo-proxy.kleinpanic.workers.dev/canvas \
+  -H "Content-Type: application/json" \
+  -d '{"endpoint":"/api/v1/courses","method":"GET"}'
 ```
 
 ## What this protects against
 
-- HF_TOKEN never reaches the browser → cannot be extracted from public JS.
-- Token can be any scope (no need to scope down) since it stays server-side.
+- `HF_TOKEN` and `CANVAS_TOKEN` never reach the browser → cannot be extracted from public JS.
+- Tokens can be any scope (no need to scope down) since they stay server-side.
 - CORS whitelist limits which origins can use the proxy (`kleinpanic.github.io` + localhost).
-- Body validation rejects empty / oversize requests before paying for an HF call.
+- Body validation rejects empty / oversize requests before paying for an upstream call.
+- `/canvas` enforces `/api/v1/` prefix on `endpoint` to prevent SSRF against arbitrary URLs.
 
 ## Free tier limits
 
