@@ -1,7 +1,22 @@
-"""Re-export shim — canonical implementation moved to canvas_sdk.backends.calendar_adapter."""
+"""Calendar backend abstraction.
 
-from canvas_sdk.backends.calendar_adapter import *  # noqa: F401,F403
-from canvas_sdk.backends.calendar_adapter import CalendarAdapter
+Supported backends (configured via Config.calendar_backend):
+  "google"  — Google Calendar API (requires google-api-python-client + oauth2)
+  "ical"    — Local / remote iCalendar file (read-only events + write to a file)
+  "none"    — No-op backend; returns empty lists (testing / schema-only mode)
+
+The backend is selected once at startup via CalendarAdapter.from_config().
+All calendar tools in canvas_sdk.agent_tools.calendar_tools call this adapter.
+"""
+
+from __future__ import annotations
+
+import abc
+import datetime as dt
+from typing import Any
+
+
+class CalendarBackend(abc.ABC):
     """Abstract calendar backend. All methods return plain dicts (JSON-serializable)."""
 
     @abc.abstractmethod

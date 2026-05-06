@@ -6,7 +6,7 @@ __all__ = ["ListEvents", "FindFreeBlocks", "CreateEvent", "ModifyEvent", "Delete
 
 
 def _adapter():
-    from canvas_tui.agent.backends.calendar_adapter import CalendarAdapter
+    from canvas_sdk.backends.calendar_adapter import CalendarAdapter
 
     return CalendarAdapter.from_config()
 
