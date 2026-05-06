@@ -430,6 +430,8 @@ def generate_step(messages):
 def chat(message: str, history: list, state: dict | None):
     if state is None:
         state = init_state()
+    if not (message or "").strip():
+        return history or [], state, render_calendar_html(state)
 
     msgs = [{"role": "system", "content": SYSTEM_PROMPT}]
     for h in history or []:
@@ -546,11 +548,12 @@ CUSTOM_CSS = """
     padding: 3px 10px !important;
     border: 1px solid #2e2e38 !important;
     background: #18181f !important;
+    color: #d4d4db !important;
     text-align: left !important;
     white-space: normal !important;
     min-height: auto !important;
 }
-.example-btn button:hover { border-color: #d63e36 !important; background: #1f1010 !important; }
+.example-btn button:hover { border-color: #d63e36 !important; background: #1f1010 !important; color: #ffffff !important; }
 .description { font-size: 0.82rem !important; line-height: 1.6 !important; color: #9ca3af !important; }
 #calendar-pane { background: #111114; border: 1px solid #2e2e38; border-radius: 8px; min-height: 440px; max-height: 600px; overflow-y: auto; }
 """
