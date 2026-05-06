@@ -8,6 +8,7 @@ site_dir: ../site/docs
 
 theme:
   name: material
+  favicon: favicon.svg
   palette:
     - scheme: default
       primary: red
