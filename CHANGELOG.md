@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.2.0] — 2026-05-06
 
 ### Added
+- **Contributor graph** (contrib.rocks) in README showing all contributors with auto-refresh.
 - **HF Space session state + 18-tool surface**: calendar pane, 18 dispatched mock tools, pill examples, table tool calls, fill_height, Gemma-4 sampling params (#145)
 - **18 interactive tool buttons** on agent demo page with visible labels (#121, #122, #163, #164)
 - **Live Demo page** on docs-site with HF links across nav (#143, #144)
