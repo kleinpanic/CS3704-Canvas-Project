@@ -4,7 +4,7 @@ CI script: pre-fetch Canvas API data and save as static JSON for the live demo.
 
 Usage:
   CANVAS_TOKEN=<token> python3 docs-site/fetch_canvas_data.py --out site/data
-  python3 docs-site/fetch_canvas_data.py --self-test   # regex sanity check, no network
+  python3 docs-site/fetch_canvas_data.py --self-test   # regex + Piiranha mock self-test
 
 Output files (all in --out dir):
   courses.json
@@ -16,13 +16,11 @@ Output files (all in --out dir):
   course_<id>_modules.json
   course_<id>_grades.json
 
-PII scrubbing: by default, every payload is run through scrub_recursive() before
-being written to disk. The data baked into site/data/*.json is deployed to a
-PUBLIC GitHub Pages site, so live Canvas content (assignment titles, descriptions,
-announcement bodies, syllabus text) is regex-redacted for emails, phone numbers,
-SSNs, and street addresses. Pass --no-scrub for local debugging only.
-TODO: upgrade to a model-based scrub (e.g. iiiorg/piiranha) if the false-negative
-rate of these regexes becomes a concern.
+PII scrubbing: two-layer approach. When HF_TOKEN is set, strings longer than 20 chars
+are first sent to iiiorg/piiranha-v1-detect-personal-information via the HF Inference
+API. On any error (503 warm-up, 429 rate-limit, timeout) Piiranha is disabled for the
+rest of the run and the regex fallback takes over. Without HF_TOKEN the script falls
+back directly to regex. Pass --no-scrub for local debugging only.
 """
 
 import argparse
@@ -30,6 +28,7 @@ import json
 import os
 import re
 import sys
+import time
 import urllib.request
 import urllib.error
 import urllib.parse
@@ -37,6 +36,7 @@ from pathlib import Path
 
 CANVAS_BASE = "https://canvas.vt.edu/api/v1"
 TOKEN = os.environ.get("CANVAS_TOKEN") or os.environ.get("CANVAS_API_TOKEN", "")
+HF_TOKEN = os.environ.get("HF_TOKEN", "")
 
 # ── PII scrub ────────────────────────────────────────────────────────────────
 EMAIL_RE = re.compile(r"\b[\w.+-]+@[\w-]+\.[\w.-]+\b")
@@ -53,6 +53,69 @@ SCRUB_KEYS = {
     "course_name", "short_name", "original_name",
 }
 
+# Module-level flag: set to False if Piiranha returns a non-retryable error
+# during a run, so subsequent strings skip the API and use regex directly.
+_piiranha_available = True
+
+PIIRANHA_URL = (
+    "https://api-inference.huggingface.co/models/"
+    "iiiorg/piiranha-v1-detect-personal-information"
+)
+
+
+def scrub_piiranha(text, hf_token):
+    """Call Piiranha via HF Inference API. Returns redacted text or None on any error."""
+    global _piiranha_available
+    if not _piiranha_available:
+        return None
+    payload = json.dumps({"inputs": text}).encode()
+    req = urllib.request.Request(
+        PIIRANHA_URL,
+        data=payload,
+        headers={
+            "Authorization": f"Bearer {hf_token}",
+            "Content-Type": "application/json",
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            entities = json.loads(resp.read())
+    except urllib.error.HTTPError as e:
+        if e.code == 503:
+            # Model loading — retry once after 5 s
+            print("  Piiranha: model loading (503), retrying in 5 s…", file=sys.stderr)
+            time.sleep(5)
+            try:
+                with urllib.request.urlopen(req, timeout=15) as resp:
+                    entities = json.loads(resp.read())
+            except Exception as retry_err:
+                print(f"  Piiranha: retry failed ({retry_err}), falling back to regex",
+                      file=sys.stderr)
+                _piiranha_available = False
+                return None
+        else:
+            print(f"  Piiranha: HTTP {e.code}, falling back to regex", file=sys.stderr)
+            _piiranha_available = False
+            return None
+    except Exception as e:
+        print(f"  Piiranha: {e}, falling back to regex", file=sys.stderr)
+        _piiranha_available = False
+        return None
+
+    if not isinstance(entities, list):
+        return None
+
+    # Walk in reverse so offsets remain valid as we splice
+    chars = list(text)
+    for ent in sorted(entities, key=lambda x: x.get("start", 0), reverse=True):
+        start = ent.get("start")
+        end = ent.get("end")
+        group = ent.get("entity_group", "PII")
+        if start is None or end is None:
+            continue
+        chars[start:end] = list(f"[{group}]")
+    return "".join(chars)
+
 
 def scrub(text):
     if not isinstance(text, str):
@@ -64,12 +127,21 @@ def scrub(text):
     return text
 
 
+def scrub_string(text):
+    """Scrub a single string: Piiranha-first (if HF_TOKEN set), regex fallback."""
+    if HF_TOKEN and len(text) > 20:
+        result = scrub_piiranha(text, HF_TOKEN)
+        if result is not None:
+            return result
+    return scrub(text)
+
+
 def scrub_recursive(obj, target_keys=SCRUB_KEYS):
     if isinstance(obj, dict):
         out = {}
         for k, v in obj.items():
             if k in target_keys and isinstance(v, str):
-                out[k] = scrub(v)
+                out[k] = scrub_string(v)
             else:
                 out[k] = scrub_recursive(v, target_keys)
         return out
@@ -77,7 +149,7 @@ def scrub_recursive(obj, target_keys=SCRUB_KEYS):
         return [scrub_recursive(x, target_keys) for x in obj]
     if isinstance(obj, str):
         # belt-and-braces: catch PII anywhere, even outside whitelisted keys
-        return scrub(obj)
+        return scrub_string(obj)
     return obj
 
 
@@ -138,6 +210,10 @@ def collect_teachers(courses):
 
 
 def self_test():
+    import io
+    from unittest.mock import patch, MagicMock
+
+    # ── regex path ────────────────────────────────────────────────────────────
     sample = {
         "name": "Email Prof at jane@vt.edu about HW",
         "description": "Call 540-555-1234 or visit 123 Main Street",
@@ -152,7 +228,29 @@ def self_test():
     assert "[SSN]" in cleaned["courses"][0]["description"], cleaned
     assert "[EMAIL]" in cleaned["nested"]["body"], cleaned
     assert "[PHONE]" in cleaned["nested"]["body"], cleaned
-    print("scrub self-test PASSED")
+    print("scrub self-test (regex) PASSED")
+
+    # ── Piiranha mock path ────────────────────────────────────────────────────
+    # Simulate Piiranha returning entity spans for "Hello jane@vt.edu end"
+    # start=6, end=18 covers "jane@vt.edu"
+    fake_entities = [{"entity_group": "EMAIL", "score": 0.99, "word": "jane@vt.edu",
+                      "start": 6, "end": 17}]
+    fake_response = io.BytesIO(json.dumps(fake_entities).encode())
+    mock_cm = MagicMock()
+    mock_cm.__enter__ = MagicMock(return_value=mock_cm)
+    mock_cm.__exit__ = MagicMock(return_value=False)
+    mock_cm.read = MagicMock(return_value=json.dumps(fake_entities).encode())
+
+    global _piiranha_available
+    _piiranha_available = True  # reset in case a prior test tripped it
+
+    with patch("urllib.request.urlopen", return_value=mock_cm):
+        result = scrub_piiranha("Hello jane@vt.edu end", "fake-token")
+
+    assert result is not None, "scrub_piiranha returned None with mock"
+    assert "jane@vt.edu" not in result, f"PII not redacted: {result!r}"
+    assert "[EMAIL]" in result, f"Expected [EMAIL] tag: {result!r}"
+    print("scrub self-test (Piiranha mock) PASSED")
 
 
 def main():

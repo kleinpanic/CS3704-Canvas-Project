@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "canvas-tui"
-version = "1.2.1"
+version = "1.2.2"
 description = "Canvas LMS TUI client for the CS3704 Canvas project"
 readme = "README.md"
 license = "GPL-3.0-or-later"
@@ -66,14 +66,14 @@ where = ["src"]
 
 [tool.towncrier]
 name = "canvas-tui"
-version = "1.2.1"
+version = "1.2.2"
 directory = "newsfragments"
 filename = "CHANGELOG.md"
 issue_format = "[#{issue}](https://github.com/kleinpanic/CS3704-Canvas-Project/issues/{issue})"
 
 [tool.commitizen]
 name = "cz_conventional_commits"
-version = "1.2.1"
+version = "1.2.2"
 tag_format = "v$version"
 version_source = "commitizen"
 

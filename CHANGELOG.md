@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.2] — 2026-05-06
+
+### Changed
+- **HF Space description**: removed unverified v7-broken numbers (β=0.1, 181 trajectories, 90.3% reward accuracy); replaced with β=0.3 (per small-N regularization research) and TBD status for trajectory/bench counts pending phase 1/4; links to cited method.html for details. (`hf-space/app.py`)
+- **fetch_canvas_data.py**: upgraded PII scrubbing from regex-only to Piiranha-first with regex fallback. When `HF_TOKEN` is set, strings >20 chars are sent to `iiiorg/piiranha-v1-detect-personal-information` via HF Inference API; 503 warm-up is retried once after 5 s; any error disables Piiranha for the remainder of the run and falls back to existing regex. Self-test extended with Piiranha mock.
+
+### Security
+- **CF Worker `/canvas` PII scrub**: defense-in-depth regex scrub (email, phone, SSN, address) applied to Canvas API JSON responses before returning to caller. Opt out with `?nopiiscrub=1` for SDK consumers that need raw field values. (`proxy/worker.js`)
+
+---
+
 ## [1.2.1] — 2026-05-06
 
 ### Fixed
