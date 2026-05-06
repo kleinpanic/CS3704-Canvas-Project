@@ -664,6 +664,7 @@ button.example-btn {
 button.example-btn:hover { border-color: #d63e36 !important; background: #1f1010 !important; color: #ffffff !important; }
 .description { font-size: 0.82rem !important; line-height: 1.6 !important; color: #9ca3af !important; }
 #calendar-pane { background: #111114; border: 1px solid #2e2e38; border-radius: 8px; min-height: 440px; max-height: 600px; overflow-y: auto; }
+#chat-panel { border-radius: 0 0 8px 8px !important; border-top: none !important; }
 """
 
 _MODEL_URL = "https://huggingface.co/kleinpanic93/canvas-calendar-agent-v7-dpo"
@@ -762,11 +763,31 @@ with gr.Blocks(theme=THEME, css=CUSTOM_CSS, title="Canvas Calendar Agent") as de
 
     with gr.Row(equal_height=True):
         with gr.Column(scale=3):
+            gr.HTML("""
+            <div style="background:#1e1e24;border:1px solid #2e2e38;border-radius:8px 8px 0 0;
+                        padding:8px 12px;display:flex;align-items:center;gap:10px;
+                        border-bottom:none;">
+              <div style="display:flex;gap:5px;">
+                <span style="width:11px;height:11px;border-radius:50%;
+                             background:#ff5f56;display:inline-block;"></span>
+                <span style="width:11px;height:11px;border-radius:50%;
+                             background:#ffbd2e;display:inline-block;"></span>
+                <span style="width:11px;height:11px;border-radius:50%;
+                             background:#27c93f;display:inline-block;"></span>
+              </div>
+              <div style="flex:1;background:#111114;border:1px solid #2e2e38;border-radius:4px;
+                          padding:3px 10px;font-size:0.72rem;color:#6b7280;
+                          font-family:'Cascadia Code',monospace;">
+                canvas.vt.edu/calendar — Canvas Calendar Agent Demo
+              </div>
+            </div>
+            """)
             chatbot = gr.Chatbot(
                 type="messages",
                 height=440,
                 show_label=False,
                 avatar_images=None,
+                elem_id="chat-panel",
             )
             with gr.Row(elem_classes=["input-row"]):
                 msg = gr.Textbox(
