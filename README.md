@@ -2,29 +2,38 @@
 
 A maintainable, team-ready **Canvas LMS productivity client** with a Textual TUI frontend, Chrome extension, Python SDK, and a fine-tuned calendar agent — with a documented shared-core architecture.
 
-<!-- Build, repo, tooling, downstream — re-grouped 2026-05-06 -->
+<!-- badges: CI/CD | Distribution | Repo health | Tooling | HF/ML | Dev buttons (Phase 9) -->
 [![CI](https://img.shields.io/github/actions/workflow/status/kleinpanic/CS3704-Canvas-Project/ci.yml?branch=main&label=CI)](https://github.com/kleinpanic/CS3704-Canvas-Project/actions/workflows/ci.yml)
 [![Security](https://img.shields.io/github/actions/workflow/status/kleinpanic/CS3704-Canvas-Project/security.yml?branch=main&label=Security)](https://github.com/kleinpanic/CS3704-Canvas-Project/actions/workflows/security.yml)
 [![Pages](https://img.shields.io/github/actions/workflow/status/kleinpanic/CS3704-Canvas-Project/pages.yml?branch=main&label=Pages)](https://github.com/kleinpanic/CS3704-Canvas-Project/actions/workflows/pages.yml)
 [![Release](https://img.shields.io/github/actions/workflow/status/kleinpanic/CS3704-Canvas-Project/release.yml?label=Release)](https://github.com/kleinpanic/CS3704-Canvas-Project/actions/workflows/release.yml)
-[![Coverage](https://img.shields.io/github/actions/workflow/status/kleinpanic/CS3704-Canvas-Project/coverage.yml?branch=main&label=Coverage)](https://github.com/kleinpanic/CS3704-Canvas-Project/actions/workflows/coverage.yml)
+[![codecov](https://codecov.io/gh/kleinpanic/CS3704-Canvas-Project/branch/main/graph/badge.svg)](https://codecov.io/gh/kleinpanic/CS3704-Canvas-Project)
+<br>
+[![PyPI canvas-sdk](https://img.shields.io/pypi/v/canvas-sdk?label=canvas-sdk)](https://pypi.org/project/canvas-sdk/)
+[![PyPI canvas-tui](https://img.shields.io/pypi/v/canvas-tui?label=canvas-tui)](https://pypi.org/project/canvas-tui/)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/canvas-sdk)](https://pypi.org/project/canvas-sdk/)
+[![ghcr.io](https://img.shields.io/badge/ghcr.io-canvas--tui-2496ED?logo=docker&logoColor=white)](https://github.com/kleinpanic/CS3704-Canvas-Project/pkgs/container/canvas-tui)
 <br>
 [![release](https://img.shields.io/github/v/release/kleinpanic/CS3704-Canvas-Project?label=release)](https://github.com/kleinpanic/CS3704-Canvas-Project/releases)
 [![last commit](https://img.shields.io/github/last-commit/kleinpanic/CS3704-Canvas-Project)](https://github.com/kleinpanic/CS3704-Canvas-Project/commits/main)
 [![activity](https://img.shields.io/github/commit-activity/m/kleinpanic/CS3704-Canvas-Project?label=activity)](https://github.com/kleinpanic/CS3704-Canvas-Project/commits/main)
 [![contributors](https://img.shields.io/github/contributors/kleinpanic/CS3704-Canvas-Project)](https://github.com/kleinpanic/CS3704-Canvas-Project/graphs/contributors)
 <br>
-[![Python](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 [![code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000?logo=ruff)](https://github.com/astral-sh/ruff)
 [![types: mypy](https://img.shields.io/badge/types-mypy-blue?logo=python&logoColor=white)](https://mypy-lang.org/)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://pre-commit.com/)
+[![Commitizen friendly](https://img.shields.io/badge/commitizen-friendly-brightgreen.svg)](http://commitizen.github.io/cz-cli/)
+[![OSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/kleinpanic/CS3704-Canvas-Project/badge)](https://securityscorecards.dev/viewer/?uri=github.com/kleinpanic/CS3704-Canvas-Project)
 <br>
+[![Open in HF Spaces](https://huggingface.co/datasets/huggingface/badges/resolve/main/open-in-hf-spaces-sm.svg)](https://huggingface.co/spaces/kleinpanic93/canvas-calendar-agent-demo)
+[![Open in HF Spaces](https://huggingface.co/datasets/huggingface/badges/resolve/main/open-in-hf-spaces-sm.svg)](https://huggingface.co/spaces/kleinpanic93/canvas-pii-scrub)
 [![HF Model](https://img.shields.io/badge/🤗_Model-canvas--calendar--agent--v7--dpo-yellow)](https://huggingface.co/kleinpanic93/canvas-calendar-agent-v7-dpo)
 [![HF Dataset](https://img.shields.io/badge/🤗_Dataset-canvas--calendar--preferences--v7-blue)](https://huggingface.co/datasets/kleinpanic93/canvas-calendar-preferences-v7)
 [![HF Collection](https://img.shields.io/badge/🤗_Collection-Canvas_Calendar_Agent_v3.0-yellow)](https://huggingface.co/collections/kleinpanic93/canvas-calendar-agent-v30-69fa6462f697e0342b21dfe0)
-[![HF Space](https://img.shields.io/badge/🤗_Space-Live_Demo-purple)](https://huggingface.co/spaces/kleinpanic93/canvas-calendar-agent-demo)
-[![ghcr.io](https://img.shields.io/badge/ghcr.io-canvas--tui-2496ED?logo=docker&logoColor=white)](https://github.com/kleinpanic/CS3704-Canvas-Project/pkgs/container/canvas-tui)
+<br>
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/kleinpanic/CS3704-Canvas-Project)
+[![Open in Dev Containers](https://img.shields.io/static/v1?label=Dev%20Containers&message=Open&color=blue&logo=visualstudiocode)](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/kleinpanic/CS3704-Canvas-Project)
 
 ---
 

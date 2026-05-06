@@ -49,3 +49,13 @@ Forks that have not configured the `pypi` and `test-pypi` environments will have
 ## Verifying a Release
 
 See [BREAKING.md](../BREAKING.md) for `slsa-verifier` and `cosign` verification commands.
+
+## Maintainer Setup
+
+### Codecov Integration
+
+1. Go to https://codecov.io and sign in with GitHub.
+2. Add `kleinpanic/CS3704-Canvas-Project` as a new repository.
+3. For public repos, no `CODECOV_TOKEN` secret is required — `codecov/codecov-action` uploads anonymously.
+4. After the first successful `coverage.yml` run, the live badge renders at `https://codecov.io/gh/kleinpanic/CS3704-Canvas-Project/branch/main/graph/badge.svg`.
+5. If the repo is ever set private, add `CODECOV_TOKEN` (Codecov Dashboard → Settings → General) as a GitHub Actions secret and add `token: ${{ secrets.CODECOV_TOKEN }}` to the upload step.
