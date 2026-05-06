@@ -188,9 +188,14 @@ def generate_step(messages):
         model.to("cuda")
         input_ids = input_ids.to("cuda")
     with torch.inference_mode():
+        # Gemma-4 official sampling for production inference per
+        # https://ai.google.dev/gemma/docs/core/model_card_4
         out = model.generate(
             input_ids,
-            do_sample=False,
+            do_sample=True,
+            temperature=1.0,
+            top_p=0.95,
+            top_k=64,
             max_new_tokens=MAX_NEW_TOKENS,
             pad_token_id=tokenizer.eos_token_id,
         )
@@ -232,11 +237,13 @@ def chat(message, history):
     if not final or final == "(no final answer)":
         final = summarize_tool_results(tool_log)
     if tool_log:
-        tool_md = "\n".join(
-            f"- `{t['tool']}({json.dumps(t['args'])})` -> `{json.dumps(t['result'])[:120]}...`"
+        rows = "\n".join(
+            f"| `{t['tool']}` | `{json.dumps(t['args'])[:70]}` | `{json.dumps(t['result'])[:90]}` |"
             for t in tool_log
         )
-        return f"{final}\n\n---\n**Tool calls (mock data — Space has no Canvas creds):**\n{tool_md}"
+        table = f"| Tool | Args | Result |\n|------|------|--------|\n{rows}"
+        label = f"{len(tool_log)} tool call{'s' if len(tool_log) > 1 else ''}"
+        return f"{final}\n\n<details><summary>🔧 {label} (mock data)</summary>\n\n{table}\n\n</details>"
     return final
 
 
@@ -275,33 +282,53 @@ THEME = gr.themes.Monochrome(
 )
 
 CUSTOM_CSS = """
-/* tighten overall page padding */
-.gradio-container { max-width: 860px !important; padding: 16px !important; }
-/* remove soft shadow blobs from blocks */
-.block { box-shadow: none !important; border-radius: 6px !important; }
-/* chatbot window: taller, tighter bubbles */
-#component-0 .chatbot { min-height: 380px; }
-.message-bubble-border { border-radius: 6px !important; }
-.user .message { background: #d63e36 !important; color: #fff !important; }
-.bot .message  { background: #1a1a1f !important; border: 1px solid #2e2e38 !important; }
-/* input row */
-.input-row textarea { border-radius: 4px !important; font-size: 0.85rem !important; }
-/* example buttons */
-.examples-holder button { border-radius: 4px !important; font-size: 0.78rem !important; }
-/* description text */
-.description { font-size: 0.82rem !important; line-height: 1.55 !important; color: #9ca3af !important; }
+.gradio-container { max-width: 960px !important; padding: 24px 20px !important; }
+.block { box-shadow: none !important; border-radius: 8px !important; }
+/* chatbot */
+#component-0 .chatbot { min-height: 440px; }
+.message-bubble-border { border-radius: 8px !important; }
+.user .message {
+    background: #d63e36 !important;
+    color: #fff !important;
+    border-radius: 8px 8px 2px 8px !important;
+}
+.bot .message {
+    background: #18181f !important;
+    border: 1px solid #2e2e38 !important;
+    border-radius: 8px 8px 8px 2px !important;
+    line-height: 1.6 !important;
+}
+/* bot message: tool-call table */
+.bot .message table { font-size: 0.75rem !important; border-collapse: collapse !important; width: 100% !important; margin-top: 6px; }
+.bot .message th, .bot .message td { padding: 3px 8px !important; border: 1px solid #2e2e38 !important; text-align: left !important; }
+.bot .message th { background: #111114 !important; color: #9ca3af !important; font-weight: 500 !important; }
+.bot .message details summary { cursor: pointer; color: #6b7280; font-size: 0.78rem; user-select: none; }
+/* input */
+.input-row textarea { border-radius: 6px !important; font-size: 0.875rem !important; min-height: 48px !important; }
+/* example buttons — pill style */
+.examples-holder { flex-wrap: wrap !important; gap: 6px !important; }
+.examples-holder button {
+    border-radius: 20px !important;
+    font-size: 0.78rem !important;
+    padding: 4px 14px !important;
+    border: 1px solid #2e2e38 !important;
+    background: #18181f !important;
+    transition: border-color 0.15s, background 0.15s !important;
+}
+.examples-holder button:hover { border-color: #d63e36 !important; background: #1f1010 !important; }
+/* description */
+.description { font-size: 0.82rem !important; line-height: 1.6 !important; color: #9ca3af !important; }
 """
 
 DESCRIPTION_MD = """
-**Canvas LMS calendar + study-planning agent.** Fine-tuned Gemma-4-E2B-IT with DPO on a custom preference dataset (1,071 pairs, 90.3% reward accuracy, 0.22 train loss).
+Fine-tuned **Gemma-4-E2B-IT** (DPO · β=0.1 · 181 trajectories · 90.3% reward accuracy) — speaks the native Gemma-4 tool protocol for **18 tools** across 4 families:
 
-The model speaks the **native Gemma-4 tool-call protocol** for 18 tools — `canvas.*` (8 tools for assignments / courses / grades / syllabi / planner), `calendar.*` (5 for scheduling / free-block search), `reranker.*` (priority hints), and `study.*` (4 for exam prep, spaced repetition, semester planning).
+`canvas.*` assignments · grades · syllabi · planner &nbsp;|&nbsp; `calendar.*` scheduling · free blocks &nbsp;|&nbsp; `reranker.*` priority hints &nbsp;|&nbsp; `study.*` exam prep · spaced repetition
 
-**Tool results are mocked** — this Space has no Canvas credentials. Install the SDK locally with your own Canvas token for real data: `pip install canvas-sdk[autodownload]`.
+> ⚠️ **Mock data** — no Canvas credentials in this Space. For live data: `pip install canvas-sdk[autodownload]`
+> ⏱ Cold-start after inactivity ~30 s (ZeroGPU). Subsequent responses are fast.
 
-[Model](https://huggingface.co/kleinpanic93/canvas-calendar-agent-v7-dpo) · [Dataset](https://huggingface.co/datasets/kleinpanic93/canvas-calendar-preferences-v7) · [Collection (9-method matrix)](https://huggingface.co/collections/kleinpanic93/canvas-calendar-agent-v30-69fa6462f697e0342b21dfe0) · [GitHub](https://github.com/kleinpanic/CS3704-Canvas-Project)
-
-> First request after a quiet period takes ~30 s while ZeroGPU cold-starts. Subsequent requests are fast.
+[Model](https://huggingface.co/kleinpanic93/canvas-calendar-agent-v7-dpo) · [Dataset](https://huggingface.co/datasets/kleinpanic93/canvas-calendar-preferences-v7) · [Collection](https://huggingface.co/collections/kleinpanic93/canvas-calendar-agent-v30-69fa6462f697e0342b21dfe0) · [GitHub](https://github.com/kleinpanic/CS3704-Canvas-Project) · [Docs](https://kleinpanic.github.io/CS3704-Canvas-Project/agent-demo/method.html)
 """
 
 demo = gr.ChatInterface(
@@ -313,13 +340,16 @@ demo = gr.ChatInterface(
         "Find me a 2-hour free block tomorrow afternoon",
         "Build me an exam-prep bracket for the May 12 final",
         "Rank my todos by priority",
-        "What's on my calendar this week?",
+        "What are my current grades?",
         "Plan a spaced-repetition schedule for my Linear Algebra final",
+        "Create a study block from 3pm to 5pm tomorrow",
+        "What announcements are in my CS 3704 course?",
     ],
     type="messages",
     theme=THEME,
     css=CUSTOM_CSS,
     cache_examples=False,
+    fill_height=True,
 )
 
 if __name__ == "__main__":
