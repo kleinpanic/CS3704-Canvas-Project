@@ -12,7 +12,15 @@ Welcome to the team documentation portal. This site is built with MkDocs and dep
 
 | Resource | Link |
 |----------|------|
+| **🎓 Try the live agent** | [agent-demo](https://kleinpanic.github.io/CS3704-Canvas-Project/agent-demo/) |
+| **🤗 Model card** | [canvas-calendar-agent-v7-dpo](https://huggingface.co/kleinpanic93/canvas-calendar-agent-v7-dpo) |
+| **🤗 Dataset** | [canvas-calendar-preferences-v7](https://huggingface.co/datasets/kleinpanic93/canvas-calendar-preferences-v7) |
+| **🤗 Inference Space** | [canvas-calendar-agent-demo](https://huggingface.co/spaces/kleinpanic93/canvas-calendar-agent-demo) |
+| **🤗 Collection (v3.0 9-method matrix)** | [Canvas Calendar Agent v3.0](https://huggingface.co/collections/kleinpanic93/canvas-calendar-agent-v30-69fa6462f697e0342b21dfe0) |
+| **🤗 GGUF for Ollama** | [canvas-calendar-agent-v7-dpo-gguf](https://huggingface.co/kleinpanic93/canvas-calendar-agent-v7-dpo-gguf) |
+| **🚀 Live Demo & ML Assets page** | [live-demo](live-demo.md) |
 | **GitHub Repo** | [kleinpanic/CS3704-Canvas-Project](https://github.com/kleinpanic/CS3704-Canvas-Project) |
+| **Latest Release** | [v3.0.0](https://github.com/kleinpanic/CS3704-Canvas-Project/releases/tag/v3.0.0) |
 | **Open Issues** | [Issue Tracker](https://github.com/kleinpanic/CS3704-Canvas-Project/issues) |
 | **Open PRs** | [Pull Requests](https://github.com/kleinpanic/CS3704-Canvas-Project/pulls) |
 | **Project Board** | [Sprint Board](https://github.com/users/kleinpanic/projects/5) |
