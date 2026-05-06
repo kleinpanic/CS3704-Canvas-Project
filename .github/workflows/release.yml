@@ -134,3 +134,27 @@ jobs:
         if: failure()
         run: |
           echo "::error::Release ${{ needs.build.outputs.version }} failed. Check logs: https://github.com/${{ github.repository }}/actions/workflows/release.yml"
+
+  # Publishes stable releases (no pre-release suffixes) to PyPI via OIDC trusted publishing.
+  # No API token is needed here. Configure the PyPI project for trusted publishing first:
+  # https://docs.pypi.org/trusted-publishers/
+  publish-pypi:
+    needs: [release, build]
+    if: ${{ !contains(needs.build.outputs.version, '-') }}
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - name: Download dist artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: dist-${{ github.run_number }}
+          path: dist/
+          pattern: dist-*
+          merge-multiple: true
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@v1
+        with:
+          skip-existing: true
