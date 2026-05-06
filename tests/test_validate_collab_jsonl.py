@@ -92,3 +92,24 @@ def test_valid_record_passes(tmp_path):
     result = _run(tmp_path, [json.dumps(VALID_RECORD)])
     assert result.returncode == 0
     assert "OK:" in result.stdout
+
+
+def test_space_url_flag_accepted(tmp_path):
+    """Case 7: --space-url flag is accepted (no --pii → no HTTP call made, exits 0)."""
+    result = _run(
+        tmp_path,
+        [json.dumps(VALID_RECORD)],
+        extra_args=["--space-url", "http://mock.invalid"],
+    )
+    assert result.returncode == 0
+    assert "OK:" in result.stdout
+
+
+def test_space_url_and_piiranha_sha_mutually_exclusive(tmp_path):
+    """Case 8: --space-url and --piiranha-model-sha together exit 1."""
+    result = _run(
+        tmp_path,
+        [json.dumps(VALID_RECORD)],
+        extra_args=["--space-url", "http://mock.invalid", "--piiranha-model-sha", "abc123"],
+    )
+    assert result.returncode == 1
