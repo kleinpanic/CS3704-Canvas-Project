@@ -255,7 +255,12 @@ class InMemoryCalendarBackend(CalendarBackend):
             ev["end_iso"] = end_iso
         if rationale:
             ev["rationale"] = rationale
-        return {"status": "modified", "event_id": event_id, "modified": True, **{k: ev[k] for k in ("title", "start_iso", "end_iso")}}
+        return {
+            "status": "modified",
+            "event_id": event_id,
+            "modified": True,
+            **{k: ev[k] for k in ("title", "start_iso", "end_iso")},
+        }
 
     def delete_event(self, event_id: str, rationale: str = "") -> dict[str, Any]:
         if event_id in self._events:
@@ -687,9 +692,16 @@ class CalendarAdapter:
 
 if __name__ == "__main__":
     # Round-trip self-test for InMemoryCalendarBackend.
-    b = InMemoryCalendarBackend(seed_events=[
-        {"id": "evt_001", "title": "CS 3704 lecture", "start_iso": "2026-05-06T10:00:00+00:00", "end_iso": "2026-05-06T11:00:00+00:00"},
-    ])
+    b = InMemoryCalendarBackend(
+        seed_events=[
+            {
+                "id": "evt_001",
+                "title": "CS 3704 lecture",
+                "start_iso": "2026-05-06T10:00:00+00:00",
+                "end_iso": "2026-05-06T11:00:00+00:00",
+            },
+        ]
+    )
     assert len(b.list_events()) == 1, "seed event missing"
     created = b.create_event(title="study", start_iso="2026-05-07T14:00:00+00:00", end_iso="2026-05-07T16:00:00+00:00")
     assert created["status"] == "created"
