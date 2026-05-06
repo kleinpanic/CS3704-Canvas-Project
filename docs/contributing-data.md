@@ -87,3 +87,65 @@ Your Canvas token is **never** written to the output.
 **`CANVAS_TOKEN is not set`** — run `export CANVAS_TOKEN=...` first.
 
 **`401 Unauthorized`** — token expired or copied wrong. Regenerate it in Canvas Settings.
+
+---
+
+## Automated Validation (CI Gate)
+
+Every pull request that touches `data/collab/*.jsonl` is automatically validated
+by `.github/workflows/dataset-validation.yml`. The PR cannot merge until all three
+steps pass.
+
+### Record schema
+
+Each line in a contribution file must be a valid JSON object with these fields:
+
+| Field | Type | Rule |
+|---|---|---|
+| `type` | string | Required. E.g. `"course_snapshot"`. |
+| `contributor_id` | string | Required. Your VT PID or GitHub handle. |
+| `collected_at` | string | Required. ISO-8601 timestamp. |
+| `course_code` | string | Required. Must be anonymized: starts with `@COURSE<N>/` (e.g. `@COURSE1/3704 S26`), or empty string. Bare codes like `CS_3114_202601` fail. |
+| `course_name` | — | **Forbidden.** Must not appear. Use the anonymized `course_code` instead. |
+
+### What CI checks
+
+1. **Parse** — every line is valid JSON (`jq`).
+2. **Schema** — required fields present, `course_name` absent, `course_code` matches
+   the anonymized pattern (`python tools/validate_collab_jsonl.py`).
+3. **PII** — free-text fields are checked with Piiranha + regex. Any residual PII
+   (email, phone, SSN, address) fails the step.
+
+### What to do if CI fails
+
+Re-run the scrub pipeline locally:
+
+```bash
+python scripts/share_my_canvas.py --contributor yourpid --dry-run
+```
+
+Review the dry-run output, confirm no real names or course titles appear, then
+re-generate your contribution file:
+
+```bash
+python scripts/share_my_canvas.py --contributor yourpid
+```
+
+### Fork contributor note
+
+If you are contributing from a fork, the PII step is **skipped** (your fork cannot
+access the `HF_TOKEN` secret). The parse and schema steps still run and will catch
+structural problems. The maintainer runs a full PII check before merging any fork PR.
+
+### Branch protection (maintainer note)
+
+After the first successful run of this workflow, add `validate / Dataset Validation`
+as a required status check under **Settings → Branches → main** branch protection
+rules. This ensures no `data/collab/` PR can merge without passing all three steps.
+
+### Piiranha model pinning
+
+The PII step uses a specific model revision, controlled by the `PIIRANHA_MODEL_SHA`
+repository variable (**Settings → Secrets and variables → Actions → Variables**).
+Set this to the HuggingFace commit SHA of the `iiiorg/piiranha-v1-detect-personal-information`
+model you want to pin. If unset, `main` is used (not recommended for production).
