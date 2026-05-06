@@ -32,6 +32,7 @@ import re
 import sys
 import urllib.request
 import urllib.error
+import urllib.parse
 from pathlib import Path
 
 CANVAS_BASE = "https://canvas.vt.edu/api/v1"
@@ -102,6 +103,38 @@ def save(out_dir: Path, filename: str, data):
     with open(path, "w") as f:
         json.dump({"ok": True, "data": data}, f)
     print(f"  wrote {path} ({len(data) if isinstance(data, list) else '...'} items)")
+
+
+def fetch_rmp(last_name: str):
+    if not last_name:
+        return None
+    url = f"https://www.ratemyprofessors.com/filter/teacher?institution_id=1346&query={urllib.parse.quote(last_name)}"
+    try:
+        with urllib.request.urlopen(url, timeout=10) as resp:
+            data = json.loads(resp.read())
+        teacher = (data.get("data") or [None])[0]
+        if not teacher:
+            return None
+        return {
+            "rating": teacher.get("avg_rating"),
+            "difficulty": teacher.get("avg_difficulty"),
+            "numRatings": teacher.get("num_ratings", 0),
+        }
+    except Exception as e:
+        print(f"  RMP fetch failed for {last_name}: {e}", file=sys.stderr)
+        return None
+
+
+def collect_teachers(courses):
+    seen = set()
+    out = []
+    for c in courses or []:
+        for t in c.get("teachers") or []:
+            name = t.get("display_name")
+            if name and name not in seen:
+                seen.add(name)
+                out.append(name)
+    return out
 
 
 def self_test():
@@ -204,6 +237,18 @@ def main():
             syllabus = fetch(f"/courses/{cid}", {"include[]": "syllabus_body"})
             save(out_dir, f"course_{cid}_syllabus.json",
                  clean(syllabus if isinstance(syllabus, dict) else {}))
+
+    # RMP ratings — pre-fetched at build time; chrome_shim_prod.js reads from rmp.json
+    print("Fetching RateMyProfessors ratings...")
+    teachers = collect_teachers(courses if isinstance(courses, list) else [])
+    rmp_map = {}
+    for name in teachers:
+        last = name.split()[-1] if name else ""
+        rating = fetch_rmp(last)
+        if rating:
+            rmp_map[name] = rating
+            rmp_map[last] = rating  # popup looks up by last-name; index both
+    save(out_dir, "rmp.json", rmp_map)
 
     print(f"\nDone. Data written to {out_dir}/")
 
