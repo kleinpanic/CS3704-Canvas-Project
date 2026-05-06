@@ -29,7 +29,14 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 from canvas_tui.pii import scrub_doc  # noqa: E402
 
-BASE_URL = os.environ.get("CANVAS_BASE_URL", "https://canvas.vt.edu")
+BASE_URL = os.environ.get("CANVAS_BASE_URL", "").strip()
+if not BASE_URL:
+    print(
+        "ERROR: CANVAS_BASE_URL must be set to your institution's Canvas URL\n"
+        "  e.g. export CANVAS_BASE_URL=https://canvas.yourschool.edu",
+        file=sys.stderr,
+    )
+    sys.exit(1)
 
 # All enrollment states so we get 4 years of history
 _ENROLLMENT_STATES = ["active", "completed", "invited", "rejected"]

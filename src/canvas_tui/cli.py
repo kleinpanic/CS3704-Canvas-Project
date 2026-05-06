@@ -17,7 +17,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         epilog="""\
 environment variables:
   CANVAS_TOKEN        Canvas API access token (required)
-  CANVAS_BASE_URL     Canvas instance URL (default: https://canvas.vt.edu)
+  CANVAS_BASE_URL     Canvas instance URL (REQUIRED — no default)
   TZ                  Timezone (default: America/New_York)
   DAYS_AHEAD          Days to look ahead (default: 7)
   PAST_HOURS          Hours to look back (default: 72)

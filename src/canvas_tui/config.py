@@ -13,7 +13,7 @@ from typing import Any
 class Config:
     """All configuration values with validated defaults."""
 
-    base_url: str = "https://canvas.vt.edu"
+    base_url: str = ""
     token: str = ""
     user_tz: str = "America/New_York"
     user_agent: str = "canvas-tui/0.5 (textual)"
@@ -133,8 +133,9 @@ def _load_dotenv() -> None:
 def load_config() -> Config:
     """Load config from .env, environment variables, then overlay file config."""
     _load_dotenv()
+    from .config_env import get_canvas_base_url
     cfg = Config(
-        base_url=os.environ.get("CANVAS_BASE_URL", "https://canvas.vt.edu").rstrip("/"),
+        base_url=get_canvas_base_url().rstrip("/"),
         token=os.environ.get("CANVAS_TOKEN", ""),
         user_tz=os.environ.get("TZ", "America/New_York"),
         user_agent=os.environ.get("CANVAS_UA", "canvas-tui/1.0 (textual)"),

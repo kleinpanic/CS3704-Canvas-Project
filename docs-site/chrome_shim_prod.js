@@ -13,7 +13,7 @@
   'use strict';
 
   const TOKEN = 'DEMO_MODE_NO_TOKEN'; // cosmetic only — no runtime canvas calls
-  const PROXY_URL = 'https://cs3704-demo-proxy.kleinpanic.workers.dev/chat';
+  const PROXY_URL = typeof __CANVAS_PROXY_URL__ !== 'undefined' ? __CANVAS_PROXY_URL__ : 'https://cs3704-demo-proxy.kleinpanic.workers.dev/chat';
   // Popup lives at extension/src/popup/ — data is 3 levels up at site root /data/
   const DATA_BASE = '../../../data/';
 

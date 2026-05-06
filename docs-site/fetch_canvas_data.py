@@ -20,7 +20,7 @@ PII scrubbing: two-layer approach. When HF_TOKEN is set, strings longer than 20 
 are first sent to iiiorg/piiranha-v1-detect-personal-information via the HF Inference
 API. On any error (503 warm-up, 429 rate-limit, timeout) Piiranha is disabled for the
 rest of the run and the regex fallback takes over. Without HF_TOKEN the script falls
-back directly to regex. Pass --no-scrub for local debugging only.
+back directly to regex.
 """
 
 import argparse
@@ -32,7 +32,10 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-CANVAS_BASE = "https://canvas.vt.edu/api/v1"
+CANVAS_BASE = (os.environ.get("CANVAS_BASE_URL") or sys.exit(
+    "ERROR: CANVAS_BASE_URL must be set; was previously hardcoded to canvas.vt.edu\n"
+    "  e.g. export CANVAS_BASE_URL=https://canvas.yourschool.edu"
+)).rstrip("/") + "/api/v1"
 TOKEN = os.environ.get("CANVAS_TOKEN") or os.environ.get("CANVAS_API_TOKEN", "")
 HF_TOKEN = os.environ.get("HF_TOKEN", "")
 

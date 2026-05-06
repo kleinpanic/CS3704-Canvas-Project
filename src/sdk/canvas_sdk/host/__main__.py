@@ -11,6 +11,7 @@ Usage (Chrome registers this via the host manifest):
 
 import dataclasses
 import json
+import os
 import struct
 import sys
 from typing import Any
@@ -83,7 +84,7 @@ def _write(msg: dict) -> None:
 def _handle(msg: dict) -> dict:
     method = msg.get("method")
     token = msg.get("token")
-    base_url = msg.get("baseUrl", "https://canvas.vt.edu")
+    base_url = msg.get("baseUrl", os.environ.get("CANVAS_BASE_URL", "")).strip()
     params = msg.get("params", {})
 
     if not token:

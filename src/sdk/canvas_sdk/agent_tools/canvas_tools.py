@@ -24,7 +24,9 @@ __all__ = [
 def _client():
     from canvas_sdk import CanvasClient
 
-    base_url = os.environ.get("CANVAS_BASE_URL", "https://canvas.vt.edu")
+    base_url = os.environ.get("CANVAS_BASE_URL", "").strip()
+    if not base_url:
+        raise ValueError("CANVAS_BASE_URL must be set to your institution's Canvas URL")
     token = os.environ.get("CANVAS_TOKEN", "")
     if not token:
         raise RuntimeError("CANVAS_TOKEN environment variable is not set.")
