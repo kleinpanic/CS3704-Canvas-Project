@@ -153,3 +153,27 @@ The v1 entity layer was a port of canvasapi v3.6.0 (MIT licensed).
 The v2 entity layer (`client.py`, `entities.py`, `exceptions.py`) is original code
 written from the Canvas API public documentation and is licensed under GPL-3.0,
 consistent with the rest of this repository.
+
+## Verifying Releases
+
+All stable releases (`v*.*.*` without pre-release suffix) ship with a SLSA3 provenance
+file and a CycloneDX SBOM attached to the GitHub Release.
+
+### Verify SLSA provenance (requires slsa-verifier)
+
+```sh
+# Install: https://github.com/slsa-framework/slsa-verifier#installation
+slsa-verifier verify-artifact canvas_sdk-<version>-py3-none-any.whl \
+  --provenance-path provenance.intoto.jsonl \
+  --source-uri github.com/kleinpanic/CS3704-Canvas-Project \
+  --source-tag v<version>
+```
+
+### Verify Docker image signature (requires cosign)
+
+```sh
+# Install: https://docs.sigstore.dev/cosign/installation/
+cosign verify ghcr.io/kleinpanic93/canvas-tui:<version> \
+  --certificate-identity-regexp "https://github.com/kleinpanic/CS3704-Canvas-Project/.*" \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+```
