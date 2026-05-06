@@ -1,5 +1,3 @@
 # Canvas SDK
 
-Ported from [canvasapi](https://github.com/ucfopen/canvasapi) v3.6.0.
-
-A Python SDK for the Canvas LMS API. Provides typed Python objects for all Canvas API endpoints.
+Pure-Python (stdlib only) Canvas LMS read-only client and agent SDK. The HTTP client is implemented entirely with the Python standard library — no `requests`, no `httpx`, no `arrow`. The agent layer adds Gemma/Gemini backends, tool dispatch, and a Chrome native-messaging host.
