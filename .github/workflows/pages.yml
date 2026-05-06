@@ -53,7 +53,12 @@ jobs:
       # CANVAS_TOKEN secret). The build-time snapshot fetch below still uses the GHA
       # secret until fetch_canvas_data.py is moved behind the Worker.
 
-      # Pre-fetch live Canvas data and bake as static JSON
+      # PII scrub regex sanity check — fail the build if regexes regress
+      - name: PII scrub self-test
+        run: |
+          python3 docs-site/fetch_canvas_data.py --self-test
+
+      # Pre-fetch live Canvas data and bake as static JSON (PII-scrubbed)
       - name: Fetch Canvas data snapshot
         env:
           CANVAS_TOKEN: ${{ secrets.CANVAS_API_TOKEN }}
