@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Roadmap — Canvas Calendar Agent</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: { canvas: { red: '#d63e36', dark: '#b83830' } },
+          fontFamily: {
+            sans: ['Segoe UI', 'system-ui', '-apple-system', 'Roboto', 'sans-serif'],
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    .fade-up { opacity: 0; transform: translateY(24px); transition: opacity 0.55s ease, transform 0.55s ease; }
+    .fade-up.visible { opacity: 1; transform: none; }
+    .fade-left { opacity: 0; transform: translateX(-20px); transition: opacity 0.5s ease, transform 0.5s ease; }
+    .fade-left.visible { opacity: 1; transform: none; }
+    .d1 { transition-delay: 0.07s; }
+    .d2 { transition-delay: 0.14s; }
+    .d3 { transition-delay: 0.21s; }
+    .d4 { transition-delay: 0.28s; }
+    .phase-card { background: #111116; border: 1px solid #2e2e38; border-radius: 8px; padding: 16px 18px; }
+    .status-done   { background: #0d1a0d; border-color: #166534; }
+    .status-active { background: #1a0d0d; border-color: #d63e36; }
+    .status-next   { background: #0d0d1a; border-color: #312e81; }
+  </style>
+</head>
+<body class="bg-gray-950 text-gray-100 font-sans min-h-screen">
+
+  <nav class="sticky top-0 z-40 bg-gray-950/95 backdrop-blur border-b border-gray-800/60">
+    <div class="max-w-7xl mx-auto px-6 flex items-center justify-between" style="height:52px">
+      <a href="index.html" class="flex items-center gap-2.5">
+        <div class="w-7 h-7 rounded bg-canvas-red flex items-center justify-center font-bold text-white text-xs">C</div>
+        <span class="font-semibold text-sm">Canvas Calendar Agent</span>
+      </a>
+      <div class="flex items-center gap-5 text-xs text-gray-400">
+        <a href="index.html" class="hover:text-white transition-colors">Home</a>
+        <a href="agent-demo/" class="hover:text-white transition-colors">Agent Demo</a>
+        <a href="docs/architecture/" class="hover:text-white transition-colors">Architecture</a>
+        <span class="text-white">Roadmap</span>
+        <a href="https://github.com/kleinpanic/CS3704-Canvas-Project" target="_blank" rel="noopener" class="hover:text-white transition-colors">GitHub</a>
+        <a href="https://huggingface.co/spaces/kleinpanic93/canvas-calendar-agent-demo" target="_blank" rel="noopener" class="hover:text-white transition-colors">&#x1F917; HF Space</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="max-w-5xl mx-auto px-6 pt-12 pb-20 space-y-14">
+
+    <!-- Hero -->
+    <section>
+      <h1 class="text-4xl font-bold mb-3 fade-up visible">Project Roadmap</h1>
+      <p class="text-gray-400 text-base leading-relaxed max-w-2xl fade-up visible d1">
+        CS3704 Canvas Calendar Agent — current status, completed milestones, and what's next.
+        228 commits across 5 contributors as of May 2026.
+      </p>
+    </section>
+
+    <!-- Contributor breakdown -->
+    <section id="contributors">
+      <h2 class="text-xl font-bold mb-4 fade-left" style="color:#d63e36">Contributor Breakdown</h2>
+      <div class="flex flex-col md:flex-row gap-8 items-center fade-up">
+        <div class="w-56 h-56 shrink-0">
+          <canvas id="contribChart"></canvas>
+        </div>
+        <div class="flex-1 space-y-3 text-sm">
+          <div class="flex items-center gap-3">
+            <span class="w-3 h-3 rounded-full shrink-0" style="background:#d63e36"></span>
+            <span class="text-gray-300 flex-1">Klein Panic</span>
+            <span class="text-gray-500 text-xs font-mono">203 commits</span>
+            <span class="text-gray-400 font-semibold w-12 text-right">93.1%</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="w-3 h-3 rounded-full shrink-0" style="background:#818cf8"></span>
+            <span class="text-gray-300 flex-1">William (Williammm23)</span>
+            <span class="text-gray-500 text-xs font-mono">11 commits</span>
+            <span class="text-gray-400 font-semibold w-12 text-right">5.0%</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="w-3 h-3 rounded-full shrink-0" style="background:#4ade80"></span>
+            <span class="text-gray-300 flex-1">Yuzhuo</span>
+            <span class="text-gray-500 text-xs font-mono">2 commits</span>
+            <span class="text-gray-400 font-semibold w-12 text-right">0.9%</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="w-3 h-3 rounded-full shrink-0" style="background:#facc15"></span>
+            <span class="text-gray-300 flex-1">pjie22</span>
+            <span class="text-gray-500 text-xs font-mono">2 commits</span>
+            <span class="text-gray-400 font-semibold w-12 text-right">0.9%</span>
+          </div>
+          <div class="border-t border-gray-800 pt-2 flex items-center gap-3">
+            <span class="w-3 h-3 rounded-full shrink-0" style="background:#374151"></span>
+            <span class="text-gray-600 flex-1">dependabot[bot]</span>
+            <span class="text-gray-700 text-xs font-mono">10 commits</span>
+            <span class="text-gray-700 font-semibold w-12 text-right">excluded</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Current milestone -->
+    <section id="current">
+      <h2 class="text-xl font-bold mb-2 fade-left" style="color:#d63e36">Current Milestone</h2>
+      <p class="text-sm text-gray-500 mb-5 fade-up d1">Demo site polish + DPO methodology documentation</p>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+        <div class="phase-card status-done fade-up d1">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-xs font-bold text-green-400">&#x2713; DONE</span>
+            <span class="text-sm font-semibold">Nav consistency + HF links</span>
+          </div>
+          <p class="text-xs text-gray-500 leading-relaxed">Unified 52px nav across all pages. HF Space + Model + Dataset links added. Tailwind homepage CTA wired to agent-demo/. .planning and .claude untracked from GitHub.</p>
+        </div>
+
+        <div class="phase-card status-done fade-up d2">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-xs font-bold text-green-400">&#x2713; DONE</span>
+            <span class="text-sm font-semibold">Chrome extension aesthetic</span>
+          </div>
+          <p class="text-xs text-gray-500 leading-relaxed">Agent demo redesigned to match Chrome extension popup — fixed-height panel, Segoe UI font stack, pinned input, breathing room on tool grid. PR #128 merged.</p>
+        </div>
+
+        <div class="phase-card status-done fade-up d3">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-xs font-bold text-green-400">&#x2713; DONE</span>
+            <span class="text-sm font-semibold">DPO methodology page</span>
+          </div>
+          <p class="text-xs text-gray-500 leading-relaxed">New method.html: base model, SFT trajectories, DPO theory, 9-method ablation matrix, G1–G13 guardrails, bench harness. Scroll animations + pipeline visualization. PR #130.</p>
+        </div>
+
+        <div class="phase-card status-done fade-up d4">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-xs font-bold text-green-400">&#x2713; DONE</span>
+            <span class="text-sm font-semibold">Favicon + site assets</span>
+          </div>
+          <p class="text-xs text-gray-500 leading-relaxed">SVG favicon created from TUI Canvas icon. Added to all pages and MkDocs. pages.yml updated to deploy method.html and favicon.svg to site/.</p>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Open work -->
+    <section id="open">
+      <h2 class="text-xl font-bold mb-2 fade-left" style="color:#d63e36">Open</h2>
+      <p class="text-sm text-gray-500 mb-5 fade-up d1">Next up</p>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+        <div class="phase-card status-active fade-up d1">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="w-1.5 h-1.5 rounded-full bg-canvas-red animate-pulse"></span>
+            <span class="text-xs font-bold text-canvas-red">IN PROGRESS</span>
+            <span class="text-sm font-semibold ml-1">CANVAS_API_TOKEN → CF Worker</span>
+          </div>
+          <p class="text-xs text-gray-500 leading-relaxed">Move Canvas API token from GH Actions env into Cloudflare Worker proxy. Same pattern as HF token (PR #124). TODO comment in pages.yml build step.</p>
+        </div>
+
+        <div class="phase-card status-next fade-up d2">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-xs font-bold text-indigo-400">NEXT</span>
+            <span class="text-sm font-semibold">Release CI overhaul</span>
+          </div>
+          <p class="text-xs text-gray-500 leading-relaxed">4 release asset sets: source.zip+tar.gz, canvas-sdk (tar.gz + macOS + .whl), canvas-tui (tar.gz + macOS), web-extension (tar.gz + .crx). Standalone shippable for each.</p>
+        </div>
+
+        <div class="phase-card status-next fade-up d3">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-xs font-bold text-indigo-400">NEXT</span>
+            <span class="text-sm font-semibold">Standalone SDK + TUI + extension</span>
+          </div>
+          <p class="text-xs text-gray-500 leading-relaxed">Audit and fix any hidden cross-module imports. Each of canvas-sdk, canvas-tui, and the Chrome extension should pip install / load cleanly in an isolated environment.</p>
+        </div>
+
+        <div class="phase-card status-next fade-up d4">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-xs font-bold text-indigo-400">NEXT</span>
+            <span class="text-sm font-semibold">README modernization</span>
+          </div>
+          <p class="text-xs text-gray-500 leading-relaxed">Revamp README with badges, quick-start, architecture overview, and links to live demo, HF Space, and docs. Structure for GitHub scannability.</p>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Completed phases -->
+    <section id="history">
+      <h2 class="text-xl font-bold mb-4 fade-left" style="color:#d63e36">History</h2>
+      <div class="space-y-2 text-sm">
+        <div class="flex items-start gap-4 py-2 border-b border-gray-900 fade-up d1">
+          <span class="text-green-500 shrink-0 font-mono text-xs mt-0.5">&#x2713;</span>
+          <div class="flex-1"><span class="text-gray-300">v7-DPO model deployed to HF Space</span> <span class="text-gray-600 text-xs ml-2">9-method ablation training complete</span></div>
+        </div>
+        <div class="flex items-start gap-4 py-2 border-b border-gray-900 fade-up d2">
+          <span class="text-green-500 shrink-0 font-mono text-xs mt-0.5">&#x2713;</span>
+          <div class="flex-1"><span class="text-gray-300">HF token → Cloudflare Worker proxy</span> <span class="text-gray-600 text-xs ml-2">PR #124 — tokens out of GH Actions</span></div>
+        </div>
+        <div class="flex items-start gap-4 py-2 border-b border-gray-900 fade-up d3">
+          <span class="text-green-500 shrink-0 font-mono text-xs mt-0.5">&#x2713;</span>
+          <div class="flex-1"><span class="text-gray-300">18-tool agent registry + Ask AI tab wired to HF Space</span> <span class="text-gray-600 text-xs ml-2">PR #122</span></div>
+        </div>
+        <div class="flex items-start gap-4 py-2 border-b border-gray-900 fade-up d4">
+          <span class="text-green-500 shrink-0 font-mono text-xs mt-0.5">&#x2713;</span>
+          <div class="flex-1"><span class="text-gray-300">GitHub Pages live demo site</span> <span class="text-gray-600 text-xs ml-2">Tailwind homepage + MkDocs docs + agent demo</span></div>
+        </div>
+        <div class="flex items-start gap-4 py-2 border-b border-gray-900 fade-up">
+          <span class="text-green-500 shrink-0 font-mono text-xs mt-0.5">&#x2713;</span>
+          <div class="flex-1"><span class="text-gray-300">Security audit — PII removed, tokens removed from public JS</span> <span class="text-gray-600 text-xs ml-2">PRs #128, #124</span></div>
+        </div>
+        <div class="flex items-start gap-4 py-2 fade-up">
+          <span class="text-green-500 shrink-0 font-mono text-xs mt-0.5">&#x2713;</span>
+          <div class="flex-1"><span class="text-gray-300">canvas-sdk 18-tool registry, LoRA/DPO training pipeline, bench harness</span> <span class="text-gray-600 text-xs ml-2">v3.0 milestone</span></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="border-t border-gray-900 py-6 text-center text-gray-700 text-xs">
+    CS3704 Canvas Calendar Agent &mdash;
+    <a href="https://github.com/kleinpanic/CS3704-Canvas-Project" target="_blank" rel="noopener" class="hover:text-gray-500 underline">GitHub</a>
+    &mdash;
+    <a href="docs/architecture/" class="hover:text-gray-500 underline">Docs</a>
+  </footer>
+
+  <script>
+    // Intersection Observer for scroll animations
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (!e.isIntersecting) return;
+        e.target.classList.add('visible');
+        observer.unobserve(e.target);
+      });
+    }, { threshold: 0.1, rootMargin: '0px 0px -24px 0px' });
+    document.querySelectorAll('.fade-up, .fade-left').forEach(el => observer.observe(el));
+
+    // Pie chart
+    const ctx = document.getElementById('contribChart').getContext('2d');
+    new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Klein Panic', 'William', 'Yuzhuo', 'pjie22'],
+        datasets: [{
+          data: [203, 11, 2, 2],
+          backgroundColor: ['#d63e36', '#818cf8', '#4ade80', '#facc15'],
+          borderColor: '#0a0a0f',
+          borderWidth: 3,
+          hoverOffset: 6,
+        }],
+      },
+      options: {
+        cutout: '65%',
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => ` ${ctx.label}: ${ctx.raw} commits (${((ctx.raw / 218) * 100).toFixed(1)}%)`,
+            },
+            backgroundColor: '#111116',
+            borderColor: '#2e2e38',
+            borderWidth: 1,
+            titleColor: '#e5e7eb',
+            bodyColor: '#9ca3af',
+            padding: 10,
+          },
+        },
+      },
+    });
+  </script>
+
+</body>
+</html>

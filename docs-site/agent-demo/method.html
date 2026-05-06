@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>How the Model Was Trained — Canvas Calendar Agent</title>
+  <link rel="icon" type="image/svg+xml" href="../favicon.svg" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -37,6 +38,66 @@
     th, td { border: 1px solid #2e2e38; padding: 8px 12px; text-align: left; vertical-align: top; }
     tr:nth-child(even) td { background: #0d0d12; }
     .sft-row td { background: #1a0d0d !important; border-color: #d63e36 !important; }
+
+    /* ── Scroll-triggered animations ───────────────────────── */
+    .fade-up   { opacity: 0; transform: translateY(30px); transition: opacity 0.6s ease, transform 0.6s ease; }
+    .fade-left { opacity: 0; transform: translateX(-24px); transition: opacity 0.55s ease, transform 0.55s ease; }
+    .fade-scale { opacity: 0; transform: scale(0.93); transition: opacity 0.5s ease, transform 0.5s ease; }
+    .fade-up.visible, .fade-left.visible, .fade-scale.visible {
+      opacity: 1; transform: none;
+    }
+    .d1 { transition-delay: 0.07s; }
+    .d2 { transition-delay: 0.14s; }
+    .d3 { transition-delay: 0.21s; }
+    .d4 { transition-delay: 0.28s; }
+    .d5 { transition-delay: 0.35s; }
+    .d6 { transition-delay: 0.42s; }
+    .d7 { transition-delay: 0.49s; }
+    .d8 { transition-delay: 0.56s; }
+    .d9 { transition-delay: 0.63s; }
+
+    /* ── Training pipeline ──────────────────────────────────── */
+    .pipeline-stage {
+      position: relative; display: flex; flex-direction: column; align-items: center;
+      flex: 1; min-width: 88px;
+    }
+    .pipeline-dot {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: #111116; border: 2px solid #2e2e38;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.6rem; font-weight: 700; color: #d63e36;
+      position: relative; z-index: 2;
+      transition: border-color 0.4s ease, background 0.4s ease, box-shadow 0.4s ease;
+    }
+    .pipeline-stage.visible .pipeline-dot {
+      border-color: #d63e36;
+      background: #1a0808;
+      box-shadow: 0 0 12px #d63e3644;
+    }
+    .pipeline-label {
+      margin-top: 8px; font-size: 0.6rem; text-align: center; color: #6b7280;
+      line-height: 1.35; max-width: 76px;
+      transition: color 0.4s ease;
+    }
+    .pipeline-stage.visible .pipeline-label { color: #9ca3af; }
+    .pipeline-connector {
+      position: absolute; top: 18px; left: calc(50% + 18px);
+      right: calc(-50% + 18px); height: 2px;
+      background: #2e2e38; z-index: 1;
+      overflow: hidden;
+    }
+    .pipeline-connector::after {
+      content: ''; display: block; height: 100%;
+      width: 0; background: #d63e36;
+      transition: width 0.5s ease;
+    }
+    .pipeline-stage.visible ~ .pipeline-stage .pipeline-connector::after,
+    .pipeline-stage.visible .pipeline-connector::after { width: 100%; }
+    .pipeline-flow .pipeline-stage:last-child .pipeline-connector { display: none; }
+
+    /* ── Matrix row animate ─────────────────────────────────── */
+    .matrix-row { opacity: 0; transform: translateX(-16px); transition: opacity 0.45s ease, transform 0.45s ease; }
+    .matrix-row.visible { opacity: 1; transform: none; }
   </style>
 </head>
 <body class="bg-gray-950 text-gray-100 font-sans min-h-screen">
@@ -62,25 +123,72 @@
 
     <!-- ── 1. Hero ──────────────────────────────────────────────────── -->
     <section>
-      <div class="inline-flex items-center gap-2 bg-canvas-red/10 border border-canvas-red/30 rounded px-3 py-1 text-canvas-red text-xs font-medium mb-4">
+      <div class="inline-flex items-center gap-2 bg-canvas-red/10 border border-canvas-red/30 rounded px-3 py-1 text-canvas-red text-xs font-medium mb-4 fade-up visible">
         <span class="w-1.5 h-1.5 rounded-full bg-canvas-red animate-pulse"></span>
         Deployed: v7-DPO &nbsp;&bull;&nbsp;
-        <a href="https://huggingface.co/kleinpanic93/canvas-calendar-agent-v7-dpo" target="_blank" rel="noopener" class="underline underline-offset-2">HF Space</a>
+        <a href="https://huggingface.co/kleinpanic93/canvas-calendar-agent-v7-dpo" target="_blank" rel="noopener" class="underline underline-offset-2">HF Model</a>
       </div>
-      <h1 class="text-4xl font-bold mb-4 leading-tight">How the Model Was Trained</h1>
-      <p class="text-gray-400 text-base leading-relaxed max-w-2xl">
+      <h1 class="text-4xl font-bold mb-4 leading-tight fade-up visible d1">How the Model Was Trained</h1>
+      <p class="text-gray-400 text-base leading-relaxed max-w-2xl mb-8 fade-up visible d2">
         v7-DPO is a fine-tuned Gemma-4-E2B-IT optimized for 18-tool function calling
         across Canvas LMS, calendar scheduling, and study planning. This page documents
         the full training methodology: SFT trajectory collection, DPO preference
         optimization, the 9-method ablation matrix, pre-execution guardrails, and
         the bench harness used to validate results.
       </p>
+
+      <!-- Training pipeline visualization -->
+      <div class="fade-up visible d3">
+        <p class="text-xs font-semibold text-gray-600 uppercase tracking-widest mb-4">End-to-end training pipeline</p>
+        <div class="pipeline-flow flex items-start gap-0 overflow-x-auto pb-2" id="pipeline">
+          <div class="pipeline-stage" data-step="0">
+            <div class="pipeline-connector"></div>
+            <div class="pipeline-dot">01</div>
+            <div class="pipeline-label">Canvas LMS<br/>Raw Data</div>
+          </div>
+          <div class="pipeline-stage" data-step="1">
+            <div class="pipeline-connector"></div>
+            <div class="pipeline-dot">02</div>
+            <div class="pipeline-label">Trajectory<br/>Curation</div>
+          </div>
+          <div class="pipeline-stage" data-step="2">
+            <div class="pipeline-connector"></div>
+            <div class="pipeline-dot">03</div>
+            <div class="pipeline-label">G1–G13<br/>Guardrails</div>
+          </div>
+          <div class="pipeline-stage" data-step="3">
+            <div class="pipeline-connector"></div>
+            <div class="pipeline-dot">SFT</div>
+            <div class="pipeline-label">Supervised<br/>Fine-Tuning</div>
+          </div>
+          <div class="pipeline-stage" data-step="4">
+            <div class="pipeline-connector"></div>
+            <div class="pipeline-dot">04</div>
+            <div class="pipeline-label">Preference<br/>Pairs (×4)</div>
+          </div>
+          <div class="pipeline-stage" data-step="5">
+            <div class="pipeline-connector"></div>
+            <div class="pipeline-dot">DPO</div>
+            <div class="pipeline-label">DPO Training<br/>β = 0.1</div>
+          </div>
+          <div class="pipeline-stage" data-step="6">
+            <div class="pipeline-connector"></div>
+            <div class="pipeline-dot">05</div>
+            <div class="pipeline-label">Bench Eval<br/>500+ prompts</div>
+          </div>
+          <div class="pipeline-stage" data-step="7">
+            <div class="pipeline-connector"></div>
+            <div class="pipeline-dot">v7</div>
+            <div class="pipeline-label">Deploy<br/>HF Space</div>
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- ── 2. The Model ─────────────────────────────────────────────── -->
     <section id="model">
-      <h2 class="text-xl font-bold mb-4" style="color:#d63e36">The Base Model</h2>
-      <div class="bg-gray-900/60 border border-gray-800 rounded-lg p-6 flex flex-col sm:flex-row gap-6">
+      <h2 class="text-xl font-bold mb-4 fade-left" style="color:#d63e36">The Base Model</h2>
+      <div class="bg-gray-900/60 border border-gray-800 rounded-lg p-6 flex flex-col sm:flex-row gap-6 fade-up">
         <div class="flex-1 space-y-3">
           <div class="flex items-center gap-3 mb-1">
             <span class="text-lg font-bold">Gemma-4-E2B-IT</span>
@@ -88,8 +196,8 @@
           </div>
           <p class="text-sm text-gray-400 leading-relaxed">
             Google's MatFormer architecture — a nested transformer where the same
-            weights serve multiple effective parameter counts. At the 2B extraction
-            point the model is multimodal (text + vision tokens) and instruction-tuned.
+            weights serve multiple effective parameter counts. At the E2B (2.7B)
+            extraction point the model is multimodal (text + vision tokens) and instruction-tuned.
             Fine-tuning inherits the instruction-following alignment without catastrophic
             forgetting of general capabilities.
           </p>
@@ -99,19 +207,19 @@
           </a>
         </div>
         <div class="shrink-0 grid grid-cols-2 gap-3 text-center text-xs text-gray-400 self-start sm:self-center">
-          <div class="bg-gray-950 border border-gray-800 rounded p-3">
-            <div class="text-xl font-bold text-white">2B</div>
-            <div>effective params</div>
+          <div class="bg-gray-950 border border-gray-800 rounded p-3 fade-scale d1">
+            <div class="text-xl font-bold text-white">2.7B</div>
+            <div>params</div>
           </div>
-          <div class="bg-gray-950 border border-gray-800 rounded p-3">
+          <div class="bg-gray-950 border border-gray-800 rounded p-3 fade-scale d2">
             <div class="text-xl font-bold text-white">18</div>
             <div>tools</div>
           </div>
-          <div class="bg-gray-950 border border-gray-800 rounded p-3">
+          <div class="bg-gray-950 border border-gray-800 rounded p-3 fade-scale d3">
             <div class="text-xl font-bold text-white">MatFormer</div>
             <div>architecture</div>
           </div>
-          <div class="bg-gray-950 border border-gray-800 rounded p-3">
+          <div class="bg-gray-950 border border-gray-800 rounded p-3 fade-scale d4">
             <div class="text-xl font-bold text-white">multimodal</div>
             <div>text + vision</div>
           </div>
@@ -121,12 +229,12 @@
 
     <!-- ── 3. SFT ───────────────────────────────────────────────────── -->
     <section id="sft">
-      <h2 class="text-xl font-bold mb-1" style="color:#d63e36">Supervised Fine-Tuning (SFT)</h2>
-      <p class="text-sm text-gray-500 mb-4">Phase 1 — teaches the model what a correct tool call looks like</p>
+      <h2 class="text-xl font-bold mb-1 fade-left" style="color:#d63e36">Supervised Fine-Tuning (SFT)</h2>
+      <p class="text-sm text-gray-500 mb-4 fade-up d1">Phase 1 — teaches the model what a correct tool call looks like</p>
 
-      <div class="bg-gray-900/60 border border-gray-800 rounded-lg p-6 space-y-5">
+      <div class="bg-gray-900/60 border border-gray-800 rounded-lg p-6 space-y-5 fade-up d2">
         <p class="text-sm text-gray-300 leading-relaxed">
-          SFT trains on 400–500 human-curated tool-call trajectories. Each trajectory
+          SFT trains on 181 human-curated tool-call trajectories (post-anonymization). Each trajectory
           is a full user-turn → model-turn sequence where the model outputs one or more
           native Gemma-4 tool calls followed by a synthesized answer. The model learns
           correct syntax, correct tool selection, and correct argument structure from
@@ -146,7 +254,7 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
           <div class="bg-gray-950 border border-gray-800 rounded p-4 space-y-1">
             <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Dataset shape</div>
-            <div class="flex justify-between text-xs"><span class="text-gray-500">Trajectories</span><span class="text-gray-200">400–500</span></div>
+            <div class="flex justify-between text-xs"><span class="text-gray-500">Trajectories</span><span class="text-gray-200">181</span></div>
             <div class="flex justify-between text-xs"><span class="text-gray-500">Tools covered</span><span class="text-gray-200">18 (all)</span></div>
             <div class="flex justify-between text-xs"><span class="text-gray-500">Min per tool</span><span class="text-gray-200">30</span></div>
             <div class="flex justify-between text-xs"><span class="text-gray-500">Distribution CV</span><span class="text-gray-200">≤ 0.3</span></div>
@@ -165,10 +273,10 @@
 
     <!-- ── 4. DPO ───────────────────────────────────────────────────── -->
     <section id="dpo">
-      <h2 class="text-xl font-bold mb-1" style="color:#d63e36">Direct Preference Optimization (DPO)</h2>
-      <p class="text-sm text-gray-500 mb-4">Phase 2 — teaches the model what a <em>better</em> tool call looks like</p>
+      <h2 class="text-xl font-bold mb-1 fade-left" style="color:#d63e36">Direct Preference Optimization (DPO)</h2>
+      <p class="text-sm text-gray-500 mb-4 fade-up d1">Phase 2 — teaches the model what a <em>better</em> tool call looks like</p>
 
-      <div class="bg-gray-900/60 border border-gray-800 rounded-lg p-6 space-y-6">
+      <div class="bg-gray-900/60 border border-gray-800 rounded-lg p-6 space-y-6 fade-up d2">
         <div class="space-y-3">
           <p class="text-sm text-gray-300 leading-relaxed">
             DPO (Rafailov et al. 2023,
@@ -183,18 +291,19 @@
             <p class="text-xs text-gray-400 leading-relaxed">
               The reference model is the <strong class="text-gray-200">SFT checkpoint</strong> — it acts as a KL-divergence
               anchor, not a teacher. The DPO objective penalizes moving too far from the SFT
-              distribution, preventing mode collapse on easy preferences. With β = 0.3
-              (stronger regularization), this is critical for small-N datasets (&lt; 2000 pairs)
-              where overfitting is the primary failure mode.
+              distribution, preventing mode collapse on easy preferences. At β = 0.1,
+              the policy is allowed to move further from the SFT reference — appropriate
+              for small-N datasets (&lt; 2000 pairs) where the DPO signal should dominate.
             </p>
           </div>
         </div>
 
         <div>
-          <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Four preference pair types</p>
+          <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Four preference pair types</p>
+          <p class="text-xs text-gray-600 italic mb-3">Methodology framework for v8 retraining. v7 dataset uses <code>standard</code> and <code>hard_negative</code> labels internally.</p>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
 
-            <div class="pair-card">
+            <div class="pair-card fade-up d1">
               <div class="flex items-center gap-2 mb-2">
                 <span class="method-badge" style="background:#1a1a0d;color:#facc15;border:1px solid #713f12">parsimony</span>
               </div>
@@ -205,7 +314,7 @@
               </p>
             </div>
 
-            <div class="pair-card">
+            <div class="pair-card fade-up d2">
               <div class="flex items-center gap-2 mb-2">
                 <span class="method-badge" style="background:#1a0d0d;color:#f87171;border:1px solid #7f1d1d">wrong_tool</span>
               </div>
@@ -216,7 +325,7 @@
               </p>
             </div>
 
-            <div class="pair-card">
+            <div class="pair-card fade-up d3">
               <div class="flex items-center gap-2 mb-2">
                 <span class="method-badge" style="background:#0d0d1a;color:#818cf8;border:1px solid #312e81">wrong_args</span>
               </div>
@@ -227,7 +336,7 @@
               </p>
             </div>
 
-            <div class="pair-card">
+            <div class="pair-card fade-up d4">
               <div class="flex items-center gap-2 mb-2">
                 <span class="method-badge" style="background:#0d1a0d;color:#86efac;border:1px solid #14532d">format</span>
               </div>
@@ -245,10 +354,10 @@
 
     <!-- ── 5. 9-Method Matrix ───────────────────────────────────────── -->
     <section id="matrix">
-      <h2 class="text-xl font-bold mb-1" style="color:#d63e36">9-Method Ablation Matrix</h2>
-      <p class="text-sm text-gray-500 mb-4">Every method trained on the same data split — only the loss function changes</p>
+      <h2 class="text-xl font-bold mb-1 fade-left" style="color:#d63e36">9-Method Ablation Matrix</h2>
+      <p class="text-sm text-gray-500 mb-4 fade-up d1">Every method trained on the same data split — only the loss function changes</p>
 
-      <div class="bg-gray-900/60 border border-gray-800 rounded-lg overflow-hidden">
+      <div class="bg-gray-900/60 border border-gray-800 rounded-lg overflow-hidden fade-up d2">
         <div class="overflow-x-auto">
           <table class="text-xs text-gray-300">
             <thead>
@@ -259,47 +368,47 @@
               </tr>
             </thead>
             <tbody>
-              <tr class="sft-row">
+              <tr class="sft-row matrix-row">
                 <td><strong class="text-white">SFT</strong> <span class="method-badge ml-1" style="background:#d63e3622;color:#d63e36;border:1px solid #d63e3644">baseline</span></td>
                 <td>trajectory data<br/><code class="text-gray-500">{prompt, completion}</code></td>
                 <td>Direct imitation of correct tool-call sequences. Reference checkpoint for all DPO variants.</td>
               </tr>
-              <tr>
+              <tr class="matrix-row d1">
                 <td><strong>LoRA</strong></td>
                 <td>SFT trajectory data</td>
                 <td>PEFT wrapper over SFT. Low-rank adapter only; base weights frozen. Faster iteration.</td>
               </tr>
-              <tr>
+              <tr class="matrix-row d2">
                 <td><strong>QLoRA</strong></td>
                 <td>SFT trajectory data</td>
                 <td>LoRA + 4-bit NF4 quantization. Reduces VRAM by ~60%. Quality delta vs LoRA is the ablation question.</td>
               </tr>
-              <tr>
+              <tr class="matrix-row d3">
                 <td><strong>DPO</strong></td>
                 <td>preference pairs<br/><code class="text-gray-500">{prompt, chosen, rejected}</code></td>
-                <td>Rafailov 2023. β=0.3. Reference = SFT checkpoint. Primary production method.</td>
+                <td>Rafailov 2023. β=0.1. Reference = SFT checkpoint. Primary production method.</td>
               </tr>
-              <tr>
+              <tr class="matrix-row d4">
                 <td><strong>IPO</strong></td>
                 <td>preference pairs</td>
                 <td>Identity Preference Optimization (Azar et al.). Removes Bradley-Terry assumption; theoretically better on near-equal pairs.</td>
               </tr>
-              <tr>
+              <tr class="matrix-row d5">
                 <td><strong>APO-Zero</strong></td>
                 <td>preference pairs</td>
                 <td>Anchored Preference Optimization with zero anchor. Stabilizes training when reference model is weak.</td>
               </tr>
-              <tr>
+              <tr class="matrix-row d6">
                 <td><strong>SPPO</strong></td>
                 <td>preference pairs</td>
                 <td>Self-Play Preference Optimization. Iterative; each round re-ranks pairs using the current policy.</td>
               </tr>
-              <tr>
+              <tr class="matrix-row d7">
                 <td><strong>NCA</strong></td>
                 <td>preference pairs</td>
                 <td>Noise-Contrastive Alignment. Treats rejected as noise; contrastive loss formulation.</td>
               </tr>
-              <tr>
+              <tr class="matrix-row d8">
                 <td><strong>KTO</strong></td>
                 <td>unpaired desirability<br/><code class="text-gray-500">{prompt, completion, label}</code></td>
                 <td>Kahneman-Tversky Optimization (Ethayarajh et al.). Works without paired comparisons — useful when pairing is ambiguous.</td>
@@ -315,9 +424,9 @@
 
     <!-- ── 6. Pre-execution Guardrails ─────────────────────────────── -->
     <section id="guardrails">
-      <h2 class="text-xl font-bold mb-1" style="color:#d63e36">Pre-execution Guardrails (G1–G13)</h2>
-      <p class="text-sm text-gray-500 mb-2">Automated fail-stop CLI checks that run before every training job</p>
-      <p class="text-sm text-gray-400 mb-5 leading-relaxed">
+      <h2 class="text-xl font-bold mb-1 fade-left" style="color:#d63e36">Pre-execution Guardrails (G1–G13)</h2>
+      <p class="text-sm text-gray-500 mb-2 fade-up d1">Automated fail-stop CLI checks that run before every training job</p>
+      <p class="text-sm text-gray-400 mb-5 leading-relaxed fade-up d2">
         Each guardrail encodes a specific failure mode discovered during prior training runs.
         Every check is deterministic and exits non-zero on violation — no training job starts
         if any guardrail fails. <code class="text-xs text-gray-500">canvas-train --check</code> runs all 13 in sequence.
@@ -325,7 +434,7 @@
 
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
 
-        <div class="guardrail-card">
+        <div class="guardrail-card fade-scale d1">
           <div class="flex items-center gap-2 mb-1.5">
             <span class="text-xs font-bold" style="color:#d63e36">G1</span>
             <span class="text-xs font-semibold text-gray-300">Tool-call token coverage</span>
@@ -333,7 +442,7 @@
           <p class="text-xs text-gray-500 leading-relaxed">≥80% of chosen/rejected completions must contain the <code>&lt;|tool_call&gt;</code> sentinel. Catches data pipelines that drop the token.</p>
         </div>
 
-        <div class="guardrail-card">
+        <div class="guardrail-card fade-scale d2">
           <div class="flex items-center gap-2 mb-1.5">
             <span class="text-xs font-bold" style="color:#d63e36">G2</span>
             <span class="text-xs font-semibold text-gray-300">Eval dataset required</span>
@@ -341,7 +450,7 @@
           <p class="text-xs text-gray-500 leading-relaxed">eval_dataset must exist and be item-disjoint from train. Prevents eval contamination and silent overfitting.</p>
         </div>
 
-        <div class="guardrail-card">
+        <div class="guardrail-card fade-scale d3">
           <div class="flex items-center gap-2 mb-1.5">
             <span class="text-xs font-bold" style="color:#d63e36">G3</span>
             <span class="text-xs font-semibold text-gray-300">Base model bench sanity</span>
@@ -349,7 +458,7 @@
           <p class="text-xs text-gray-500 leading-relaxed">Quick bench against base model must show ≥20% first-tool accuracy. If base is already broken, no fine-tune will fix it.</p>
         </div>
 
-        <div class="guardrail-card">
+        <div class="guardrail-card fade-scale d4">
           <div class="flex items-center gap-2 mb-1.5">
             <span class="text-xs font-bold" style="color:#d63e36">G4</span>
             <span class="text-xs font-semibold text-gray-300">Tool distribution CV ≤ 0.3</span>
@@ -357,7 +466,7 @@
           <p class="text-xs text-gray-500 leading-relaxed">Coefficient of variation across 18 tools must be ≤ 0.3, with min 30 examples per tool. Prevents distribution skew.</p>
         </div>
 
-        <div class="guardrail-card">
+        <div class="guardrail-card fade-scale d5">
           <div class="flex items-center gap-2 mb-1.5">
             <span class="text-xs font-bold" style="color:#d63e36">G5</span>
             <span class="text-xs font-semibold text-gray-300">Preflight grad norm</span>
@@ -365,7 +474,7 @@
           <p class="text-xs text-gray-500 leading-relaxed">1-step dry run: grad_norm must be &lt; 1.0. Catches numerical instability (NaN/Inf in activations) before a full run wastes GPU hours.</p>
         </div>
 
-        <div class="guardrail-card">
+        <div class="guardrail-card fade-scale d6">
           <div class="flex items-center gap-2 mb-1.5">
             <span class="text-xs font-bold" style="color:#d63e36">G6</span>
             <span class="text-xs font-semibold text-gray-300">Pipeline shrinkage ≤ 30%</span>
@@ -373,7 +482,7 @@
           <p class="text-xs text-gray-500 leading-relaxed">Each processing stage (tokenize → filter → pair) must retain ≥ 70% of its input. Excessive shrinkage signals a pipeline bug, not a data quality issue.</p>
         </div>
 
-        <div class="guardrail-card">
+        <div class="guardrail-card fade-scale d7">
           <div class="flex items-center gap-2 mb-1.5">
             <span class="text-xs font-bold" style="color:#d63e36">G7</span>
             <span class="text-xs font-semibold text-gray-300">Tool name registry check</span>
@@ -381,7 +490,7 @@
           <p class="text-xs text-gray-500 leading-relaxed">Every tool name in the dataset must appear in the SDK tool registry. Catches stale or renamed tool references before they poison the model.</p>
         </div>
 
-        <div class="guardrail-card">
+        <div class="guardrail-card fade-scale d8">
           <div class="flex items-center gap-2 mb-1.5">
             <span class="text-xs font-bold" style="color:#d63e36">G8</span>
             <span class="text-xs font-semibold text-gray-300">Serializer round-trip</span>
@@ -389,7 +498,7 @@
           <p class="text-xs text-gray-500 leading-relaxed">Parser → serializer → parser round-trip must pass 100% of samples. A round-trip failure means the model will emit unparseable output.</p>
         </div>
 
-        <div class="guardrail-card">
+        <div class="guardrail-card fade-scale d9">
           <div class="flex items-center gap-2 mb-1.5">
             <span class="text-xs font-bold" style="color:#d63e36">G9</span>
             <span class="text-xs font-semibold text-gray-300">Behavioral reward margins</span>
@@ -397,7 +506,7 @@
           <p class="text-xs text-gray-500 leading-relaxed">Micro-bench verifies reward margins move in the correct direction per pair type — parsimony pairs should widen the parsimony margin, not the format margin.</p>
         </div>
 
-        <div class="guardrail-card">
+        <div class="guardrail-card fade-scale d1">
           <div class="flex items-center gap-2 mb-1.5">
             <span class="text-xs font-bold" style="color:#d63e36">G10</span>
             <span class="text-xs font-semibold text-gray-300">Docker container smoke test</span>
@@ -405,7 +514,7 @@
           <p class="text-xs text-gray-500 leading-relaxed"><code>canvas-train --help</code> inside the training container must exit 0. Catches broken dependencies and mis-built images before a multi-hour run.</p>
         </div>
 
-        <div class="guardrail-card">
+        <div class="guardrail-card fade-scale d2">
           <div class="flex items-center gap-2 mb-1.5">
             <span class="text-xs font-bold" style="color:#d63e36">G11</span>
             <span class="text-xs font-semibold text-gray-300">Sequence length budget</span>
@@ -413,7 +522,7 @@
           <p class="text-xs text-gray-500 leading-relaxed">&lt;1% of rows may exceed max_length=2048. Rows above the limit are silently truncated during training — high truncation rates indicate dataset construction errors.</p>
         </div>
 
-        <div class="guardrail-card">
+        <div class="guardrail-card fade-scale d3">
           <div class="flex items-center gap-2 mb-1.5">
             <span class="text-xs font-bold" style="color:#d63e36">G12</span>
             <span class="text-xs font-semibold text-gray-300">Minimum dataset sizes</span>
@@ -421,7 +530,7 @@
           <p class="text-xs text-gray-500 leading-relaxed">DPO/KTO methods require ≥ 1000 preference pairs; SFT requires ≥ 200 trajectories. Below these thresholds overfitting is near-certain.</p>
         </div>
 
-        <div class="guardrail-card sm:col-span-2 lg:col-span-3">
+        <div class="guardrail-card sm:col-span-2 lg:col-span-3 fade-scale d4">
           <div class="flex items-center gap-2 mb-1.5">
             <span class="text-xs font-bold" style="color:#d63e36">G13</span>
             <span class="text-xs font-semibold text-gray-300">Trajectory tool repetition</span>
@@ -434,25 +543,26 @@
 
     <!-- ── 7. Bench Harness ─────────────────────────────────────────── -->
     <section id="bench">
-      <h2 class="text-xl font-bold mb-1" style="color:#d63e36">Bench Harness</h2>
-      <p class="text-sm text-gray-500 mb-4">Offline evaluation protocol used to select the production checkpoint</p>
+      <h2 class="text-xl font-bold mb-1 fade-left" style="color:#d63e36">Bench Harness</h2>
+      <p class="text-sm text-gray-500 mb-4 fade-up d1">Offline evaluation protocol used to select the production checkpoint</p>
 
-      <div class="bg-gray-900/60 border border-gray-800 rounded-lg p-6 space-y-5">
+      <div class="bg-gray-900/60 border border-gray-800 rounded-lg p-6 space-y-5 fade-up d2">
+        <p class="text-xs text-gray-600 italic mb-3">Design targets — the bench harness is fully implemented; coverage numbers reflect the full evaluation spec.</p>
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center text-xs text-gray-400">
-          <div class="bg-gray-950 border border-gray-800 rounded p-4">
-            <div class="text-2xl font-bold text-white">500+</div>
+          <div class="bg-gray-950 border border-gray-800 rounded p-4 fade-scale d1">
+            <div class="text-2xl font-bold text-white" data-count="500" data-suffix="+">0</div>
             <div class="mt-1">evaluation prompts</div>
           </div>
-          <div class="bg-gray-950 border border-gray-800 rounded p-4">
-            <div class="text-2xl font-bold text-white">18</div>
+          <div class="bg-gray-950 border border-gray-800 rounded p-4 fade-scale d2">
+            <div class="text-2xl font-bold text-white" data-count="18">0</div>
             <div class="mt-1">tools covered</div>
           </div>
-          <div class="bg-gray-950 border border-gray-800 rounded p-4">
-            <div class="text-2xl font-bold text-white">≥25×</div>
+          <div class="bg-gray-950 border border-gray-800 rounded p-4 fade-scale d3">
+            <div class="text-2xl font-bold text-white" data-prefix="≥" data-count="25" data-suffix="×">0</div>
             <div class="mt-1">each tool as expected_tools[0]</div>
           </div>
-          <div class="bg-gray-950 border border-gray-800 rounded p-4">
-            <div class="text-2xl font-bold text-white">95%</div>
+          <div class="bg-gray-950 border border-gray-800 rounded p-4 fade-scale d4">
+            <div class="text-2xl font-bold text-white" data-count="95" data-suffix="%">0</div>
             <div class="mt-1">Wilson CI per result</div>
           </div>
         </div>
@@ -486,6 +596,54 @@
     CS3704 Canvas Calendar Agent &mdash; v7-DPO methodology. Model weights on
     <a href="https://huggingface.co/kleinpanic93/canvas-calendar-agent-v7-dpo" target="_blank" rel="noopener" class="hover:text-gray-500 underline">HuggingFace</a>.
   </footer>
+
+  <script>
+    // ── Intersection Observer for scroll animations ──────────────────
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add('visible');
+        observer.unobserve(entry.target);
+        // Trigger count-up if applicable
+        entry.target.querySelectorAll('[data-count]').forEach(countUp);
+        if (entry.target.hasAttribute('data-count')) countUp(entry.target);
+      });
+    }, { threshold: 0.12, rootMargin: '0px 0px -32px 0px' });
+
+    document.querySelectorAll('.fade-up, .fade-left, .fade-scale, .matrix-row').forEach(el => {
+      observer.observe(el);
+    });
+
+    // ── Pipeline stage stagger animation ────────────────────────────
+    const pipelineObs = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (!entry.isIntersecting) return;
+        const stages = entry.target.querySelectorAll('.pipeline-stage');
+        stages.forEach((stage, i) => {
+          setTimeout(() => stage.classList.add('visible'), i * 140);
+        });
+        pipelineObs.unobserve(entry.target);
+      });
+    }, { threshold: 0.1 });
+    const pipeline = document.getElementById('pipeline');
+    if (pipeline) pipelineObs.observe(pipeline);
+
+    // ── Count-up animation ───────────────────────────────────────────
+    function countUp(el) {
+      const target = parseInt(el.dataset.count, 10);
+      const prefix = el.dataset.prefix || '';
+      const suffix = el.dataset.suffix || '';
+      const duration = 900;
+      const start = performance.now();
+      function frame(now) {
+        const progress = Math.min((now - start) / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        el.textContent = prefix + Math.round(eased * target) + suffix;
+        if (progress < 1) requestAnimationFrame(frame);
+      }
+      requestAnimationFrame(frame);
+    }
+  </script>
 
 </body>
 </html>

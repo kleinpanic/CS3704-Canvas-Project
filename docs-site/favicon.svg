@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- Canvas circular icon — geometric approximation of the TUI ASCII pinwheel -->
+  <rect width="32" height="32" rx="6" fill="#0a0a0f"/>
+  <!-- outer ring -->
+  <circle cx="16" cy="16" r="13" fill="none" stroke="#d63e36" stroke-width="1.5" opacity="0.4"/>
+  <!-- pinwheel arms (4 pairs of opposing swept arcs) -->
+  <!-- top-right arm -->
+  <path d="M16 16 L21 7 Q24 10 22 14 Z" fill="#d63e36" opacity="0.85"/>
+  <!-- bottom-left arm -->
+  <path d="M16 16 L11 25 Q8 22 10 18 Z" fill="#d63e36" opacity="0.85"/>
+  <!-- top-left arm -->
+  <path d="M16 16 L7 11 Q10 8 14 10 Z" fill="#d63e36" opacity="0.85"/>
+  <!-- bottom-right arm -->
+  <path d="M16 16 L25 21 Q22 24 18 22 Z" fill="#d63e36" opacity="0.85"/>
+  <!-- inner circle -->
+  <circle cx="16" cy="16" r="3.5" fill="#d63e36"/>
+</svg>
