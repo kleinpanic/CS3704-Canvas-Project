@@ -34,10 +34,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Docs
 - `docs-site/` deployed site: architecture, extension, workflow, and roadmap pages updated
-- `docs/project/VISUAL-AUDIT.md` — full visual audit + 4-phase advancement plan
-- `docs/project/CLAIMS-AUDIT.md` — concrete claims: what promised vs. what exists
 - `docs/project/DEVELOPER_GUIDE.md` — onboarding, setup, test/run/build commands
-- `CONTRIBUTING-DATA.md` — teammate data-contribution guide
+- `docs/contributing-data.md` — teammate data-contribution guide
 - Zenodo DOI alongside HuggingFace in ML release notes
 - Dead link to private training repo removed from README
 
@@ -83,10 +81,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Branch protection: only Test, Coverage, Python Compat block merge
 
 ### Docs
-- `docs/project/VISUAL-AUDIT.md` — full visual audit + 4-phase advancement plan
-- `docs/project/CLAIMS-AUDIT.md` — concrete claims: what promised vs. what exists
 - `docs/project/DEVELOPER_GUIDE.md` — onboarding, setup, test/run/build commands
-- `docs-site/` deployed docs site updated with visual and claims audits
+- `docs-site/` deployed docs site updated
 
 ### Dependencies
 - PRs merged: dependabot updates for `actions/github-script` v7→v9 (#22), `actions/download-artifact` v5→v8 (#21)

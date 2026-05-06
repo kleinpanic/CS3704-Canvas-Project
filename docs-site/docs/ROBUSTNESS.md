@@ -105,16 +105,6 @@ The app is designed to work offline with a warm cache:
 
 ---
 
-## Cross-AI Review
-
-All non-trivial PRs go through a formal cross-AI review process documented in `REVIEWS.md` at the repo root. Key points:
-
-- Reviewers run the full test suite and report findings before merge
-- Gemini review findings must be addressed before the PR is merged
-- Critical findings (crashes, data loss, auth bypass) block merge entirely
-
----
-
 ## Dependency Management
 
 - All runtime dependencies are pinned with lower bounds in `pyproject.toml`

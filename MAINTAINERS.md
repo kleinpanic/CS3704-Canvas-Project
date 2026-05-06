@@ -32,6 +32,4 @@ Only tests and coverage checks block merge. Linting, type checking, and document
 
 ## Core Architecture
 
-See `docs/project/VISUAL-AUDIT.md` for the advancement plan and `docs/project/DEVELOPER_GUIDE.md` for setup instructions.
-
-For the shared-core architecture that enables the planned browser extension, see the Phase 2 refactor plan in `docs/project/VISUAL-AUDIT.md`.
+See `docs/project/DEVELOPER_GUIDE.md` for setup instructions.
