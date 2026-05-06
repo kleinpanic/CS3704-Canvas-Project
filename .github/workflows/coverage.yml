@@ -34,5 +34,5 @@ jobs:
 
       - name: Coverage threshold
         run: |
-          coverage report --fail-under=0
+          coverage report --fail-under=70
           echo "Coverage check passed"
