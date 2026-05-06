@@ -69,15 +69,9 @@ jobs:
         run: pytest tests/ -q --cov=canvas_tui --cov-report=term-missing
 
       - name: Coverage threshold
-        env:
-          PR_BODY: ${{ github.event.pull_request.body }}
         run: |
           if [ "${{ github.event_name }}" = "push" ]; then
             echo "Push to main — coverage threshold check skipped (see coverage.yml)"
-            exit 0
-          fi
-          if echo "$PR_BODY" | grep -qi "no-coverage-check"; then
-            echo "Coverage check bypassed by PR author"
             exit 0
           fi
           coverage report --fail-under=80
