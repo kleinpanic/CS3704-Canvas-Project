@@ -181,8 +181,12 @@ def main():
     out_dir = Path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    print("Fetching courses...")
-    courses = fetch("/courses", {"enrollment_state": "active", "per_page": "50"})
+    print("Fetching courses (with teachers for RMP lookup)...")
+    courses = fetch("/courses", {
+        "enrollment_state": "active",
+        "per_page": "50",
+        "include[]": "teachers",
+    })
     save(out_dir, "courses.json", clean(courses))
 
     print("Fetching upcoming assignments...")

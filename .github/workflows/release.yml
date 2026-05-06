@@ -376,20 +376,24 @@ jobs:
     needs: [release, build-sdk-linux]
     if: ${{ !contains(needs.build-sdk-linux.outputs.version, '-') }}
     runs-on: ubuntu-latest
-    environment: pypi
-    permissions:
-      id-token: write
     steps:
-      - name: Download dist artifacts
-        uses: actions/download-artifact@v8
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
         with:
-          name: dist-${{ github.run_number }}
-          path: dist/
-          pattern: dist-*
-          merge-multiple: true
+          python-version: "3.12"
+
+      - name: Build PEP 625-compliant sdist + wheel from source
+        # build-sdk-linux renames canvas_sdk-*.tar.gz to canvas-sdk-* for the GH release.
+        # PyPI requires PEP 625 underscore names, so we rebuild fresh here.
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build src/sdk/ --outdir dist/
+          ls -la dist/
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           skip-existing: true
           packages-dir: dist/
+          password: ${{ secrets.PYPI_API_TOKEN }}

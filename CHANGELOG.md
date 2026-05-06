@@ -43,6 +43,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Quick-checks + pip caching**: added cleanup workflow and changelog tooling (#92)
 
 ### Fixed
+- **release.yml publish-pypi**: switched from OIDC trusted publishing to API token (`PYPI_API_TOKEN` secret); rebuilt sdist + wheel from `src/sdk/` source inside the publish-pypi job so PyPI gets PEP 625-compliant underscore filenames (the GH-release artifacts are renamed to hyphens for human readability). (#173)
+- **fetch_canvas_data.py**: added `?include[]=teachers` to the `/courses` query so teacher `display_name` fields populate, letting the RMP map at `site/data/rmp.json` actually fill in. (#173)
 - **release.yml publish-pypi action ref**: `pypa/gh-action-pypi-publish@v1` doesn't resolve; use `@release/v1` (the canonical major-version pointer). Surfaced when `publish-pypi` ran on the v1.2.0 release. (#172)
 - **release.yml require-ci result-encoding**: `'escape'` → `'string'` (only `string` or `json` are valid for `actions/github-script@v9`). Latent from #132's overhaul; surfaced on first `v*` tag push. (#171)
 - **Empty-send guard + example-btn color + Ask AI height overflow** (#160, #163)
