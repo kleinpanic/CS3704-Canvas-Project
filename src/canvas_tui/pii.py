@@ -1,4 +1,5 @@
 """PII scrubbing for Canvas dataset contributions."""
+
 from __future__ import annotations
 
 import json
@@ -10,24 +11,30 @@ import urllib.request
 
 EMAIL_RE = re.compile(r"\b[\w.+-]+@[\w-]+\.[\w.-]+\b")
 PHONE_RE = re.compile(r"\b(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b")
-SSN_RE   = re.compile(r"\b\d{3}-\d{2}-\d{4}\b")
-ADDR_RE  = re.compile(
+SSN_RE = re.compile(r"\b\d{3}-\d{2}-\d{4}\b")
+ADDR_RE = re.compile(
     r"\b\d{1,5}\s+[A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+)*\s+"
     r"(?:Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Drive|Dr|Court|Ct|Lane|Ln)\b"
 )
 
 SCRUB_KEYS = {
-    "name", "title", "description", "message", "body",
-    "syllabus_body", "content", "summary", "details",
-    "course_name", "short_name", "original_name",
+    "name",
+    "title",
+    "description",
+    "message",
+    "body",
+    "syllabus_body",
+    "content",
+    "summary",
+    "details",
+    "course_name",
+    "short_name",
+    "original_name",
 }
 
 _piiranha_available = True
 
-PIIRANHA_URL = (
-    "https://api-inference.huggingface.co/models/"
-    "iiiorg/piiranha-v1-detect-personal-information"
-)
+PIIRANHA_URL = "https://api-inference.huggingface.co/models/iiiorg/piiranha-v1-detect-personal-information"
 
 
 def _piiranha_call(text: str, hf_token: str) -> str | None:
@@ -55,8 +62,7 @@ def _piiranha_call(text: str, hf_token: str) -> str | None:
                 with urllib.request.urlopen(req, timeout=15) as resp:
                     entities = json.loads(resp.read())
             except Exception as retry_err:
-                print(f"  Piiranha: retry failed ({retry_err}), falling back to regex",
-                      file=sys.stderr)
+                print(f"  Piiranha: retry failed ({retry_err}), falling back to regex", file=sys.stderr)
                 _piiranha_available = False
                 return None
         else:
@@ -120,4 +126,4 @@ def scrub_doc(obj: object, *, hf_token: str = "", mode: str = "piiranha-then-reg
     return obj
 
 
-__all__ = ["scrub_doc", "scrub_string", "SCRUB_KEYS"]
+__all__ = ["SCRUB_KEYS", "scrub_doc", "scrub_string"]

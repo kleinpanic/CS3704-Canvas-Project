@@ -26,12 +26,10 @@ back directly to regex. Pass --no-scrub for local debugging only.
 import argparse
 import json
 import os
-import re
 import sys
-import time
-import urllib.request
 import urllib.error
 import urllib.parse
+import urllib.request
 from pathlib import Path
 
 CANVAS_BASE = "https://canvas.vt.edu/api/v1"
@@ -39,118 +37,16 @@ TOKEN = os.environ.get("CANVAS_TOKEN") or os.environ.get("CANVAS_API_TOKEN", "")
 HF_TOKEN = os.environ.get("HF_TOKEN", "")
 
 # ── PII scrub ────────────────────────────────────────────────────────────────
-EMAIL_RE = re.compile(r"\b[\w.+-]+@[\w-]+\.[\w.-]+\b")
-PHONE_RE = re.compile(r"\b(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b")
-SSN_RE   = re.compile(r"\b\d{3}-\d{2}-\d{4}\b")
-ADDR_RE  = re.compile(
-    r"\b\d{1,5}\s+[A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+)*\s+"
-    r"(?:Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Drive|Dr|Court|Ct|Lane|Ln)\b"
-)
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+import canvas_tui.pii as _pii_mod  # noqa: E402
+from canvas_tui.pii import SCRUB_KEYS, scrub_doc, scrub_string  # noqa: E402, F401
 
-SCRUB_KEYS = {
-    "name", "title", "description", "message", "body",
-    "syllabus_body", "content", "summary", "details",
-    "course_name", "short_name", "original_name",
-}
-
-# Module-level flag: set to False if Piiranha returns a non-retryable error
-# during a run, so subsequent strings skip the API and use regex directly.
-_piiranha_available = True
-
-PIIRANHA_URL = (
-    "https://api-inference.huggingface.co/models/"
-    "iiiorg/piiranha-v1-detect-personal-information"
-)
+scrub_recursive = scrub_doc  # backward-compat alias for local callers
 
 
 def scrub_piiranha(text, hf_token):
-    """Call Piiranha via HF Inference API. Returns redacted text or None on any error."""
-    global _piiranha_available
-    if not _piiranha_available:
-        return None
-    payload = json.dumps({"inputs": text}).encode()
-    req = urllib.request.Request(
-        PIIRANHA_URL,
-        data=payload,
-        headers={
-            "Authorization": f"Bearer {hf_token}",
-            "Content-Type": "application/json",
-        },
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            entities = json.loads(resp.read())
-    except urllib.error.HTTPError as e:
-        if e.code == 503:
-            # Model loading — retry once after 5 s
-            print("  Piiranha: model loading (503), retrying in 5 s…", file=sys.stderr)
-            time.sleep(5)
-            try:
-                with urllib.request.urlopen(req, timeout=15) as resp:
-                    entities = json.loads(resp.read())
-            except Exception as retry_err:
-                print(f"  Piiranha: retry failed ({retry_err}), falling back to regex",
-                      file=sys.stderr)
-                _piiranha_available = False
-                return None
-        else:
-            print(f"  Piiranha: HTTP {e.code}, falling back to regex", file=sys.stderr)
-            _piiranha_available = False
-            return None
-    except Exception as e:
-        print(f"  Piiranha: {e}, falling back to regex", file=sys.stderr)
-        _piiranha_available = False
-        return None
-
-    if not isinstance(entities, list):
-        return None
-
-    # Walk in reverse so offsets remain valid as we splice
-    chars = list(text)
-    for ent in sorted(entities, key=lambda x: x.get("start", 0), reverse=True):
-        start = ent.get("start")
-        end = ent.get("end")
-        group = ent.get("entity_group", "PII")
-        if start is None or end is None:
-            continue
-        chars[start:end] = list(f"[{group}]")
-    return "".join(chars)
-
-
-def scrub(text):
-    if not isinstance(text, str):
-        return text
-    text = SSN_RE.sub("[SSN]", text)
-    text = EMAIL_RE.sub("[EMAIL]", text)
-    text = PHONE_RE.sub("[PHONE]", text)
-    text = ADDR_RE.sub("[ADDRESS]", text)
-    return text
-
-
-def scrub_string(text):
-    """Scrub a single string: Piiranha-first (if HF_TOKEN set), regex fallback."""
-    if HF_TOKEN and len(text) > 20:
-        result = scrub_piiranha(text, HF_TOKEN)
-        if result is not None:
-            return result
-    return scrub(text)
-
-
-def scrub_recursive(obj, target_keys=SCRUB_KEYS):
-    if isinstance(obj, dict):
-        out = {}
-        for k, v in obj.items():
-            if k in target_keys and isinstance(v, str):
-                out[k] = scrub_string(v)
-            else:
-                out[k] = scrub_recursive(v, target_keys)
-        return out
-    if isinstance(obj, list):
-        return [scrub_recursive(x, target_keys) for x in obj]
-    if isinstance(obj, str):
-        # belt-and-braces: catch PII anywhere, even outside whitelisted keys
-        return scrub_string(obj)
-    return obj
+    """Delegate to canvas_tui.pii._piiranha_call for backward compat."""
+    return _pii_mod._piiranha_call(text, hf_token)
 
 
 def fetch(path, params=None):
@@ -241,10 +137,9 @@ def self_test():
     mock_cm.__exit__ = MagicMock(return_value=False)
     mock_cm.read = MagicMock(return_value=json.dumps(fake_entities).encode())
 
-    global _piiranha_available
-    _piiranha_available = True  # reset in case a prior test tripped it
+    _pii_mod._piiranha_available = True  # reset in case a prior test tripped it
 
-    with patch("urllib.request.urlopen", return_value=mock_cm):
+    with patch("canvas_tui.pii.urllib.request.urlopen", return_value=mock_cm):
         result = scrub_piiranha("Hello jane@vt.edu end", "fake-token")
 
     assert result is not None, "scrub_piiranha returned None with mock"

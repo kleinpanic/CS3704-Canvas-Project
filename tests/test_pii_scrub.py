@@ -1,11 +1,10 @@
 """Tests for canvas_tui.pii — PII scrub module."""
+
 from __future__ import annotations
 
 import sys
 from pathlib import Path
 from unittest.mock import patch
-
-import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
@@ -119,14 +118,16 @@ class TestPiiranha:
 
     def test_token_not_in_piiranha_error(self):
         import canvas_tui.pii as pii_mod
+
         original = pii_mod._piiranha_available
         pii_mod._piiranha_available = True
         try:
             import urllib.error
-            with patch("canvas_tui.pii.urllib.request.urlopen",
-                       side_effect=urllib.error.HTTPError(
-                           url="", code=401, msg="Unauthorized",
-                           hdrs=None, fp=None)):
+
+            with patch(
+                "canvas_tui.pii.urllib.request.urlopen",
+                side_effect=urllib.error.HTTPError(url="", code=401, msg="Unauthorized", hdrs=None, fp=None),
+            ):
                 result = pii_mod._piiranha_call("some text here", "secret_token_abc")
             assert result is None
             assert "secret_token_abc" not in str(result)

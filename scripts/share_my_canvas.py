@@ -26,6 +26,8 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+from canvas_tui.pii import scrub_doc  # noqa: E402
 
 BASE_URL = os.environ.get("CANVAS_BASE_URL", "https://canvas.vt.edu")
 
@@ -59,12 +61,17 @@ def _token() -> str:
 
 def _get(path: str, params: dict | None = None) -> list | dict:
     import requests
-    headers = {"Authorization": f"Bearer {_token()}"}
+    tok = _token()
+    headers = {"Authorization": f"Bearer {tok}"}
     url = f"{BASE_URL}/api/v1{path}"
     results = []
     while url:
-        r = requests.get(url, headers=headers, params=params, timeout=30)
-        r.raise_for_status()
+        try:
+            r = requests.get(url, headers=headers, params=params, timeout=30)
+            r.raise_for_status()
+        except requests.RequestException as exc:
+            safe = str(exc).replace(tok, "[CANVAS_TOKEN]")
+            raise RuntimeError(safe) from None
         data = r.json()
         if isinstance(data, list):
             results.extend(data)
@@ -111,10 +118,16 @@ def anonymize(obj: object, salt: str) -> object:
 
     obj = _walk(obj)
     text = json.dumps(obj, default=str)
-    # Course codes like "CS 3704", "ENGL2204" → @COURSE1, @COURSE2, ...
+    # Pass 1: strict — "CS 3704", "ENGL2204", "CS3114"
     text = re.sub(
         r"\b([A-Z]{2,5})\s*(\d{3,4}[A-Z]?)\b",
         lambda m: _anon_course(m.group(0)),
+        text,
+    )
+    # Pass 2: underscore form — "CS_3114_202601", "CS_3704_21936_202601"
+    text = re.sub(
+        r"(?<![A-Z])([A-Z]{2,5})_(\d{3,4}[A-Z]?)(?:_\d+)*(?![A-Z])",
+        lambda m: _anon_course(m.group(1) + "_" + m.group(2)),
         text,
     )
     return json.loads(text)
@@ -202,15 +215,16 @@ def collect(contributor: str) -> list[dict]:
         if not asgn_records:
             continue  # skip courses with nothing plannable
 
-        # Anonymize course_code explicitly — VT CRN format (CS_3704_21936_202601)
-        # is not caught by the regex in anonymize() because underscores block \b.
+        # Anonymize course_code and course_name to the same @COURSE handle.
+        # Catches both "CS 3704" and underscore forms "CS_3114_202601".
         _raw_code = course.get("course_code", "")
-        _m = re.search(r"[A-Z]{2,5}\s*\d{3,4}[A-Z]?", _raw_code)
+        _m = re.search(r"[A-Z]{2,5}[\s_]\d{3,4}[A-Z]?", _raw_code)
         _code_key = _m.group(0) if _m else _raw_code
+        _anon_handle = _anon_course(_code_key) if _code_key else ""
         records.append({
             "type": "course_snapshot",
-            "course_name": cname,
-            "course_code": _anon_course(_code_key) if _code_key else "",
+            "course_name": _anon_handle,
+            "course_code": _anon_handle,
             "term": term,
             "assignments": asgn_records,
             "contributor_id": contributor,
@@ -238,7 +252,8 @@ def collect(contributor: str) -> list[dict]:
     except Exception as e:
         print(f"  todo fetch skipped ({e})")
 
-    return [anonymize(r, contributor) for r in records]
+    hf_token = os.environ.get("HF_TOKEN", "")
+    return [scrub_doc(anonymize(r, contributor), hf_token=hf_token) for r in records]
 
 
 def main():
