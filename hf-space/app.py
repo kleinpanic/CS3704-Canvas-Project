@@ -542,7 +542,10 @@ CUSTOM_CSS = """
 .bot .message th { background: #111114 !important; color: #9ca3af !important; font-weight: 500 !important; }
 .bot .message details summary { cursor: pointer; color: #6b7280; font-size: 0.78rem; user-select: none; }
 .input-row textarea { border-radius: 6px !important; font-size: 0.875rem !important; min-height: 48px !important; }
-.example-btn button {
+/* Gradio renders elem_classes directly on the <button>, NOT a wrapper div.
+   Live DOM inspection: <button class="sm secondary example-btn svelte-...">.
+   Selector must be `button.example-btn`, not `.example-btn button`. */
+button.example-btn {
     border-radius: 16px !important;
     font-size: 0.74rem !important;
     padding: 3px 10px !important;
@@ -553,7 +556,7 @@ CUSTOM_CSS = """
     white-space: normal !important;
     min-height: auto !important;
 }
-.example-btn button:hover { border-color: #d63e36 !important; background: #1f1010 !important; color: #ffffff !important; }
+button.example-btn:hover { border-color: #d63e36 !important; background: #1f1010 !important; color: #ffffff !important; }
 .description { font-size: 0.82rem !important; line-height: 1.6 !important; color: #9ca3af !important; }
 #calendar-pane { background: #111114; border: 1px solid #2e2e38; border-radius: 8px; min-height: 440px; max-height: 600px; overflow-y: auto; }
 """
