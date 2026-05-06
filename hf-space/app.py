@@ -201,21 +201,55 @@ def chat(message, history):
     return final
 
 
+THEME = gr.themes.Soft(
+    primary_hue="red",
+    secondary_hue="slate",
+    neutral_hue="slate",
+    font=[gr.themes.GoogleFont("Inter"), "ui-sans-serif", "system-ui", "sans-serif"],
+).set(
+    body_background_fill="#0a0a0b",
+    body_background_fill_dark="#0a0a0b",
+    block_background_fill="#15151a",
+    block_background_fill_dark="#15151a",
+    block_border_color="#27272f",
+    block_border_color_dark="#27272f",
+    body_text_color="#e5e7eb",
+    body_text_color_dark="#e5e7eb",
+    button_primary_background_fill="#d63e36",
+    button_primary_background_fill_dark="#d63e36",
+    button_primary_background_fill_hover="#b83830",
+    button_primary_background_fill_hover_dark="#b83830",
+    button_primary_text_color="#ffffff",
+    button_primary_text_color_dark="#ffffff",
+)
+
+DESCRIPTION_MD = """
+**Canvas LMS calendar + study-planning agent.** Fine-tuned Gemma-4-E2B-IT with DPO on a custom preference dataset (1,071 pairs, 90.3% reward accuracy, 0.22 train loss).
+
+The model speaks the **native Gemma-4 tool-call protocol** for 18 tools — `canvas.*` (8 tools for assignments / courses / grades / syllabi / planner), `calendar.*` (5 for scheduling / free-block search), `reranker.*` (priority hints), and `study.*` (4 for exam prep, spaced repetition, semester planning).
+
+**Tool results are mocked** — this Space has no Canvas credentials. Install the SDK locally with your own Canvas token for real data: `pip install canvas-sdk[autodownload]`.
+
+[Model](https://huggingface.co/kleinpanic93/canvas-calendar-agent-v7-dpo) · [Dataset](https://huggingface.co/datasets/kleinpanic93/canvas-calendar-preferences-v7) · [Collection (9-method matrix)](https://huggingface.co/collections/kleinpanic93/canvas-calendar-agent-v30-69fa6462f697e0342b21dfe0) · [GitHub](https://github.com/kleinpanic/CS3704-Canvas-Project)
+
+> First request after a quiet period takes ~30 s while ZeroGPU cold-starts. Subsequent requests are fast.
+"""
+
 demo = gr.ChatInterface(
     fn=chat,
-    title="Canvas Calendar Agent — Live Inference",
-    description=(
-        "DPO Gemma-4-E2B-IT (rewards/accuracies=0.9032). 18 native Gemma-4 tool calls. "
-        "Cold-start ~30s on ZeroGPU. Tool results are mocked — install the SDK locally for real Canvas access."
-    ),
+    title="🎓 Canvas Calendar Agent",
+    description=DESCRIPTION_MD,
     examples=[
         "What assignments do I have due this week?",
-        "Find me a 2-hour free block tomorrow",
-        "Build me an exam-prep bracket for May 12",
+        "Find me a 2-hour free block tomorrow afternoon",
+        "Build me an exam-prep bracket for the May 12 final",
         "Rank my todos by priority",
         "What's on my calendar this week?",
+        "Plan a spaced-repetition schedule for my Linear Algebra final",
     ],
     type="messages",
+    theme=THEME,
+    cache_examples=False,
 )
 
 if __name__ == "__main__":
