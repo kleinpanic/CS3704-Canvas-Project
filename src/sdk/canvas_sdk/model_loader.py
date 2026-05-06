@@ -128,26 +128,22 @@ def ensure_model(
     cache_dir = cache_dir or DEFAULT_CACHE_DIR
     hf_repo = hf_repo or DEFAULT_HF_REPO
 
-    # 1. Explicit override
     explicit = os.environ.get("CANVAS_LLM_ENDPOINT", "").strip()
     if explicit:
         model = os.environ.get("CANVAS_LLM_MODEL", "google/gemma-4-e2b-it")
         logger.info("using explicit CANVAS_LLM_ENDPOINT=%s model=%s", explicit, model)
         return explicit, model
 
-    # 2. Local cache
     if cache_dir.exists() and any(cache_dir.iterdir()):
         result = _spawn_local_vllm(cache_dir, port)
         if result is not None:
             return result
         logger.info("local cache present but server unreachable; falling through")
 
-    # 3. HF download
     if _try_download_from_hf(hf_repo, cache_dir):
         result = _spawn_local_vllm(cache_dir, port)
         if result is not None:
             return result
 
-    # 4. Gemini fallback
     logger.warning("no local model and HF download unavailable; falling back to Gemini (set GOOGLE_API_KEY)")
     return GEMINI_FALLBACK_SENTINEL, "gemini-2.5-flash"
