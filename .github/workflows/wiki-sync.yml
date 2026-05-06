@@ -22,10 +22,12 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
 
       - name: Clone wiki
+        # Exits 0 gracefully if wiki repo not yet initialized (fork-friendly).
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git clone "https://x-access-token:${GH_TOKEN}@github.com/kleinpanic/CS3704-Canvas-Project.wiki.git" wiki-out
+          git clone "https://x-access-token:${GH_TOKEN}@github.com/kleinpanic/CS3704-Canvas-Project.wiki.git" wiki-out 2>/dev/null \
+            || { echo "Wiki not initialized - skipping sync. Initialize at https://github.com/kleinpanic/CS3704-Canvas-Project/wiki"; exit 0; }
 
       - name: Copy docs
         run: |
