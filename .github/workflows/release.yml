@@ -125,6 +125,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.meta.outputs.version }}
+      hashes: ${{ steps.hash.outputs.hashes }}
     steps:
       - name: Harden runner
         uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450  # v2
@@ -162,6 +163,11 @@ jobs:
             -exec mv {} "sdk-dist/canvas-sdk-${VERSION}.tar.gz" \;
           find sdk-dist/ -name "canvas_sdk-*-py3-none-any.whl" \
             -exec mv {} "sdk-dist/canvas-sdk-${VERSION}-py3-none-any.whl" \;
+
+      - name: Compute artifact hashes
+        id: hash
+        run: |
+          echo "hashes=$(sha256sum sdk-dist/*.whl sdk-dist/*.tar.gz | base64 -w0)" >> "$GITHUB_OUTPUT"
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
         with:
@@ -444,3 +450,50 @@ jobs:
         run: |
           echo "fork: skipping PyPI publish (PYPI_API_TOKEN not configured); see CONTRIBUTING.md"
 
+
+  generate-sbom:
+    name: Generate SBOM
+    needs: [release, publish-pypi, build-sdk-linux]
+    if: ${{ !contains(needs.build-sdk-linux.outputs.version, '-') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450  # v2
+        with:
+          egress-policy: audit
+
+      - name: Download SDK artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8
+        with:
+          name: sdk-linux
+          path: dist/
+
+      - name: Generate SBOM
+        uses: anchore/sbom-action@e11c554f704a0b820cbf8c51673f6945e0731532  # v0.20.0
+        with:
+          artifact-name: sbom.cyclonedx.json
+          format: cyclonedx-json
+          path: dist/
+
+      - name: Attach SBOM to GH Release
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65  # v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: sbom.cyclonedx.json
+
+  slsa-provenance:
+    name: SLSA Provenance
+    needs: [release, publish-pypi, build-sdk-linux]
+    if: ${{ !contains(needs.build-sdk-linux.outputs.version, '-') }}
+    permissions:
+      id-token: write
+      contents: write
+      actions: read
+    # SLSA generator reusable workflow: pinned to semver per SLSA spec (SHA not valid here)
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.1.0
+    with:
+      base64-subjects: "${{ needs.build-sdk-linux.outputs.hashes }}"
+      upload-assets: true
