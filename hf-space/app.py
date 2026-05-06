@@ -17,7 +17,7 @@ except Exception:
     GPU_DECORATOR = _noop
 
 MODEL_ID = "kleinpanic93/canvas-calendar-agent-v7-dpo"
-MAX_TURNS = 4
+MAX_TURNS = 2  # was 4 — model over-chained tool calls across rounds
 MAX_NEW_TOKENS = 384
 
 _TOOL_CALL_RE = re.compile(r"<\|tool_call>(.*?)<tool_call\|>", re.DOTALL)
@@ -72,12 +72,19 @@ def extract_final_answer(text: str) -> str:
     return re.sub(r"<\|tool_call>.*?<tool_call\|>", "", text, flags=re.DOTALL).strip()
 
 
-SYSTEM_PROMPT = """You are the Canvas Calendar Agent. Speak Gemma-4 native tool-call format `<|tool_call>call:tool.name{arg:value}<tool_call|>` for any of these 18 tools:
+SYSTEM_PROMPT = """You are the Canvas Calendar Agent. You have these 18 tools available:
 - canvas.{get_assignments,get_course,get_grades,get_syllabus,get_todo,list_announcements,list_courses,list_planner_items}
 - calendar.{create_event,delete_event,find_free_blocks,list_events,modify_event}
 - reranker.priority_hint
 - study.{exam_bracket,recommend_block_size,semester_schedule,spaced_schedule}
-After tool results come back, produce a concise final answer for the user."""
+
+RULES (follow strictly):
+1. Call the MINIMUM number of tools needed — usually ONE — to directly answer the user's question.
+2. Don't call tools speculatively. Don't fetch data the user didn't ask for.
+3. Don't iterate over courses/items unless the user explicitly asked for per-item detail.
+4. After tool results come back, IMMEDIATELY produce a concise final answer. Do NOT call more tools.
+
+Tool-call format: `<|tool_call>call:tool.name{arg:value}<tool_call|>`"""
 
 
 _MOCK_ASSIGNMENTS = [
