@@ -61,7 +61,7 @@ jobs:
               }
             }
             throw new Error(`No successful CI for ${context.sha} after ${maxAttempts} attempts`);
-          result-encoding: 'escape'
+          result-encoding: 'string'
 
       - name: Report CI failure
         if: failure()
