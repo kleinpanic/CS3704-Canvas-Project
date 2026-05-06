@@ -1,0 +1,16 @@
+01-loaded: full-page screenshot saved
+Found space iframe: https://kleinpanic93-canvas-calendar-agent-demo.hf.space/?__theme=system
+02-gradio-loaded: textarea visible
+Found Send button. Clicking with EMPTY input to test guard...
+03-empty-send: screenshot taken — check if "Generating..." or spinner appeared
+Found 19 example-like buttons
+  1. "What's on my calendar this week?"
+  2. "Find a 2-hour free block tomorrow afternoon"
+  3. "Schedule a study block tomorrow 3-5pm"
+  4. "Move my 2pm event to 4pm"
+  5. "Cancel my 3pm meeting"
+Clicking first example: "What's on my calendar this week?"
+04-after-example-click: textbox should be populated
+Sent the example message. Waiting up to 90s for response...
+05-chat-response: screenshot after waiting 60s
+TEST COMPLETE
