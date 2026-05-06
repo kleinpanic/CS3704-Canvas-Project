@@ -1,0 +1,55 @@
+name: Nightly Release
+on:
+  schedule:
+    - cron: '0 6 * * *'  # 06:00 UTC daily
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: nightly
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build SDK wheel
+        run: |
+          cd src/sdk
+          pip install build
+          python -m build --wheel --sdist
+      - name: Build extension archive
+        run: |
+          tar -czf canvas-extension-nightly.tar.gz -C extension src manifest.json
+      - name: Compute tag
+        id: tag
+        run: |
+          SHA=$(git rev-parse --short HEAD)
+          DATE=$(date -u +%Y%m%d)
+          TAG="nightly-${DATE}-${SHA}"
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+      - name: Create tag
+        run: |
+          TAG="${{ steps.tag.outputs.tag }}"
+          git tag "$TAG"
+          git push origin "$TAG"
+      - name: Publish pre-release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: 'Nightly ${{ steps.tag.outputs.tag }}'
+          prerelease: true
+          body: |
+            Automated nightly snapshot of `main`.
+
+            This is a pre-release build for testing. NOT published to PyPI. Use stable `v*` releases for production.
+
+            Commit: ${{ github.sha }}
+          files: |
+            src/sdk/dist/*
+            canvas-extension-nightly.tar.gz
