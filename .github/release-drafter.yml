@@ -1,0 +1,59 @@
+name-template: 'v$RESOLVED_VERSION'
+tag-template: 'v$RESOLVED_VERSION'
+categories:
+  - title: '🚀 Features'
+    labels: ['feat', 'feature', 'enhancement']
+  - title: '🐛 Bug Fixes'
+    labels: ['fix', 'bugfix', 'bug']
+  - title: '📝 Documentation'
+    labels: ['docs', 'documentation']
+  - title: '🔒 Security'
+    labels: ['security']
+  - title: '🧹 Maintenance'
+    labels: ['chore', 'refactor', 'ci', 'build']
+  - title: '⚠️ Breaking Changes'
+    labels: ['breaking', 'breaking-change']
+autolabeler:
+  - label: 'feat'
+    title:
+      - '/^feat(\(.+\))?:/'
+  - label: 'fix'
+    title:
+      - '/^fix(\(.+\))?:/'
+  - label: 'docs'
+    title:
+      - '/^docs(\(.+\))?:/'
+  - label: 'chore'
+    title:
+      - '/^chore(\(.+\))?:/'
+  - label: 'refactor'
+    title:
+      - '/^refactor(\(.+\))?:/'
+  - label: 'ci'
+    title:
+      - '/^ci(\(.+\))?:/'
+  - label: 'build'
+    title:
+      - '/^build(\(.+\))?:/'
+  - label: 'security'
+    title:
+      - '/^fix\(security\):/'
+  - label: 'breaking-change'
+    title:
+      - '/BREAKING CHANGE/'
+change-template: '- $TITLE (#$NUMBER) by @$AUTHOR'
+change-title-escapes: '\<*_&'
+version-resolver:
+  major:
+    labels: ['breaking', 'breaking-change']
+  minor:
+    labels: ['feat', 'feature', 'enhancement']
+  patch:
+    labels: ['fix', 'bugfix', 'bug', 'docs', 'chore']
+  default: patch
+template: |
+  ## What's Changed
+
+  $CHANGES
+
+  **Full Changelog**: https://github.com/$OWNER/$REPOSITORY/compare/$PREVIOUS_TAG...v$RESOLVED_VERSION

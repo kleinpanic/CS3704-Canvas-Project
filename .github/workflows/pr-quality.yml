@@ -1,0 +1,60 @@
+name: PR Quality
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, labeled, unlabeled]
+    branches: [main]
+permissions:
+  pull-requests: read
+  contents: read
+jobs:
+  conventional-title:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            docs
+            chore
+            refactor
+            test
+            perf
+            style
+            ci
+            build
+            revert
+
+  changelog-required:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dangoslen/changelog-enforcer@v3
+        with:
+          changeLogPath: CHANGELOG.md
+          skipLabels: 'skip-changelog,dependencies'
+
+  size-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check PR size
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          additions=$(gh pr view "$PR_NUMBER" --json additions -q '.additions')
+          deletions=$(gh pr view "$PR_NUMBER" --json deletions -q '.deletions')
+          total=$((additions + deletions))
+          echo "PR diff size: $total lines ($additions added, $deletions deleted)"
+          labels=$(gh pr view "$PR_NUMBER" --json labels -q '[.labels[].name] | join(",")')
+          if [ "$total" -gt 1000 ] && [[ "$labels" != *"large-pr"* ]]; then
+            echo "::error::PR is $total lines (limit: 1000). Add 'large-pr' label to override."
+            exit 1
+          fi
