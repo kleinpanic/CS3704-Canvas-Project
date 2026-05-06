@@ -30,9 +30,15 @@ jobs:
           pip install pytest-cov
 
       - name: Run coverage
-        run: pytest --cov=canvas_tui --cov-report=term-missing -q
+        run: pytest --cov=canvas_tui --cov-report=xml --cov-report=term-missing -q
 
       - name: Coverage threshold
         run: |
           coverage report --fail-under=70
           echo "Coverage check passed"
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2  # v6.0.0
+        with:
+          files: coverage.xml
+          fail_ci_if_error: false
