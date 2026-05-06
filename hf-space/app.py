@@ -4,12 +4,19 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import os
 import re
+import threading
 from typing import Any
 
 import gradio as gr
 import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer, TextIteratorStreamer
+
+# CANVAS_STREAMING=0 disables TextIteratorStreamer and falls back to the
+# blocking generate_step() path (chat()). Set this in HF Space Settings ->
+# Variables if streaming breaks on ZeroGPU.
+_STREAMING = os.environ.get("CANVAS_STREAMING", "1") == "1"
 
 try:
     import spaces
@@ -421,6 +428,104 @@ def generate_step(messages):
     return tokenizer.decode(out[0, input_ids.shape[1]:], skip_special_tokens=False)
 
 
+@GPU_DECORATOR
+def generate_step_streaming(messages):
+    input_ids = _to_input_ids(messages)
+    if torch.cuda.is_available():
+        model.to("cuda")
+        input_ids = input_ids.to("cuda")
+    streamer = TextIteratorStreamer(
+        tokenizer, skip_prompt=True, skip_special_tokens=False
+    )
+    gen_kwargs = dict(
+        input_ids=input_ids,
+        do_sample=True, temperature=1.0, top_p=0.95, top_k=64,
+        max_new_tokens=MAX_NEW_TOKENS,
+        pad_token_id=tokenizer.eos_token_id,
+        streamer=streamer,
+    )
+    t = threading.Thread(target=model.generate, kwargs=gen_kwargs)
+    t.start()
+    for token_text in streamer:
+        yield token_text
+    t.join()
+
+
+def chat_stream(message: str, history: list, state: dict | None):
+    """Generator version of chat(). Yields (history, state, calendar_html) tuples
+    with progressively longer assistant messages.
+
+    If _STREAMING is False, delegates to the blocking chat() and yields once.
+    """
+    if not _STREAMING:
+        yield from [chat(message, history, state)]
+        return
+
+    if state is None:
+        state = init_state()
+    if not (message or "").strip():
+        yield history or [], state, render_calendar_html(state)
+        return
+
+    msgs = [{"role": "system", "content": SYSTEM_PROMPT}]
+    for h in history or []:
+        if isinstance(h, dict):
+            msgs.append({"role": h.get("role", "user"), "content": h.get("content", "")})
+        elif isinstance(h, (list, tuple)) and len(h) >= 2:
+            if h[0]: msgs.append({"role": "user", "content": h[0]})
+            if h[1]: msgs.append({"role": "assistant", "content": h[1]})
+    msgs.append({"role": "user", "content": message})
+
+    tool_log: list[dict] = []
+    raw = ""
+    MAX_CALLS_PER_TURN = 2
+    for _ in range(MAX_TURNS):
+        partial = ""
+        for token in generate_step_streaming(msgs):
+            partial += token
+            partial_history = (history or []) + [
+                {"role": "user", "content": message},
+                {"role": "assistant", "content": partial},
+            ]
+            yield partial_history, state, render_calendar_html(state)
+        raw = partial
+        calls = parse_tool_calls(raw)[:MAX_CALLS_PER_TURN]
+        msgs.append({"role": "assistant", "content": raw})
+        if not calls:
+            break
+        for call in calls:
+            already = any(
+                t["tool"] == call["tool"] and t["args"] == call["args"]
+                for t in tool_log
+            )
+            if already:
+                continue
+            result, state = apply_tool(call["tool"], call["args"], state)
+            tool_log.append({"tool": call["tool"], "args": call["args"], "result": result})
+            msgs.append({"role": "user", "content": format_tool_result(call["tool"], result)})
+
+    final = extract_final_answer(raw)
+    if not final or final == "(no final answer)":
+        final = summarize_tool_results(tool_log)
+    if tool_log:
+        rows = "\n".join(
+            f"| `{t['tool']}` | `{json.dumps(t['args'])[:70]}` | `{json.dumps(t['result'])[:90]}` |"
+            for t in tool_log
+        )
+        table = f"| Tool | Args | Result |\n|------|------|--------|\n{rows}"
+        label = f"{len(tool_log)} tool call{'s' if len(tool_log) > 1 else ''}"
+        reply = f"{final}\n\n<details><summary>🔧 {label} (mock data — session-local state)</summary>\n\n{table}\n\n</details>"
+    else:
+        reply = final
+
+    new_history = (history or []) + [
+        {"role": "user", "content": message},
+        {"role": "assistant", "content": reply},
+    ]
+    state["tool_log"].extend(tool_log)
+    yield new_history, state, render_calendar_html(state)
+
+
 # ---------------------------------------------------------------------------
 # Chat function — bound to gr.Blocks layout.
 # Signature: (message, history, state) -> (history, state, calendar_html).
@@ -704,7 +809,7 @@ with gr.Blocks(theme=THEME, css=CUSTOM_CSS, title="Canvas Calendar Agent") as de
             ["Rank my todos by priority"],
         ],
         inputs=msg,
-        fn=chat,
+        fn=chat_stream,
         outputs=[chatbot, state, calendar_html],
         run_on_click=True,
         cache_examples=False,
@@ -712,17 +817,17 @@ with gr.Blocks(theme=THEME, css=CUSTOM_CSS, title="Canvas Calendar Agent") as de
         elem_classes=["example-btn"],
     )
 
-    # Wire send button + Enter-key submit. Outputs order MUST match chat() return:
+    # Wire send button + Enter-key submit. Outputs order MUST match chat_stream() yield:
     # (history, state, calendar_html).
     send_btn.click(
-        fn=chat,
+        fn=chat_stream,
         inputs=[msg, chatbot, state],
         outputs=[chatbot, state, calendar_html],
         api_name=False,
     ).then(lambda: "", outputs=msg, api_name=False)
 
     msg.submit(
-        fn=chat,
+        fn=chat_stream,
         inputs=[msg, chatbot, state],
         outputs=[chatbot, state, calendar_html],
         api_name=False,
