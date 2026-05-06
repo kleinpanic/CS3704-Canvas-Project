@@ -5,6 +5,60 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] — 2026-05-06
+
+### Added
+- **HF Space session state + 18-tool surface**: calendar pane, 18 dispatched mock tools, pill examples, table tool calls, fill_height, Gemma-4 sampling params (#145)
+- **18 interactive tool buttons** on agent demo page with visible labels (#121, #122, #163, #164)
+- **Live Demo page** on docs-site with HF links across nav (#143, #144)
+- **Auto-deploy HF Space** to HuggingFace on main push via `deploy-hf-space.yml` (#141)
+- **GHCR Docker image**: build + publish `canvas-tui` to `ghcr.io/kleinpanic/canvas-tui` (#140)
+- **PyPI publish workflow**: `canvas-sdk` publishes on stable releases via OIDC trusted publishing (#138)
+- **GitHub Wiki sync**: `wiki-sync.yml` syncs `docs-site/docs/` to GitHub Wiki on main push (#139)
+- **Read the Docs config**: `.readthedocs.yml` added for RTD integration (#137)
+- **RMP pre-fetch at build time**: Rate My Professor ratings baked into `rmp.json` at build time (#155)
+- **DPO+SFT methodology explainer page** in docs-site with nav links (#130)
+- **SDK 18-tool agent registry + calendar adapter**: `REGISTRY` dict with Canvas API tools (×8), calendar adapters (×5), study helpers (×4), reranker integration (×1) (#83, #91)
+- **InMemoryCalendarBackend** and `calendar_adapter` migration to SDK (#134)
+- **HF Space inference backend** — Gradio app loading v7-dpo behind `ChatInterface` (#107, #109, #136)
+- **Gemma4 agentic backend, tool parser, and agent loop** in SDK (#98)
+- **Live demo GitHub Pages** with GitHub Actions CI (#99)
+- **HF Model/Dataset/Space nav links** added to docs-site demo (#112)
+- **TRAINING-PIPELINE walkthrough** added to MkDocs site (#108)
+- **HF Space integration test** + HF badges (#116)
+
+### Changed
+- **README modernized**: structure, links, quick-start, badge expansion, PyPI badges, Distribution table for 3-package channels (#131, #158, #159, #161)
+- **docs/method.html**: rewrite with cited corrections from SSOT truth source (#148)
+- **MkDocs deduplication**: removed root `mkdocs.yml`, resolved nav conflicts (#156)
+- **HF Space UI polish**: wider layout, pill examples, flat grid replacing accordions, structured description (#152)
+- **CI overhaul**: release workflow with 4 parallel build jobs (#132)
+- **Branch protection**: added `feat/*` to branch-name policy (#142)
+- **CODEOWNERS + stale policy**: tightened to 14-day window (#87)
+- **Quick-checks + pip caching**: added cleanup workflow and changelog tooling (#92)
+
+### Fixed
+- **Empty-send guard + example-btn color + Ask AI height overflow** (#160, #163)
+- **release.yml**: replaced phantom `build` job dependency with `build-sdk-linux` (#165)
+- **branch-name policy regex**: now allows `feat/*` branches (#142)
+- **CI rename**: `huggingface-cli` → `hf` in deploy workflow (#146)
+- **HF Space stability**: pinned Python 3.11, `hub<1.0`, `transformers<5`, `audioop-lts` shim (#113, #115)
+- **SDK standalone shippability**: moved `calendar_adapter`, guarded reranker import (#134)
+- **Extension assignment rows**: made clickable (#149)
+- **Canvas assignments** not loading in live demo (#105)
+- **Chrome extension**: `chrome_shim` polyfill + `.crxignore` for standalone packaging (#135)
+- **Gemini review findings**: 10 fixes, 47 tests (#86)
+
+### Security
+- **PII scrub**: Canvas data scrubbed before baking into public Pages JSON (#151)
+- **CF Worker proxy**: Canvas API calls routed through Cloudflare Worker; tokens removed from public JS (#133)
+
+### Removed
+- **AI-generated audit/review/plan docs**: removed from repo; test files moved to `tests/` (#153)
+- **Root mkdocs.yml**: deleted unused duplicate (#156)
+
+---
+
 ## [1.1.1] — 2026-05-04
 
 ### Added

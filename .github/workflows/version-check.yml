@@ -1,0 +1,28 @@
+name: Version Check
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  version-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify versions match
+        run: |
+          ROOT=$(grep -m1 '^version' pyproject.toml | head -1 | sed 's/.*"\(.*\)".*/\1/')
+          SDK=$(grep -m1 '^version' src/sdk/pyproject.toml | head -1 | sed 's/.*"\(.*\)".*/\1/')
+          echo "Root canvas-tui: $ROOT"
+          echo "SDK canvas-sdk:  $SDK"
+          if [ "$ROOT" != "$SDK" ]; then
+            echo "::error::Version drift: pyproject.toml=$ROOT but src/sdk/pyproject.toml=$SDK"
+            exit 1
+          fi
+      - name: Verify CHANGELOG entry exists
+        run: |
+          VERSION=$(grep -m1 '^version' pyproject.toml | head -1 | sed 's/.*"\(.*\)".*/\1/')
+          if ! grep -q "## \[$VERSION\]" CHANGELOG.md; then
+            echo "::error::CHANGELOG.md missing entry for $VERSION"
+            exit 1
+          fi
