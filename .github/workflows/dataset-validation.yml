@@ -1,0 +1,79 @@
+name: Dataset Validation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'data/collab/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dataset-validation-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Dataset Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install package
+        run: pip install -e ".[dev]" --quiet
+
+      - name: Detect changed collab files
+        id: changed
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          FILES=$(git diff --name-only "$BASE_SHA".."$HEAD_SHA" -- 'data/collab/**' | tr '\n' ' ')
+          echo "files=$FILES" >> "$GITHUB_OUTPUT"
+          echo "Changed files: $FILES"
+
+      - name: Parse check (jq)
+        env:
+          CHANGED_FILES: ${{ steps.changed.outputs.files }}
+        run: |
+          for f in $CHANGED_FILES; do
+            echo "Checking JSON syntax: $f"
+            while IFS= read -r line; do
+              if [ -z "$line" ]; then continue; fi
+              echo "$line" | jq -c . > /dev/null || {
+                echo "FAIL $f: invalid JSON — run: python scripts/share_my_canvas.py --dry-run"
+                exit 1
+              }
+            done < "$f"
+          done
+
+      - name: Schema check
+        env:
+          CHANGED_FILES: ${{ steps.changed.outputs.files }}
+        run: python tools/validate_collab_jsonl.py $CHANGED_FILES
+
+      - name: PII check
+        if: ${{ secrets.HF_TOKEN != '' }}
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          CHANGED_FILES: ${{ steps.changed.outputs.files }}
+          PIIRANHA_SHA: ${{ vars.PIIRANHA_MODEL_SHA || 'main' }}
+        run: |
+          python tools/validate_collab_jsonl.py --pii \
+            --piiranha-model-sha "$PIIRANHA_SHA" \
+            $CHANGED_FILES
+
+      - name: PII check (fork — token absent)
+        if: ${{ secrets.HF_TOKEN == '' }}
+        run: |
+          echo "fork: HF_TOKEN not set — PII step skipped; maintainer must validate before merge"
