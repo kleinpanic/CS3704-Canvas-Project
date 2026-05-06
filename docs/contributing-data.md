@@ -36,6 +36,34 @@ Contributions are validated automatically by CI before merge. See `.github/workf
 
 ---
 
+## Scrubbing via the PII Space (recommended)
+
+The project hosts a public [canvas-pii-scrub](https://huggingface.co/spaces/kleinpanic93/canvas-pii-scrub)
+HuggingFace Space that runs the same Piiranha model used in CI. **No HF token required.**
+
+```bash
+export CANVAS_TOKEN=your_token_here
+python3 scripts/share_my_canvas.py --contributor yourpid --scrub-via-space
+```
+
+The `--scrub-via-space` flag sends your data to the Space's `/scrub` endpoint instead of
+calling the HF Inference API locally. If the Space is unreachable, the script falls back to
+local regex scrubbing and prints a warning to stderr.
+
+**Cold start:** The Space may take 30-60 seconds to wake after a period of inactivity.
+This is expected behavior for free-tier CPU Spaces.
+
+**Fork contributors:** To point at your own fork's Space, set:
+
+```bash
+export CANVAS_PII_SPACE_URL=https://your-username-canvas-pii-scrub.hf.space
+```
+
+The `--dry-run` flag works with `--scrub-via-space` — runs the full Space-scrub pipeline
+but writes nothing to disk.
+
+---
+
 ## Before you open a PR: run --dry-run
 
 ```bash

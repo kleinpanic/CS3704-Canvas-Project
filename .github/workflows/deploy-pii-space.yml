@@ -1,0 +1,65 @@
+name: Deploy PII Scrub Space
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "hf-space-pii/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: ${{ secrets.HF_TOKEN != '' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install huggingface_hub
+        run: pip install "huggingface_hub[cli]>=0.23"
+
+      - name: Upload hf-space-pii/ to HuggingFace Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          GIT_SHA: ${{ github.sha }}
+        run: |
+          hf upload kleinpanic93/canvas-pii-scrub \
+            hf-space-pii/ . \
+            --repo-type space \
+            --commit-message "deploy: $GIT_SHA"
+
+      - name: Smoke test — /health
+        run: |
+          SPACE="https://kleinpanic93-canvas-pii-scrub.hf.space"
+          for i in 1 2 3; do
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" "$SPACE/health" || echo "000")
+            [ "$CODE" = "200" ] && break
+            echo "Attempt $i: $CODE, sleeping 30s..."; sleep 30
+          done
+          [ "$CODE" = "200" ] || { echo "/health did not return 200"; exit 1; }
+
+      - name: Smoke test — /scrub
+        run: |
+          SPACE="https://kleinpanic93-canvas-pii-scrub.hf.space"
+          RESP=$(curl -s -X POST "$SPACE/scrub" \
+            -H "Content-Type: application/json" \
+            -d '{"document": {"type": "todo_snapshot", "text": "test"}}')
+          echo "$RESP" | python -c "
+          import sys, json
+          d = json.load(sys.stdin)
+          assert 'document' in d, f'no document key: {d}'
+          print('/scrub OK')
+          "
+
+      - name: Print logs URL on failure
+        if: failure()
+        env:
+          RUN_ID: ${{ github.run_id }}
+          REPO: ${{ github.repository }}
+        run: |
+          echo "Deployment failed. View logs at:"
+          echo "https://github.com/$REPO/actions/runs/$RUN_ID"

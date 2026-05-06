@@ -77,3 +77,26 @@ jobs:
         if: ${{ secrets.HF_TOKEN == '' }}
         run: |
           echo "fork: HF_TOKEN not set — PII step skipped; maintainer must validate before merge"
+
+      - name: Warmup PII Space
+        if: ${{ vars.CANVAS_PII_SPACE_URL != '' }}
+        env:
+          SPACE_URL: ${{ vars.CANVAS_PII_SPACE_URL }}
+        run: |
+          for i in 1 2 3; do
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" "$SPACE_URL/health" || echo "000")
+            if [ "$CODE" = "200" ]; then echo "Space awake."; break; fi
+            echo "Attempt $i: Space returned $CODE, sleeping 30s..."
+            sleep 30
+          done
+          [ "$CODE" = "200" ] || { echo "Space did not wake after 90s"; exit 1; }
+
+      - name: PII check via Space
+        if: ${{ vars.CANVAS_PII_SPACE_URL != '' }}
+        env:
+          CANVAS_PII_SPACE_URL: ${{ vars.CANVAS_PII_SPACE_URL }}
+          CHANGED_FILES: ${{ steps.changed.outputs.files }}
+        run: |
+          python tools/validate_collab_jsonl.py --pii \
+            --space-url "$CANVAS_PII_SPACE_URL" \
+            $CHANGED_FILES

@@ -35,7 +35,7 @@ FORBIDDEN_KEYS = {"course_name"}
 COURSE_CODE_RE = re.compile(r"^@COURSE\d+/")
 
 
-def _validate_file(path: str, pii_mode: bool, hf_token: str) -> int:
+def _validate_file(path: str, pii_mode: bool, hf_token: str, space_url: str = "") -> int:
     try:
         fh = open(path, encoding="utf-8")
     except OSError as e:
@@ -86,24 +86,38 @@ def _validate_file(path: str, pii_mode: bool, hf_token: str) -> int:
 
             # PII
             if pii_mode:
-                for key, value in record.items():
-                    if key not in SCRUB_KEYS or not isinstance(value, str):
-                        continue
-                    if hf_token:
-                        piiranha_result = _piiranha_call(value, hf_token)
-                        if piiranha_result is None:
+                if space_url:
+                    from canvas_tui.pii import scrub_via_space
+                    for key, value in record.items():
+                        if key not in SCRUB_KEYS or not isinstance(value, str):
+                            continue
+                        resp = scrub_via_space({"text": value}, space_url)
+                        scrubbed = resp.get("text", value)
+                        if scrubbed != value:
                             print(
-                                "ERROR: Piiranha unavailable (transient) — "
-                                "re-run the workflow or contact maintainer"
+                                f"FAIL {path}:{lineno}: PII detected in '{key}' "
+                                f"— run: python scripts/share_my_canvas.py --dry-run"
                             )
-                            return 2
-                    scrubbed = scrub_string(value, hf_token=hf_token)
-                    if scrubbed != value:
-                        print(
-                            f"FAIL {path}:{lineno}: PII detected in '{key}' "
-                            f"— run: python scripts/share_my_canvas.py --dry-run"
-                        )
-                        return 1
+                            return 1
+                else:
+                    for key, value in record.items():
+                        if key not in SCRUB_KEYS or not isinstance(value, str):
+                            continue
+                        if hf_token:
+                            piiranha_result = _piiranha_call(value, hf_token)
+                            if piiranha_result is None:
+                                print(
+                                    "ERROR: Piiranha unavailable (transient) — "
+                                    "re-run the workflow or contact maintainer"
+                                )
+                                return 2
+                        scrubbed = scrub_string(value, hf_token=hf_token)
+                        if scrubbed != value:
+                            print(
+                                f"FAIL {path}:{lineno}: PII detected in '{key}' "
+                                f"— run: python scripts/share_my_canvas.py --dry-run"
+                            )
+                            return 1
 
     return 0
 
@@ -119,17 +133,27 @@ def main() -> None:
         metavar="SHA",
         help="Override PIIRANHA_URL to a pinned model revision",
     )
+    parser.add_argument(
+        "--space-url",
+        metavar="URL",
+        help="Canvas PII Space URL. When set, call /scrub instead of local Piiranha.",
+    )
     args = parser.parse_args()
+
+    if args.space_url and args.piiranha_model_sha:
+        print("ERROR: --space-url and --piiranha-model-sha are mutually exclusive")
+        sys.exit(1)
 
     if args.piiranha_model_sha:
         base = "https://api-inference.huggingface.co/models/iiiorg/piiranha-v1-detect-personal-information"
         _pii_mod.PIIRANHA_URL = f"{base}/resolve/{args.piiranha_model_sha}"
 
     hf_token = os.environ.get("HF_TOKEN", "") if args.pii else ""
+    space_url = args.space_url or ""
     total = 0
 
     for path in args.files:
-        code = _validate_file(path, pii_mode=args.pii, hf_token=hf_token)
+        code = _validate_file(path, pii_mode=args.pii, hf_token=hf_token, space_url=space_url)
         if code != 0:
             sys.exit(code)
         with open(path, encoding="utf-8") as fh:
