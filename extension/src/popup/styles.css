@@ -291,6 +291,8 @@ main {
 .assignment-item.urgent   { border-left: 4px solid var(--urgent); }
 .assignment-item.due-soon { border-left: 4px solid var(--due-soon); }
 
+.assignment-item[data-html-url]:not([data-html-url=""]) { cursor: pointer; }
+
 .assignment-main { flex: 1; min-width: 0; }
 
 .course-name {
