@@ -256,20 +256,70 @@ def collect(contributor: str) -> list[dict]:
     return [scrub_doc(anonymize(r, contributor), hf_token=hf_token) for r in records]
 
 
+def _dry_run_summary(records: list[dict]) -> None:
+    import hashlib as _hashlib
+
+    jsonl_bytes = "\n".join(json.dumps(r) for r in records).encode()
+    checksum = _hashlib.sha256(jsonl_bytes).hexdigest()
+
+    type_counts: dict[str, int] = {}
+    samples: dict[str, str] = {}
+    text_fields = ("course_name", "course_code", "assignment_name")
+
+    for rec in records:
+        rtype = rec.get("type", "unknown")
+        type_counts[rtype] = type_counts.get(rtype, 0) + 1
+        for field in text_fields:
+            val = rec.get(field)
+            if val and field not in samples:
+                samples[field] = str(val)[:80]
+        for asgn in rec.get("assignments", []) or []:
+            name = asgn.get("name")
+            if name and "assignment_name" not in samples:
+                samples["assignment_name"] = str(name)[:80]
+
+    print("--- dry-run summary ---", file=sys.stderr)
+    print(f"  total records: {len(records)}", file=sys.stderr)
+    for rtype, count in sorted(type_counts.items()):
+        print(f"  {rtype}: {count}", file=sys.stderr)
+    if samples:
+        print("  sample field values (post-scrub):", file=sys.stderr)
+        for field, val in samples.items():
+            print(f"    {field}: {val!r}", file=sys.stderr)
+    print(f"  checksum: sha256:{checksum}", file=sys.stderr)
+    print("--- end dry-run ---", file=sys.stderr)
+
+
 def main():
     p = argparse.ArgumentParser(description="Dump anonymized Canvas data for CS3704 dataset.")
     p.add_argument("--contributor", required=True,
                    help="Your PID or GitHub handle — used as anonymization salt, never stored in output")
     p.add_argument("--output", default=None,
                    help="Output JSONL path (default: data/collab/<contributor>.jsonl)")
+    p.add_argument("--dry-run", action="store_true",
+                   help="Run full pipeline but write nothing; print scrubbed-output summary to stderr.")
+    p.add_argument("--inspect", action="store_true",
+                   help="Synonym for --dry-run.")
+    p.add_argument("--piiranha-required", action="store_true",
+                   help="Abort if Piiranha is unreachable (default: fall back to regex).")
     args = p.parse_args()
 
     out = Path(args.output) if args.output else \
         Path("data/collab") / f"{args.contributor}.jsonl"
-    out.parent.mkdir(parents=True, exist_ok=True)
 
     records = collect(args.contributor)
 
+    if args.piiranha_required:
+        import canvas_tui.pii as _pii
+        if not _pii._piiranha_available:
+            print("ERROR: Piiranha unavailable and --piiranha-required set.", file=sys.stderr)
+            sys.exit(2)
+
+    if args.dry_run or args.inspect:
+        _dry_run_summary(records)
+        return
+
+    out.parent.mkdir(parents=True, exist_ok=True)
     with open(out, "w") as f:
         for r in records:
             f.write(json.dumps(r) + "\n")
