@@ -71,6 +71,7 @@ jobs:
           cp docs-site/agent-demo/method.html site/agent-demo/method.html
           cp docs-site/favicon.svg site/favicon.svg
           cp docs-site/favicon.svg site/docs/favicon.svg
+          cp docs-site/roadmap.html site/roadmap.html
 
       - uses: actions/upload-pages-artifact@v3
         with:
