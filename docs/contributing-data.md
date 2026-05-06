@@ -32,7 +32,33 @@ Replace `yourpid` with your VT PID or GitHub handle. The script pulls your full 
 - **PR:** Add `data/collab/yourpid.jsonl` and open a pull request.
 - **Email:** Open a [GitHub issue](https://github.com/kleinpanic/CS3704-Canvas-Project/issues) and we'll coordinate directly.
 
-That's it. Klein handles everything else.
+Contributions are validated automatically by CI before merge. See `.github/workflows/` for the validation pipeline.
+
+---
+
+## Before you open a PR: run --dry-run
+
+```bash
+python3 scripts/share_my_canvas.py --contributor yourpid --dry-run
+```
+
+This runs the full collection and PII scrub pipeline but writes nothing to disk.
+It prints a summary to stderr showing record counts, sample field values, and a
+SHA-256 checksum of what would be written. Review the sample values to confirm no
+real names, course titles, or email addresses appear. If anything looks wrong,
+do not open a PR — file an issue instead.
+
+---
+
+## Use a GitHub no-reply email
+
+Before committing your contribution file, configure git to use your GitHub no-reply address:
+
+```bash
+git config user.email "YOUR_GITHUB_ID+YOUR_USERNAME@users.noreply.github.com"
+```
+
+Your real email address must not appear in the git history of this public repo.
 
 ---
 
@@ -48,9 +74,11 @@ All assignments across your full Canvas history (4 years), including:
 | Original | Replaced with |
 |---|---|
 | Course codes (e.g. `CS 3704`, `ENGL2204`) | `@COURSE1`, `@COURSE2`, … |
+| Course names | same `@COURSE1`, `@COURSE2`, … handle as course code |
 | Canvas numeric IDs (7–9 digit numbers) | deterministic hash (`ID######`) |
+| Email addresses, phone numbers, SSNs | `[EMAIL]`, `[PHONE]`, `[SSN]` |
 
-Assignment names are kept as-is. Your Canvas token is **never** written to the output.
+Your Canvas token is **never** written to the output.
 
 ---
 
