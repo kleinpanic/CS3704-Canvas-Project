@@ -78,9 +78,10 @@ tag_format = "v$version"
 version_source = "commitizen"
 
 [tool.pytest.ini_options]
+addopts = "-m 'not network and not slow'"
 markers = [
-    "network: marks tests that require live network access (deselect with '-m \"not network\"')",
-    "slow: marks tests with long timeouts (deselect with '-m \"not slow\"')",
+    "network: marks tests that require live network access (run explicitly with '-m network')",
+    "slow: marks tests with long timeouts (run explicitly with '-m slow')",
 ]
 
 [tool.coverage.run]

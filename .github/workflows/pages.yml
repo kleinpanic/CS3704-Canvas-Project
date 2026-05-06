@@ -48,16 +48,11 @@ jobs:
           sed -i 's|<script src="chrome_shim.js"></script>|<script src="chrome_shim_prod.js"></script>|g' \
             site/extension/src/popup/index.html
 
-      # Inject Canvas token and HF token into prod shim at build time (never in source)
-      - name: Inject Canvas token and HF token
-        env:
-          CANVAS_API_TOKEN: ${{ secrets.CANVAS_API_TOKEN }}
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: |
-          sed -i "s|__CANVAS_TOKEN__|${CANVAS_API_TOKEN}|g" \
-            site/extension/src/popup/chrome_shim_prod.js
-          sed -i "s|__HF_TOKEN__|${HF_TOKEN}|g" \
-            site/extension/src/popup/chrome_shim_prod.js
+      # Tokens are NO LONGER injected into client-side JS.
+      # Canvas token: not needed at runtime — popup uses static JSON only.
+      # HF token: held as a Cloudflare Worker secret; the Worker proxies
+      # browser requests so the token never reaches the public site.
+      # See: proxy/README.md
 
       # Pre-fetch live Canvas data and bake as static JSON
       - name: Fetch Canvas data snapshot
@@ -83,6 +78,14 @@ jobs:
         run: |
           mkdir -p site/agent-demo
           cp docs-site/agent-demo/index.html site/agent-demo/index.html
+
+      # Inject HF token into agent demo so authenticated requests bypass
+      # the small ZeroGPU anonymous quota. Token is read-only / inference-scoped.
+      - name: Inject HF token into agent demo
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          sed -i "s|__HF_TOKEN__|${HF_TOKEN}|g" site/agent-demo/index.html
 
       - uses: actions/upload-pages-artifact@v3
         with:

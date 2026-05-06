@@ -1,0 +1,7 @@
+name = "cs3704-demo-proxy"
+main = "worker.js"
+compatibility_date = "2026-05-05"
+
+# HF_TOKEN is set as a secret via:
+#   wrangler secret put HF_TOKEN
+# (do NOT commit the token here)

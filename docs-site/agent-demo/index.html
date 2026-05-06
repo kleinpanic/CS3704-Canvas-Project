@@ -446,28 +446,27 @@ python -c "from canvas_sdk import CanvasAgent; print(CanvasAgent.auto().run('wha
   }
 
   // -----------------------------------------------------------------
-  // HuggingFace Space call (Gradio REST endpoint)
+  // Cloudflare Worker proxy → HuggingFace Space (auth lives server-side)
   // -----------------------------------------------------------------
-  // The Space exposes a Gradio Interface whose predict() returns a single
-  // structured object: {final_answer, transcript, tool_calls}.
-  const HF_SPACE_URL = "https://kleinpanic93-canvas-calendar-agent-demo.hf.space/api/predict";
+  // The Worker holds HF_TOKEN as a Cloudflare secret, calls the Space's
+  // /gradio_api/call/chat endpoint with Bearer auth, and returns a clean
+  // JSON shape: { final_answer, tool_calls: [{tool, args, result}] }.
+  // No tokens are baked into this public JS file.
+  const PROXY_URL = "https://cs3704-demo-proxy.kleinpanic.workers.dev/chat";
 
   async function callHFSpace(userMessage) {
-    const resp = await fetch(HF_SPACE_URL, {
+    const resp = await fetch(PROXY_URL, {
       method: "POST",
       headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({data: [userMessage]})
+      body: JSON.stringify({message: userMessage})
     });
+    if (!resp.ok) throw new Error(`Proxy error: HTTP ${resp.status}`);
     const result = await resp.json();
-    if (!resp.ok) {
-      throw new Error(result.error || `HTTP ${resp.status}`);
-    }
-    const payload = result.data?.[0];
-    if (!payload) throw new Error("Empty response from HF Space");
+    if (result.error) throw new Error(result.error);
     return {
-      final_answer: payload.final_answer || "",
-      transcript: payload.transcript || "",
-      tool_calls: Array.isArray(payload.tool_calls) ? payload.tool_calls : []
+      final_answer: result.final_answer || "",
+      transcript: "",
+      tool_calls: Array.isArray(result.tool_calls) ? result.tool_calls : []
     };
   }
 
