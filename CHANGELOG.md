@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.2.0] — 2026-05-06
 
 ### Added
+- **Nightly release channel**: daily cron (06:00 UTC) builds SDK wheel + extension archive, tags as `nightly-YYYYMMDD-<sha>`, publishes as GitHub pre-release. `docs/RELEASING.md` documents the 3-channel model (stable, nightly, snapshot) and branch protection recommendations.
 - **Automated PR quality enforcement**: conventional title check (`amannn/action-semantic-pull-request@v5`), CHANGELOG enforcer (`dangoslen/changelog-enforcer@v3`), size limit gate (>1000 lines requires `large-pr` label), PR template, and release-drafter for auto-generated release notes.
 - **Contributor graph** (contrib.rocks) in README showing all contributors with auto-refresh.
 - **HF Space session state + 18-tool surface**: calendar pane, 18 dispatched mock tools, pill examples, table tool calls, fill_height, Gemma-4 sampling params (#145)
