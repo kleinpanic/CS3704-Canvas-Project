@@ -333,6 +333,10 @@ All commits to protected branches must be **GPG signed**.
 - **[Agent demo](https://kleinpanic.github.io/CS3704-Canvas-Project/agent-demo/)** — chat with the Canvas Calendar Agent in your browser
 - **[Roadmap](https://kleinpanic.github.io/CS3704-Canvas-Project/roadmap.html)** — planned milestones and feature backlog
 - **[HF Space](https://huggingface.co/spaces/kleinpanic93/canvas-calendar-agent-demo)** — full v7-dpo model behind a Gradio chat UI
+- **[How it Works](https://kleinpanic.github.io/CS3704-Canvas-Project/agent-demo/method.html)** — DPO methodology, 9-method ablation matrix, G1–G13 guardrails, bench harness
+- **[Read the Docs](https://readthedocs.org/projects/canvas-tracker-cs3704/)** — auto-published API + architecture docs (project import pending — see `.readthedocs.yaml`)
+- **[GHCR Docker image](https://github.com/kleinpanic/CS3704-Canvas-Project/pkgs/container/canvas-tui)** — `docker pull ghcr.io/kleinpanic/canvas-tui` (built on push-to-main + tags)
+- **[PyPI: canvas-sdk](https://pypi.org/project/canvas-sdk/)** — `pip install canvas-sdk` (publishes on stable releases via OIDC trusted publishing)
 - **[Architecture docs](https://kleinpanic.github.io/CS3704-Canvas-Project/docs/architecture/)** — system design decisions
 - **[Browser extension docs](https://kleinpanic.github.io/CS3704-Canvas-Project/docs/extension/)** — shared client/runtime architecture
 - **[Workflow guide](https://kleinpanic.github.io/CS3704-Canvas-Project/docs/workflow/)** — how the team works
