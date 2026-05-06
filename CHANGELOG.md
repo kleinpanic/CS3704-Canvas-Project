@@ -27,6 +27,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `?` keybinding overlay auto-generated from registry via `BaseScreen.show_help_overlay()`
 - `BaseScreen` ABC (`src/canvas_tui/screens/base.py`) providing keybinding help overlay support for all screens
 - RMP TUI screen (`src/canvas_tui/screens/rmp.py`): search → results → details professor ratings view; `R` keybinding opens from HomeScreen (#45, closes #43)
+- `docs/tui-architecture.md`: TUI screen inventory, keybinding registry docs, extension SDK contract (#47)
+- Chrome extension routes 14 Canvas API MESSAGE_TYPES through native host first via `routeViaHost()` helper; automatic fallback to browser-fetch (#52)
+- Native host extended with 4 new methods: `getDashboardCards`, `getSyllabus`, `getAssignmentGroups`, `getSubmission`
+
+### Fixed
+
+- Extension ratings UI verified complete per PR #94 (ext-ui redesign + professor ratings layout) (#46)
 
 - `src/canvas_tui/config_env.py`: centralised env-driven constants for all entry points.
   Fork users need only set `CANVAS_BASE_URL` and `CANVAS_TOKEN` to get a working install.

@@ -275,25 +275,56 @@ async function runLocalAgent(query = '') {
   return { ok: true, answer, toolCalls };
 }
 
+// ── Native-host-first routing helper ─────────────────────────────────────────
+
+/**
+ * Try the native host first; fall back to clientFallback() if unavailable.
+ * @param {string} nativeMethod  - method name for the host (e.g. "getCourses")
+ * @param {object} params        - extra params forwarded to host
+ * @param {Function} clientFallback - async function returning { data } on the direct path
+ */
+async function routeViaHost(nativeMethod, params, clientFallback) {
+  const nativeData = await tryNative(nativeMethod, params);
+  if (nativeData !== null) return { data: nativeData };
+  return clientFallback();
+}
+
 // ── Message Handlers ──────────────────────────────────────────────────────────
 
 const messageHandlers = {
   [MESSAGE_TYPES.getUpcoming]: () =>
-    getUpcomingAssignments(() => canvasClient.getUpcomingAssignments()),
+    routeViaHost(
+      'getUpcomingAssignments', {},
+      () => getUpcomingAssignments(() => canvasClient.getUpcomingAssignments()),
+    ),
 
   [MESSAGE_TYPES.getCourses]: () =>
-    getCourses(() => canvasClient.getCourses()),
+    routeViaHost(
+      'getCourses', {},
+      () => getCourses(() => canvasClient.getCourses()),
+    ),
 
   [MESSAGE_TYPES.getCourseAssignments]: (msg) =>
-    getCourseAssignments((courseId) => canvasClient.getCourseAssignments(courseId), msg.courseId),
+    routeViaHost(
+      'getCourseAssignments', { courseId: msg.courseId },
+      () => getCourseAssignments((courseId) => canvasClient.getCourseAssignments(courseId), msg.courseId),
+    ),
 
   [MESSAGE_TYPES.getCourseAnnouncements]: (msg) =>
-    getCourseAnnouncements((courseId) => canvasClient.getCourseAnnouncements(courseId), msg.courseId),
+    routeViaHost(
+      'getCourseAnnouncements', { courseId: msg.courseId },
+      () => getCourseAnnouncements((courseId) => canvasClient.getCourseAnnouncements(courseId), msg.courseId),
+    ),
 
   [MESSAGE_TYPES.getCourseModules]: (msg) =>
-    getCourseModules((courseId) => canvasClient.getCourseModules(courseId), msg.courseId),
+    routeViaHost(
+      'getCourseModules', { courseId: msg.courseId },
+      () => getCourseModules((courseId) => canvasClient.getCourseModules(courseId), msg.courseId),
+    ),
 
   [MESSAGE_TYPES.validateToken]: async () => {
+    const nativeData = await tryNative('validateToken');
+    if (nativeData !== null) return { user: nativeData.user ?? nativeData };
     const { user } = await canvasClient.validateToken();
     return { user };
   },
@@ -377,25 +408,29 @@ const messageHandlers = {
     return { data: nativeData ?? [] };
   },
 
-  [MESSAGE_TYPES.getDashboardCards]: async () => {
-    const data = await canvasClient.getDashboardCards();
-    return { data };
-  },
+  [MESSAGE_TYPES.getDashboardCards]: async () =>
+    routeViaHost(
+      'getDashboardCards', {},
+      async () => ({ data: await canvasClient.getDashboardCards() }),
+    ),
 
-  [MESSAGE_TYPES.getSyllabus]: async (msg) => {
-    const data = await canvasClient.getCourseSyllabus(msg.courseId);
-    return { data };
-  },
+  [MESSAGE_TYPES.getSyllabus]: async (msg) =>
+    routeViaHost(
+      'getSyllabus', { courseId: msg.courseId },
+      async () => ({ data: await canvasClient.getCourseSyllabus(msg.courseId) }),
+    ),
 
-  [MESSAGE_TYPES.getAssignmentGroups]: async (msg) => {
-    const data = await canvasClient.getAssignmentGroups(msg.courseId);
-    return { data };
-  },
+  [MESSAGE_TYPES.getAssignmentGroups]: async (msg) =>
+    routeViaHost(
+      'getAssignmentGroups', { courseId: msg.courseId },
+      async () => ({ data: await canvasClient.getAssignmentGroups(msg.courseId) }),
+    ),
 
-  [MESSAGE_TYPES.getSubmission]: async (msg) => {
-    const data = await canvasClient.getSubmission(msg.courseId, msg.assignmentId);
-    return { data };
-  },
+  [MESSAGE_TYPES.getSubmission]: async (msg) =>
+    routeViaHost(
+      'getSubmission', { courseId: msg.courseId, assignmentId: msg.assignmentId },
+      async () => ({ data: await canvasClient.getSubmission(msg.courseId, msg.assignmentId) }),
+    ),
 
   [MESSAGE_TYPES.agentQuery]: async (msg) => {
     return runLocalAgent(msg.query);

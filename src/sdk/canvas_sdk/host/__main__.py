@@ -153,6 +153,31 @@ def _handle(msg: dict) -> dict:
         files = canvas.get_files(course_id)
         return {"ok": True, "data": _drain(files)}
 
+    if method == "getDashboardCards":
+        cards = canvas._get_list("/api/v1/dashboard/dashboard_cards", {"per_page": 100})
+        return {"ok": True, "data": _serialize(cards)}
+
+    if method == "getSyllabus":
+        data = canvas._get_single(
+            f"/api/v1/courses/{course_id}", {"include[]": "syllabus_body"}
+        )
+        return {"ok": True, "data": {"syllabus_body": data.get("syllabus_body")}}
+
+    if method == "getAssignmentGroups":
+        groups = canvas._get_list(
+            f"/api/v1/courses/{course_id}/assignment_groups", {"per_page": 100}
+        )
+        return {"ok": True, "data": _serialize(groups)}
+
+    if method == "getSubmission":
+        assignment_id = params.get("assignmentId")
+        if not assignment_id:
+            return {"ok": False, "error": "assignmentId required"}
+        data = canvas._get_single(
+            f"/api/v1/courses/{course_id}/assignments/{assignment_id}/submissions/self"
+        )
+        return {"ok": True, "data": _serialize(data)}
+
     return {"ok": False, "error": f"Unknown method: {method}"}
 
 
