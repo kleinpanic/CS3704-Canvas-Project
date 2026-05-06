@@ -41,7 +41,6 @@ jobs:
 
       - name: Run ruff check
         run: ruff check src/
-        continue-on-error: true
 
   format-check:
     name: Ruff Format
@@ -88,4 +87,3 @@ jobs:
 
       - name: Run mypy
         run: mypy src/canvas_tui --ignore-missing-imports --pretty
-        continue-on-error: true
