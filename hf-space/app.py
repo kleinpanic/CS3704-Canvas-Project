@@ -69,7 +69,29 @@ def format_tool_result(tool_name: str, result: dict) -> str:
 
 
 def extract_final_answer(text: str) -> str:
-    return re.sub(r"<\|tool_call>.*?<tool_call\|>", "", text, flags=re.DOTALL).strip()
+    # Strip both tool-call and stray tool-response markers the model sometimes hallucinates.
+    cleaned = re.sub(r"<\|tool_call>.*?<tool_call\|>", "", text, flags=re.DOTALL)
+    cleaned = re.sub(r"<\|tool_response>.*?<tool_response\|>", "", cleaned, flags=re.DOTALL)
+    cleaned = re.sub(r"<\|tool_response>", "", cleaned)
+    cleaned = re.sub(r"<turn\|>|<\|turn>", "", cleaned)
+    return cleaned.strip()
+
+
+def summarize_tool_results(tool_log: list[dict]) -> str:
+    """Fallback final answer when the model only emitted tool calls without composing prose."""
+    if not tool_log:
+        return "(no final answer)"
+    parts = []
+    for t in tool_log:
+        result = t.get("result", {})
+        items = result.get("items") if isinstance(result, dict) else None
+        if isinstance(items, list) and items:
+            parts.append(f"{t['tool']} returned {len(items)} item(s)")
+        elif isinstance(result, dict) and "blocks" in result:
+            parts.append(f"{t['tool']} found {len(result.get('blocks', []))} free block(s)")
+        else:
+            parts.append(f"{t['tool']} ran successfully")
+    return "Done. " + "; ".join(parts) + "."
 
 
 SYSTEM_PROMPT = """You are the Canvas Calendar Agent. You have these 18 tools available:
@@ -187,18 +209,28 @@ def chat(message, history):
 
     tool_log = []
     raw = ""
+    MAX_CALLS_PER_TURN = 2  # cap concurrent tool calls in a single generation
     for _ in range(MAX_TURNS):
         raw = generate_step(msgs)
-        calls = parse_tool_calls(raw)
+        calls = parse_tool_calls(raw)[:MAX_CALLS_PER_TURN]
         msgs.append({"role": "assistant", "content": raw})
         if not calls:
             break
         for call in calls:
+            # Skip duplicate (same tool+args already called this conversation)
+            already = any(
+                t["tool"] == call["tool"] and t["args"] == call["args"]
+                for t in tool_log
+            )
+            if already:
+                continue
             result = mock_tool_result(call["tool"], call["args"])
             tool_log.append({"tool": call["tool"], "args": call["args"], "result": result})
             msgs.append({"role": "user", "content": format_tool_result(call["tool"], result)})
 
-    final = extract_final_answer(raw) or "(no final answer)"
+    final = extract_final_answer(raw)
+    if not final or final == "(no final answer)":
+        final = summarize_tool_results(tool_log)
     if tool_log:
         tool_md = "\n".join(
             f"- `{t['tool']}({json.dumps(t['args'])})` -> `{json.dumps(t['result'])[:120]}...`"
