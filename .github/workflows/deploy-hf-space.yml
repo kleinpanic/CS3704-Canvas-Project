@@ -1,0 +1,38 @@
+# Requires HF_TOKEN secret set in repo Settings → Secrets → Actions.
+# Token needs write access to the Space.
+name: Deploy HF Space
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "hf-space/**"
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install huggingface_hub
+        run: pip install "huggingface_hub[cli]>=0.23"
+
+      - name: Upload hf-space/ to HuggingFace Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          huggingface-cli upload kleinpanic93/canvas-calendar-agent-demo \
+            hf-space/ . \
+            --repo-type space \
+            --commit-message "deploy: ${{ github.sha }}"
+
+      - name: Print logs URL on failure
+        if: failure()
+        run: |
+          echo "Deployment failed. View logs at:"
+          echo "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
