@@ -38,7 +38,6 @@ jobs:
               console.log(`CI passed for ${context.sha}`);
               return true;
             }
-            // Poll
             const maxAttempts = 15;
             const baseDelayMs = 10_000;
             for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -70,7 +69,48 @@ jobs:
           echo "CI check failed — release will not proceed."
           echo "Check CI at: https://github.com/${{ github.repository }}/actions/workflows/ci.yml"
 
-  build:
+  # ──────────────────────────────────────────────────────────────────────────
+  # 1. Source archives
+  # ──────────────────────────────────────────────────────────────────────────
+  build-source:
+    needs: require-ci
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Extract version
+        id: meta
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Build source archives
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          git archive --format=tar.gz \
+            --prefix="canvas-tracker-${VERSION}/" \
+            HEAD \
+            -o "canvas-tracker-${VERSION}-source.tar.gz"
+          git archive --format=zip \
+            --prefix="canvas-tracker-${VERSION}/" \
+            HEAD \
+            -o "canvas-tracker-${VERSION}-source.zip"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: source-archives
+          path: |
+            canvas-tracker-*-source.tar.gz
+            canvas-tracker-*-source.zip
+          retention-days: 7
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 2a. canvas-sdk — Linux (sdist + pure-Python wheel)
+  # ──────────────────────────────────────────────────────────────────────────
+  build-sdk-linux:
     needs: require-ci
     runs-on: ubuntu-latest
     outputs:
@@ -85,14 +125,53 @@ jobs:
           python-version: "3.12"
           cache: pip
 
+      - name: Extract version
+        id: meta
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
       - name: Install build deps
-        run: python -m pip install --upgrade pip build twine
+        run: python -m pip install --upgrade pip build
 
-      - name: Build wheel + sdist
-        run: python -m build
+      - name: Build sdk sdist and wheel
+        run: python -m build src/sdk/ --outdir sdk-dist/
 
-      - name: Check package
-        run: twine check dist/*
+      - name: Rename artifacts to canonical names
+        # python -m build produces canvas_sdk-{ver}.tar.gz / canvas_sdk-{ver}-py3-none-any.whl
+        # (PEP 625 underscore normalization). Rename to hyphenated form for release.
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          find sdk-dist/ -name "canvas_sdk-*.tar.gz" \
+            -exec mv {} "sdk-dist/canvas-sdk-${VERSION}.tar.gz" \;
+          find sdk-dist/ -name "canvas_sdk-*-py3-none-any.whl" \
+            -exec mv {} "sdk-dist/canvas-sdk-${VERSION}-py3-none-any.whl" \;
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: sdk-linux
+          path: sdk-dist/
+          retention-days: 7
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 2b. canvas-sdk — macOS wheel (wrapped as .tar.gz per release spec)
+  # Note: canvas-sdk is pure Python so the wheel is platform-independent;
+  # the macOS build is provided as a distinct tagged asset per spec.
+  # The wheel is wrapped in a .tar.gz — not renamed directly — to avoid
+  # corrupting the zip format of the .whl container.
+  # ──────────────────────────────────────────────────────────────────────────
+  build-sdk-macos:
+    needs: require-ci
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
 
       - name: Extract version
         id: meta
@@ -100,38 +179,193 @@ jobs:
           VERSION=${GITHUB_REF#refs/tags/v}
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v7
+      - name: Install build deps
+        run: python -m pip install --upgrade pip build
+
+      - name: Build sdk wheel on macOS
+        run: python -m build --wheel src/sdk/ --outdir sdk-macos-dist/
+
+      - name: Package macOS wheel as tar.gz
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          WHL=$(find sdk-macos-dist/ -name "*.whl" | head -1)
+          tar -czf "canvas-sdk-${VERSION}-macos.tar.gz" \
+            -C sdk-macos-dist/ "$(basename "$WHL")"
+
+      - uses: actions/upload-artifact@v7
         with:
-          name: dist-${{ github.run_number }}
-          path: dist/
+          name: sdk-macos
+          path: canvas-sdk-*-macos.tar.gz
           retention-days: 7
 
-  release:
-    needs: build
+  # ──────────────────────────────────────────────────────────────────────────
+  # 3. canvas-tui assets
+  # TODO: src/canvas_tui/ does not have a pyproject.toml yet; this job is
+  #       commented out until the TUI is packaged. To re-enable:
+  #         1. Add src/canvas_tui/pyproject.toml with build metadata
+  #         2. Uncomment both build-tui and build-tui-macos jobs below
+  #         3. Add build-tui and build-tui-macos to the needs list of the
+  #            release job
+  # ──────────────────────────────────────────────────────────────────────────
+  # build-tui:
+  #   needs: require-ci
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v6
+  #       with:
+  #         fetch-depth: 0
+  #     - uses: actions/setup-python@v6
+  #       with:
+  #         python-version: "3.12"
+  #         cache: pip
+  #     - run: python -m pip install --upgrade pip build
+  #     - run: python -m build src/canvas_tui/ --outdir tui-dist/
+  #     - name: Rename artifacts to canonical names
+  #       env:
+  #         VERSION: ${{ steps.meta.outputs.version }}
+  #       run: |
+  #         find tui-dist/ -name "canvas_tui-*.tar.gz" \
+  #           -exec mv {} "tui-dist/canvas-tui-${VERSION}.tar.gz" \;
+  #         find tui-dist/ -name "canvas_tui-*-py3-none-any.whl" \
+  #           -exec mv {} "tui-dist/canvas-tui-${VERSION}-py3-none-any.whl" \;
+  #     - uses: actions/upload-artifact@v7
+  #       with:
+  #         name: tui-assets
+  #         path: tui-dist/
+  #         retention-days: 7
+  #
+  # build-tui-macos:
+  #   needs: require-ci
+  #   runs-on: macos-latest
+  #   steps:
+  #     - uses: actions/checkout@v6
+  #       with:
+  #         fetch-depth: 0
+  #     - uses: actions/setup-python@v6
+  #       with:
+  #         python-version: "3.12"
+  #     - run: python -m pip install --upgrade pip build
+  #     - name: Extract version
+  #       id: meta
+  #       run: |
+  #         VERSION=${GITHUB_REF#refs/tags/v}
+  #         echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+  #     - name: Build tui wheel on macOS
+  #       run: python -m build --wheel src/canvas_tui/ --outdir tui-macos-dist/
+  #     - name: Package macOS wheel as tar.gz
+  #       env:
+  #         VERSION: ${{ steps.meta.outputs.version }}
+  #       run: |
+  #         WHL=$(find tui-macos-dist/ -name "*.whl" | head -1)
+  #         tar -czf "canvas-tui-${VERSION}-macos.tar.gz" \
+  #           -C tui-macos-dist/ "$(basename "$WHL")"
+  #     - uses: actions/upload-artifact@v7
+  #       with:
+  #         name: tui-macos
+  #         path: canvas-tui-*-macos.tar.gz
+  #         retention-days: 7
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 4. Extension assets (.zip always; .crx only when EXTENSION_PEM secret set)
+  # ──────────────────────────────────────────────────────────────────────────
+  build-extension:
+    needs: require-ci
     runs-on: ubuntu-latest
+    env:
+      HAS_PEM: ${{ secrets.EXTENSION_PEM != '' }}
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
-      - name: Download artifacts
+      - name: Extract version
+        id: meta
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Build extension zip
+        # Excludes dev-only files (node_modules, tests, build config, package manifests)
+        # that should not ship in the extension archive.
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          cd extension
+          zip -r "../canvas-tracker-extension-${VERSION}.zip" . \
+            -x "node_modules/*" \
+            -x "tests/*" \
+            -x "*.config.cjs" \
+            -x "package.json" \
+            -x "package-lock.json"
+
+      - name: Build extension CRX
+        # CRX signing requires a .pem private key. This step is skipped when
+        # the EXTENSION_PEM repository secret is not configured.
+        # To enable: add a repository secret named EXTENSION_PEM whose value is
+        # the base64-encoded PEM private key used to sign the extension.
+        if: ${{ env.HAS_PEM == 'true' }}
+        env:
+          EXTENSION_PEM_B64: ${{ secrets.EXTENSION_PEM }}
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          echo "$EXTENSION_PEM_B64" | base64 -d > extension.pem
+          npm install -g crx3
+          npx crx3 -p extension.pem extension/ -o "canvas-tracker-extension-${VERSION}.crx"
+          rm -f extension.pem
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: extension-assets
+          path: |
+            canvas-tracker-extension-*.zip
+            canvas-tracker-extension-*.crx
+          retention-days: 7
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Final: collect all artifacts and publish a single GitHub Release
+  # ──────────────────────────────────────────────────────────────────────────
+  release:
+    needs:
+      - build-source
+      - build-sdk-linux
+      - build-sdk-macos
+      - build-extension
+    runs-on: ubuntu-latest
+    steps:
+      - name: Extract version and pre-release flag
+        id: meta
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if [[ "$VERSION" == *-* ]]; then
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Download all artifacts
         uses: actions/download-artifact@v8
         with:
-          name: dist-${{ needs.build.outputs.version }}
-          path: dist/
-          pattern: dist-*
+          path: release-assets/
           merge-multiple: true
+
+      - name: List release assets
+        run: find release-assets/ -type f | sort
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: Release ${{ needs.build.outputs.version }}
+          name: Release ${{ steps.meta.outputs.version }}
           generate_release_notes: true
           draft: false
-          prerelease: ${{ contains(needs.build.outputs.version, '-') }}
-          files: dist/*
+          prerelease: ${{ steps.meta.outputs.prerelease }}
+          files: release-assets/**
 
       - name: Notify on failure
         if: failure()
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
         run: |
           echo "::error::Release ${{ needs.build.outputs.version }} failed. Check logs: https://github.com/${{ github.repository }}/actions/workflows/release.yml"
 
