@@ -1,4 +1,4 @@
-# Requires HF_TOKEN secret set in repo Settings → Secrets → Actions.
+# Requires HF_TOKEN secret set in repo Settings -> Secrets -> Actions.
 # Token needs write access to the Space.
 name: Deploy HF Space
 
@@ -18,7 +18,13 @@ jobs:
     env:
       HAS_HF_TOKEN: ${{ secrets.HF_TOKEN != '' }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Harden runner
+        uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450  # v2
+        with:
+          egress-policy: audit
+          # allow-list: huggingface.co, cdn-lfs.huggingface.co, github.com, pypi.org, files.pythonhosted.org
+
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
         with:
           fetch-depth: 0
 
@@ -35,7 +41,7 @@ jobs:
             --repo-type space \
             --commit-message "deploy: ${{ github.sha }}"
 
-      - name: Skip notice (fork — no HF_TOKEN)
+      - name: Skip notice (fork - no HF_TOKEN)
         if: ${{ env.HAS_HF_TOKEN != 'true' }}
         run: |
           echo "fork: skipping HF Space deploy (HF_TOKEN not configured); see CONTRIBUTING.md"
@@ -52,6 +58,12 @@ jobs:
     needs: deploy
     if: ${{ secrets.HF_TOKEN != '' }}
     steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450  # v2
+        with:
+          egress-policy: audit
+          # allow-list: huggingface.co, cdn-lfs.huggingface.co, github.com, pypi.org, files.pythonhosted.org
+
       - name: Poll Space until healthy (max 90s for ZeroGPU cold-start)
         run: |
           SPACE_URL="https://kleinpanic93-canvas-calendar-agent-demo.hf.space"
@@ -63,7 +75,7 @@ jobs:
               status=200
               break
             fi
-            echo "Space returned $http_code — waiting..."
+            echo "Space returned $http_code - waiting..."
             sleep 10
           done
           if [ "$status" != "200" ]; then
