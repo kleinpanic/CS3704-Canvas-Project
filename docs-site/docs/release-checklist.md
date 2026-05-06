@@ -135,3 +135,39 @@ canvas-tui --help   # or the project's actual entry point
 - [ ] Announce in Discord/project channel if applicable
 - [ ] Close the associated milestone on GitHub (if any)
 - [ ] Update `CHANGELOG.md` on `main` if you added release notes there
+
+---
+
+## 8. Security verification (mandatory)
+
+Before any release announcement, verify that the deployed GH Pages site
+contains no leaked tokens. The 2026-05-05 incident (build-time `sed`
+injection of HF + Canvas tokens into deployed JS) showed that gitleaks alone
+is insufficient — it cannot see secrets that never enter the git index but
+do appear in the deployed artifact.
+
+```bash
+# Check that the deployed artifact contains no tokens
+curl -s https://kleinpanic.github.io/CS3704-Canvas-Project/extension/src/popup/chrome_shim_prod.js \
+  | grep -E 'hf_|sk-|^.{30,}~'
+
+# Expected: no output. Any match = leak. Stop the release, rotate the token,
+# and remove the injection step before continuing.
+```
+
+Run the same grep against any other deployed JS that previously had
+build-time substitution (Canvas demo HTML, popup variants, etc).
+
+### Cloudflare Worker secret rotation
+
+The HF token used by the demo lives only as a Cloudflare Worker secret. If
+it ever needs rotation:
+
+```bash
+# At https://huggingface.co/settings/tokens : revoke old, generate new
+cd proxy
+wrangler secret put HF_TOKEN     # paste the new token when prompted
+```
+
+One command. No code change. No redeploy. The Worker picks up the new value
+on the next request. See `proxy/README.md` for full deploy procedure.
