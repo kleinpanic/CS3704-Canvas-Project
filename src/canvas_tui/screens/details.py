@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Details screen — full assignment/discussion view."""
 
 from __future__ import annotations

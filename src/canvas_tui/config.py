@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Configuration loading and validation for Canvas TUI."""
 
 from __future__ import annotations

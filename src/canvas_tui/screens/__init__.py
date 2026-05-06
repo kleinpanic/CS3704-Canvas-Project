@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """TUI screens for Canvas TUI."""
 
 from .analytics import AnalyticsScreen

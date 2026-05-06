@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """
 convert_canvas_contributions.py — convert share_my_canvas.py output to canvas_items format.
 

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Fast preference-hint tool — wraps the published Gemma-4 reranker GGUF.
 
 Used as a first-pass priority hint; richer context (syllabus, credit hours,

@@ -1,15 +1,17 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """
 Unit tests for canvas_sdk.client.CanvasClient.
 All HTTP is mocked via unittest.mock.patch on urllib.request.urlopen.
 """
+
 from __future__ import annotations
 
 import io
 import json
-import sys
 import os
+import sys
 import unittest
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 
 # Ensure the SDK source is importable when running from repo root.
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src", "sdk"))
@@ -27,7 +29,6 @@ from canvas_sdk.exceptions import (
     ResourceNotFound,
     UnprocessableEntity,
 )
-
 
 TOKEN = "supersecrettoken"
 BASE_URL = "https://canvas.example.edu"

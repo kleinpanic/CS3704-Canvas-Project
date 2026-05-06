@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """ICS (iCalendar) export for Canvas TUI — extracted from app.py for reuse."""
 
 from __future__ import annotations

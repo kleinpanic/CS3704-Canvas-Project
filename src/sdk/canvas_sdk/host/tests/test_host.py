@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Unit tests for canvas_sdk.host.__main__
 
 Tests cover:

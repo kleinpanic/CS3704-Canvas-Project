@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """PII scrubbing for Canvas dataset contributions."""
 
 from __future__ import annotations

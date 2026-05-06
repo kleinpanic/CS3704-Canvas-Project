@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """
 canvas_tui.reranker — pluggable reranker for Canvas item priority sort.
 

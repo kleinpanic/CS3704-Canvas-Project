@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Shared test fixtures for Canvas TUI."""
 
 from __future__ import annotations

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Theme system for Canvas TUI — dark/light toggle with named color tokens."""
 
 from __future__ import annotations

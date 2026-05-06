@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Calendar backend abstraction.
 
 Supported backends (configured via Config.calendar_backend):

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Tests for tools/validate_collab_jsonl.py — 6 cases covering all failure modes."""
 
 from __future__ import annotations

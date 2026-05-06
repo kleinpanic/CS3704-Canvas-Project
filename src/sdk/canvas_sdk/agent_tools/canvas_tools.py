@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Canvas-side agent tools — read access to courses, assignments, syllabus, grades, announcements.
 
 All tools use canvas_sdk.CanvasClient directly via CANVAS_TOKEN + CANVAS_BASE_URL env vars.

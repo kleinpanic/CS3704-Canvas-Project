@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Utility functions for Canvas TUI — date parsing, HTML stripping, filesystem helpers."""
 
 from __future__ import annotations

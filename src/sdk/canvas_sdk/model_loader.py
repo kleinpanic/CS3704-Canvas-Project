@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Auto-download / endpoint resolution for the Canvas Calendar Agent.
 
 Resolution order for ``ensure_model()``:

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Analytics screen — full-screen chart visualization.
 
 Multiple panes of graphs: scatter, histogram, heatmap, line trends,

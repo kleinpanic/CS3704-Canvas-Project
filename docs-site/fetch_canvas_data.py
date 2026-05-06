@@ -154,8 +154,6 @@ def self_test():
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="site/data", help="Output directory")
-    ap.add_argument("--no-scrub", action="store_true",
-                    help="Skip PII scrubbing (LOCAL DEBUG ONLY — never use in CI)")
     ap.add_argument("--self-test", action="store_true",
                     help="Run regex self-test and exit (no network calls)")
     args = ap.parse_args()
@@ -168,11 +166,7 @@ def main():
         print("ERROR: CANVAS_TOKEN or CANVAS_API_TOKEN env var not set", file=sys.stderr)
         sys.exit(1)
 
-    if args.no_scrub:
-        print("WARNING: --no-scrub set; output will contain raw PII.", file=sys.stderr)
-        clean = lambda x: x  # noqa: E731
-    else:
-        clean = scrub_recursive
+    clean = scrub_recursive
 
     out_dir = Path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)

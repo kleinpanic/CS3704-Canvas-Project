@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Calendar agent tools — list, create, modify events via the configured calendar backend."""
 
 from __future__ import annotations

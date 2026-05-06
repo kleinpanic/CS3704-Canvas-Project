@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Seeded university database.
 
 Each entry maps a human-readable school name to:
@@ -12,7 +13,6 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Optional
 
 # Default seed data — populated from public RMP school search results.
 # To find a school ID: visit https://www.ratemyprofessors.com/search.jsp?query=SchoolName
@@ -117,7 +117,7 @@ class UniversityRegistry:
     Loads seed data and merges with any user-provided overrides from a JSON file.
     """
 
-    def __init__(self, user_path: Optional[Path] = None):
+    def __init__(self, user_path: Path | None = None):
         self._universities: list[dict] = list(SEED_UNIVERSITIES)
         self._user_path = user_path
         if user_path and user_path.exists():
@@ -143,7 +143,7 @@ class UniversityRegistry:
                     else:
                         self._universities.append(entry)
 
-    def find_by_canvas_url(self, canvas_url: str) -> Optional[dict]:
+    def find_by_canvas_url(self, canvas_url: str) -> dict | None:
         """Look up a university by its Canvas LMS base URL."""
         normalized = canvas_url.rstrip("/").lower()
         for uni in self._universities:
@@ -151,7 +151,7 @@ class UniversityRegistry:
                 return uni
         return None
 
-    def find_by_name(self, name: str) -> Optional[dict]:
+    def find_by_name(self, name: str) -> dict | None:
         """Look up a university by name or alias (case-insensitive substring match)."""
         name_lower = name.lower()
         for uni in self._universities:
@@ -163,7 +163,7 @@ class UniversityRegistry:
                         return uni
         return None
 
-    def find_by_rmp_id(self, rmp_school_id: int) -> Optional[dict]:
+    def find_by_rmp_id(self, rmp_school_id: int) -> dict | None:
         """Look up a university by its RMP school ID."""
         for uni in self._universities:
             if uni.get("rmp_school_id") == rmp_school_id:

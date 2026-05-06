@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Quick demo of the Canvas Calendar Agent with Gemma4 backend."""
 import os, sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "sdk"))

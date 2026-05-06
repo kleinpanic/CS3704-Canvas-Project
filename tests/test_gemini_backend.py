@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Tests for the Gemini fallback backend.
 
 The real google-generativeai SDK isn't available in CI by default, so we

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Study-planning tools — neuroscience-grounded heuristics exposed as agent functions.
 
 All implementations are pure Python with no external dependencies.

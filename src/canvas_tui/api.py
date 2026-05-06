@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Canvas LMS API client with retry, rate-limit awareness, and pagination."""
 
 from __future__ import annotations

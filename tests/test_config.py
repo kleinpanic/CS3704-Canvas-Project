@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Tests for configuration loading and validation."""
 
 from __future__ import annotations
@@ -155,7 +156,7 @@ class TestConfigToToml:
     def test_numeric_values_are_not_quoted(self):
         cfg = Config(token="x", sidebar_width=44)
         toml_text = _config_to_toml(cfg)
-        assert 'sidebar_width = 44' in toml_text
+        assert "sidebar_width = 44" in toml_text
         assert '"44"' not in toml_text
 
     def test_http_timeout_and_max_retries_serialized(self):
@@ -237,6 +238,7 @@ class TestConfigSave:
 
     def test_download_dir_roundtrip(self, tmp_dir, sample_config_env):
         import tomllib
+
         import canvas_tui.config as config_mod
 
         cfg = Config(token="x", config_dir=tmp_dir, download_dir="/tmp/my-canvas-dl")
@@ -253,12 +255,13 @@ class TestConfigSave:
     def test_download_dir_none_not_written(self, tmp_dir):
         cfg = Config(token="x", config_dir=tmp_dir, download_dir=None)
         cfg.save()
-        with open(os.path.join(tmp_dir, "config.toml"), "r") as f:
+        with open(os.path.join(tmp_dir, "config.toml")) as f:
             content = f.read()
         assert "download_dir" not in content
 
     def test_http_timeout_roundtrip(self, tmp_dir, sample_config_env):
         import tomllib
+
         import canvas_tui.config as config_mod
 
         cfg = Config(token="x", config_dir=tmp_dir, http_timeout=45)
@@ -274,6 +277,7 @@ class TestConfigSave:
 
     def test_open_after_dl_roundtrip(self, tmp_dir, sample_config_env):
         import tomllib
+
         import canvas_tui.config as config_mod
 
         cfg = Config(token="x", config_dir=tmp_dir, open_after_dl=True)
@@ -306,7 +310,7 @@ class TestAtomicConfigUpdate:
         original = Config(token="x", theme="dark")
         candidate = dc_replace(original, theme="neon")
         candidate._validate()
-        assert original.theme == "dark"   # original untouched
+        assert original.theme == "dark"  # original untouched
         assert candidate.theme == "dark"  # clamped back to default
 
 

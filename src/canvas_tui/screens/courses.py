@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Course management screen — show/hide courses, auto-detect ghost courses.
 
 Lets any user manage which courses appear in all views (table, graphs,

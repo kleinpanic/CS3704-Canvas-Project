@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Tests for canvas_tui.pii — PII scrub module."""
 
 from __future__ import annotations

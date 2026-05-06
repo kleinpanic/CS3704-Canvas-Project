@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Gemini fallback backend for the Canvas Calendar Agent.
 
 Used when no fine-tuned Gemma4 model is available locally or via HF. The

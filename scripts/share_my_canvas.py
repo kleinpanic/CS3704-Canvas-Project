@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """
 share_my_canvas.py — dump your Canvas data for CS3704 dataset contribution.
 

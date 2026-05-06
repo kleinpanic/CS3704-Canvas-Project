@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Purpose-built validator for data/collab/*.jsonl contributions.
 
 Owned validator (no third-party action) for auditability; see D-06 in

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """
 Cache prefetch helpers for startup performance.
 Used by CLI prefetch modes to warm API response cache + state cache

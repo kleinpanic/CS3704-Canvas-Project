@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Tests for grades screen logic — calculate_grade_summary, sort_assignments."""
 
 from __future__ import annotations
@@ -9,6 +10,7 @@ from canvas_tui.screens.grades import (
 )
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
+
 
 def _make_assignment(
     name: str,
@@ -37,6 +39,7 @@ def _make_assignment(
 
 
 # ── calculate_grade_summary ───────────────────────────────────────────────────
+
 
 class TestCalculateGradeSummary:
     def test_empty_assignments(self):
@@ -161,6 +164,7 @@ class TestCalculateGradeSummary:
 
 # ── sort_assignments ──────────────────────────────────────────────────────────
 
+
 class TestSortAssignments:
     def _sample(self) -> list[dict]:
         return [
@@ -179,7 +183,7 @@ class TestSortAssignments:
         result = sort_assignments(assignments, 1)
         names = [a["name"] for a in result]
         assert names[0] == "Alpha"  # 90 highest
-        assert names[1] == "Beta"   # 70 second
+        assert names[1] == "Beta"  # 70 second
 
     def test_mode_1_ungraded_to_end(self):
         assignments = self._sample()
@@ -189,7 +193,7 @@ class TestSortAssignments:
     def test_mode_2_sorts_by_pct_desc(self):
         assignments = [
             _make_assignment("A", score=50.0, points_possible=100.0),  # 50%
-            _make_assignment("B", score=8.0, points_possible=10.0),    # 80%
+            _make_assignment("B", score=8.0, points_possible=10.0),  # 80%
         ]
         result = sort_assignments(assignments, 2)
         assert result[0]["name"] == "B"
@@ -230,6 +234,7 @@ class TestSortAssignments:
 
 
 # ── GradeSummary dataclass ────────────────────────────────────────────────────
+
 
 class TestGradeSummary:
     def test_defaults(self):

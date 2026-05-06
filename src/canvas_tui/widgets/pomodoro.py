@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Pomodoro timer widget."""
 
 from __future__ import annotations

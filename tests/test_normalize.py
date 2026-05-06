@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Tests for normalization — raw API response → CanvasItem."""
 
 from __future__ import annotations

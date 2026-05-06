@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Integration tests against the live HF Space.
 
 Requires network access and a running Space. Skip in default CI via:
@@ -78,6 +79,4 @@ def test_space_responds_to_prompt(space_client, tool_family, prompt):
         logger.info("[%s] no explicit tool-call tokens in response", tool_family)
 
     response_text = result if isinstance(result, str) else str(result)
-    assert response_text.strip(), (
-        f"Empty response from Space for tool family {tool_family!r}, prompt={prompt!r}"
-    )
+    assert response_text.strip(), f"Empty response from Space for tool family {tool_family!r}, prompt={prompt!r}"

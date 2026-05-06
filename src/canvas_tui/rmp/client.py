@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Rate My Professors API client.
 
 Fetches professor data from RateMyProfessors.com for a given school.
@@ -18,7 +19,6 @@ import os
 import tempfile
 import time
 from pathlib import Path
-from typing import Optional
 
 import requests
 
@@ -57,7 +57,7 @@ class RMPClient:
         self,
         rmp_school_id: int,
         rmp_base_url: str = DEFAULT_RMP_BASE_URL,
-        cache_dir: Optional[Path] = None,
+        cache_dir: Path | None = None,
         rate_limit: float = MIN_REQUEST_INTERVAL,
     ):
         self.rmp_school_id = rmp_school_id
@@ -72,15 +72,15 @@ class RMPClient:
             }
         )
         self._last_request_time: float = 0.0
-        self._professors_cache: Optional[list[ProfessorRating]] = None
+        self._professors_cache: list[ProfessorRating] | None = None
 
     @classmethod
     def from_canvas_url(
         cls,
         canvas_url: str,
-        registry: Optional[UniversityRegistry] = None,
-        cache_dir: Optional[Path] = None,
-    ) -> Optional["RMPClient"]:
+        registry: UniversityRegistry | None = None,
+        cache_dir: Path | None = None,
+    ) -> RMPClient | None:
         """Create an RMPClient by looking up the school from a Canvas URL.
 
         Returns None if the Canvas URL is not in the registry.
@@ -100,12 +100,12 @@ class RMPClient:
         if elapsed < self.rate_limit:
             time.sleep(self.rate_limit - elapsed)
 
-    def _cache_path(self) -> Optional[Path]:
+    def _cache_path(self) -> Path | None:
         if self.cache_dir is None:
             return None
         return self.cache_dir / f"rmp_{self.rmp_school_id}.json"
 
-    def _load_cache(self) -> Optional[list[ProfessorRating]]:
+    def _load_cache(self) -> list[ProfessorRating] | None:
         """Load professors from cache if available and not expired."""
         cache_file = self._cache_path()
         if cache_file is None or not cache_file.exists():
@@ -226,7 +226,7 @@ class RMPClient:
                 data = resp.json()
             except json.JSONDecodeError as e:
                 logger.error("RMP response was not JSON (page %d): %s", page, e)
-                raise RMPClientError(f"RMP returned non-JSON response") from e
+                raise RMPClientError("RMP returned non-JSON response") from e
 
             # Pagination uses total count; remaining is unused
             total_professors = data.get("searchResultsTotal", 0)
@@ -251,7 +251,7 @@ class RMPClient:
 
         return professors
 
-    def _parse_professor_entry(self, entry: dict) -> Optional[ProfessorRating]:
+    def _parse_professor_entry(self, entry: dict) -> ProfessorRating | None:
         """Parse a single professor entry from the RMP API response."""
         try:
             rmp_id = int(entry.get("tid", 0))
@@ -328,9 +328,7 @@ class RMPClient:
         matches = []
         for prof in all_profs:
             if prof.last_name.lower() == last_lower:
-                if not first_lower or prof.first_name.lower() == first_lower:
-                    matches.append(prof)
-                elif first_lower in prof.first_name.lower():
+                if not first_lower or prof.first_name.lower() == first_lower or first_lower in prof.first_name.lower():
                     matches.append(prof)
 
         return matches
@@ -339,7 +337,7 @@ class RMPClient:
         self,
         full_name: str,
         force_refresh: bool = False,
-    ) -> Optional[ProfessorRating]:
+    ) -> ProfessorRating | None:
         """Look up a single professor by full name.
 
         Returns the first match or None.

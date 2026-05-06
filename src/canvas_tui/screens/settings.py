@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Settings screen — theme, layout, keybindings, and data preferences."""
 
 from __future__ import annotations
@@ -5,7 +6,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from textual.app import ComposeResult
-from textual.containers import Horizontal, ScrollableContainer, Vertical
+from textual.containers import Horizontal, ScrollableContainer
 from textual.screen import Screen
 from textual.widgets import Button, Footer, Input, Label, Select, Static
 

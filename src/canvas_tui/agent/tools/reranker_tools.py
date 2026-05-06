@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Fast preference-hint tool — wraps the published Gemma-4 reranker GGUF.
 
 The agent uses this only as a *fast first-pass priority hint* when it
@@ -38,8 +39,8 @@ class PriorityHint:
 
     @staticmethod
     def call(args: dict) -> dict:
-        from canvas_tui.reranker import LocalReranker, RANK_PROMPT_FORMAT_SHA, RANK_PROMPT_TEMPLATE
         from canvas_tui.config import Config
+        from canvas_tui.reranker import RANK_PROMPT_FORMAT_SHA, RANK_PROMPT_TEMPLATE, LocalReranker
 
         cfg = Config.load()
         if not cfg.use_ai_reranker or not cfg.model_path:
