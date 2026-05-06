@@ -28,6 +28,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fork-friendly CI secret guards (`HAS_CANVAS_TOKEN`, `HAS_HF_TOKEN`, `HAS_PYPI_TOKEN`):
   forked repos see yellow (skipped) CI jobs rather than red failures when secrets are absent.
 - Branch policy loosened to `^[a-z]+/[a-z0-9._-]+$` — any lowercase prefix is accepted.
+- `CONTRIBUTING.md`: "If you fork this repo" section with env-var table, secrets table,
+  branch naming docs, and git identity guidance.
+- `SPDX-License-Identifier: GPL-3.0-or-later` header added to all `.py` files under
+  `src/`, `scripts/`, `tools/`, `tests/`.
+
+### Removed
+
+- `--no-scrub` flag in `docs-site/fetch_canvas_data.py` — deleted; use a temporary
+  local source edit for debugging. Running with raw PII is no longer possible via a flag.
+- `?nopiiscrub=1` URL parameter in `proxy/worker.js` — removed; bypass now requires
+  an `Authorization: Bearer <INTERNAL_PASSTHROUGH_TOKEN>` header with the Cloudflare
+  env secret set. The public endpoint always scrubs.
 
 ## [1.2.3] — 2026-05-06
 

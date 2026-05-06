@@ -14,7 +14,6 @@
 
 // Defense-in-depth PII scrub for Canvas API responses. The live demo does not
 // currently route through /canvas, but if it ever does, PII won't leak.
-// SDK consumers who need raw passthrough can opt out with ?nopiiscrub=1.
 const _EMAIL_RE = /\b[\w.+-]+@[\w-]+\.[\w.-]+\b/g;
 const _PHONE_RE = /\b(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b/g;
 const _SSN_RE   = /\b\d{3}-\d{2}-\d{4}\b/g;
@@ -161,7 +160,11 @@ async function handleCanvas(request, env, cors) {
     });
   }
 
-  const noPiiScrub = new URL(request.url).searchParams.get('nopiiscrub') === '1';
+  // PII bypass requires Authorization: Bearer <INTERNAL_PASSTHROUGH_TOKEN>.
+  // Token must be set as a Cloudflare environment secret. Unset = no bypass possible.
+  const authHeader = request.headers.get('Authorization') || '';
+  const passToken = env.INTERNAL_PASSTHROUGH_TOKEN || '';
+  const noPiiScrub = passToken !== '' && authHeader === `Bearer ${passToken}`;
 
   let body;
   try { body = await request.json(); }

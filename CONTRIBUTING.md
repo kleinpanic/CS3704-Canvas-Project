@@ -27,7 +27,7 @@ pip install -e ".[dev]"
 
 ```bash
 export CANVAS_TOKEN="your_canvas_token_here"
-export CANVAS_BASE_URL="https://canvas.vt.edu"
+export CANVAS_BASE_URL="https://canvas.yourschool.edu"
 canvas-tui
 ```
 
@@ -62,6 +62,52 @@ data/
     seeds/                Canonical seed examples
   v1-reranker/            Legacy v1 preference pair data
 ```
+
+---
+
+## If you fork this repo
+
+Clone → set two env vars → run. Everything else is optional.
+
+### Required environment variables
+
+| Variable | Purpose |
+|----------|---------|
+| `CANVAS_BASE_URL` | Your institution's Canvas URL, e.g. `https://canvas.example.edu` |
+| `CANVAS_TOKEN` | Canvas API access token (Account → Settings → New Access Token) |
+
+### Optional environment variables (defaults shown)
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `CANVAS_HF_MODEL` | `kleinpanic93/canvas-calendar-agent-v7-dpo` | HF model for the LLM agent |
+| `CANVAS_HF_SPACE` | `kleinpanic93/canvas-calendar-agent-demo` | HF Space for the demo |
+| `CANVAS_PII_SPACE_URL` | `https://kleinpanic93-canvas-pii-scrub.hf.space` | PII scrub Space endpoint |
+| `CANVAS_PROXY_URL` | `https://cs3704-demo-proxy.kleinpanic.workers.dev` | Cloudflare Worker proxy |
+
+Copy `.env.example` to `.env` in the repo root (loaded automatically by `canvas-tui`).
+
+### Required CI/CD secrets (for full CI — optional for development)
+
+| Secret | Workflows | Required for |
+|--------|-----------|--------------|
+| `CANVAS_API_TOKEN` | `pages.yml` | Building the live demo site with real Canvas data |
+| `HF_TOKEN` | `pages.yml`, `deploy-hf-space.yml` | Piiranha scrub API + HF Space deploys |
+| `PYPI_API_TOKEN` | `release.yml` | PyPI publishing |
+| `EXTENSION_PEM` | `release.yml` | CRX extension signing |
+
+Without these secrets, affected CI jobs will log a skip notice and continue. No red failures.
+
+### Branch naming
+
+PRs to this repo must use prefix/description format: `fix/short-description`, `feat/my-feature`,
+`docs/update-readme`, etc. Any lowercase prefix followed by `/` is accepted.
+Dependabot branches are always allowed.
+
+### git identity
+
+Use a GitHub no-reply email to avoid exposing your personal address:
+`git config user.email "YOUR_GITHUB_ID+YOUR_USERNAME@users.noreply.github.com"`
 
 ---
 
