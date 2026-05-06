@@ -2,12 +2,12 @@
 title: Canvas PII Scrub
 emoji: 🔒
 colorFrom: gray
-colorTo: black
+colorTo: indigo
 sdk: docker
 app_port: 7860
 pinned: false
 license: apache-2.0
-short_description: FastAPI PII scrubber wrapping Piiranha v1 for Canvas dataset contributors
+short_description: Piiranha-v1 PII scrubber for Canvas dataset PRs
 ---
 
 # Canvas PII Scrub

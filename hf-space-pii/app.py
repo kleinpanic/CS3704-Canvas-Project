@@ -15,7 +15,7 @@ from collections import defaultdict
 from typing import Any
 
 import uvicorn
-from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi import Body, FastAPI, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -261,8 +261,7 @@ async def health():
 
 
 @app.post("/scrub", response_model=ScrubResponse)
-@limiter.limit("30/minute")
-async def scrub(request: Request, body: ScrubRequest):
+async def scrub(body: ScrubRequest):
     if _ner is None:
         raise HTTPException(status_code=503, detail="Model not loaded")
     scrubbed, person_reg, loc_reg = _anon_doc(body.document)
@@ -272,18 +271,17 @@ async def scrub(request: Request, body: ScrubRequest):
 
 
 @app.post("/entities")
-@limiter.limit("30/minute")
-async def entities(request: Request, body: EntitiesRequest):
+async def entities(body: EntitiesRequest):
     if _ner is None:
         raise HTTPException(status_code=503, detail="Model not loaded")
     raw_entities = _ner(body.inputs)
     return [
         {
             "entity_group": e["entity_group"],
-            "score": e["score"],
+            "score": float(e["score"]),
             "word": e["word"],
-            "start": e["start"],
-            "end": e["end"],
+            "start": int(e["start"]),
+            "end": int(e["end"]),
         }
         for e in raw_entities
     ]
