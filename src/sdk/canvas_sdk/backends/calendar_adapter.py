@@ -83,6 +83,207 @@ class _NopBackend(CalendarBackend):
         return {"status": "pending_delete", "event_id": event_id, "rationale": rationale}
 
 
+class InMemoryCalendarBackend(CalendarBackend):
+    """In-memory calendar backend.
+
+    Stores events in a dict keyed by event_id with an auto-incrementing counter.
+    Used by the HF Space demo (where there's no real Canvas/Google Calendar) and
+    in test contexts where we want a coherent round-trip without external state.
+
+    Unlike Google/iCal backends, modify and delete operations mutate immediately
+    via the `modify_event` / `delete_event` methods. The abstract `propose_*`
+    methods still return pending stubs for protocol compatibility.
+    """
+
+    def __init__(self, seed_events: list[dict] | None = None) -> None:
+        self._events: dict[str, dict[str, Any]] = {}
+        self._counter = 100
+        for ev in seed_events or []:
+            eid = ev.get("id") or self._next_id()
+            ev = {**ev, "id": eid}
+            self._events[eid] = ev
+
+    def _next_id(self) -> str:
+        eid = f"evt_{self._counter:03d}"
+        self._counter += 1
+        return eid
+
+    def _in_window(self, ev: dict, start: dt.datetime | None, end: dt.datetime | None) -> bool:
+        if not (start or end):
+            return True
+        s = ev.get("start_iso")
+        if not s:
+            return True
+        try:
+            ev_start = dt.datetime.fromisoformat(str(s).replace("Z", "+00:00"))
+        except ValueError:
+            return True
+        if ev_start.tzinfo is None:
+            ev_start = ev_start.replace(tzinfo=dt.timezone.utc)
+        if start and ev_start < start:
+            return False
+        if end and ev_start > end:
+            return False
+        return True
+
+    def list_events(
+        self,
+        calendar_id: str = "primary",
+        start_iso: str | None = None,
+        end_iso: str | None = None,
+        include_all_day: bool = True,
+    ) -> list[dict[str, Any]]:
+        start = dt.datetime.fromisoformat(start_iso.replace("Z", "+00:00")) if start_iso else None
+        end = dt.datetime.fromisoformat(end_iso.replace("Z", "+00:00")) if end_iso else None
+        if start and start.tzinfo is None:
+            start = start.replace(tzinfo=dt.timezone.utc)
+        if end and end.tzinfo is None:
+            end = end.replace(tzinfo=dt.timezone.utc)
+        out = []
+        for ev in self._events.values():
+            if not include_all_day and ev.get("all_day"):
+                continue
+            if not self._in_window(ev, start, end):
+                continue
+            out.append(dict(ev))
+        out.sort(key=lambda e: e.get("start_iso", ""))
+        return out
+
+    def find_free_blocks(
+        self,
+        min_minutes: int = 90,
+        horizon_days: int = 7,
+        earliest_hour: int = 7,
+        latest_hour: int = 22,
+        calendar_id: str = "primary",
+        exclude_weekends: bool = False,
+    ) -> list[dict[str, Any]]:
+        now = dt.datetime.now(dt.timezone.utc)
+        end = now + dt.timedelta(days=horizon_days)
+        events = self.list_events(start_iso=now.isoformat(), end_iso=end.isoformat(), include_all_day=False)
+        busy: list[tuple[dt.datetime, dt.datetime]] = []
+        for ev in events:
+            if ev.get("start_iso") and ev.get("end_iso"):
+                s = dt.datetime.fromisoformat(str(ev["start_iso"]).replace("Z", "+00:00"))
+                e = dt.datetime.fromisoformat(str(ev["end_iso"]).replace("Z", "+00:00"))
+                if s.tzinfo is None:
+                    s = s.replace(tzinfo=dt.timezone.utc)
+                if e.tzinfo is None:
+                    e = e.replace(tzinfo=dt.timezone.utc)
+                busy.append((s, e))
+        busy.sort()
+
+        free_blocks = []
+        cursor = now.replace(minute=0, second=0, microsecond=0) + dt.timedelta(hours=1)
+        while cursor < end and len(free_blocks) < 20:
+            if exclude_weekends and cursor.weekday() >= 5:
+                cursor = (cursor + dt.timedelta(days=1)).replace(hour=earliest_hour, minute=0, second=0, microsecond=0)
+                continue
+            day_start = cursor.replace(hour=max(cursor.hour, earliest_hour), minute=0, second=0, microsecond=0)
+            day_end = cursor.replace(hour=latest_hour, minute=0, second=0, microsecond=0)
+            slot_start = day_start
+            if slot_start >= day_end:
+                cursor = (cursor + dt.timedelta(days=1)).replace(hour=earliest_hour, minute=0, second=0, microsecond=0)
+                continue
+            for b_s, b_e in busy:
+                if b_s >= day_end:
+                    break
+                if b_e <= slot_start:
+                    continue
+                if slot_start < b_s:
+                    gap = int((b_s - slot_start).total_seconds() / 60)
+                    if gap >= min_minutes:
+                        free_blocks.append(
+                            {
+                                "start_iso": slot_start.isoformat(),
+                                "end_iso": (slot_start + dt.timedelta(minutes=min_minutes)).isoformat(),
+                                "minutes": min_minutes,
+                            }
+                        )
+                slot_start = max(slot_start, b_e)
+            gap = int((day_end - slot_start).total_seconds() / 60)
+            if gap >= min_minutes:
+                free_blocks.append(
+                    {
+                        "start_iso": slot_start.isoformat(),
+                        "end_iso": (slot_start + dt.timedelta(minutes=min_minutes)).isoformat(),
+                        "minutes": min_minutes,
+                    }
+                )
+            cursor = (cursor + dt.timedelta(days=1)).replace(hour=earliest_hour, minute=0, second=0, microsecond=0)
+        return free_blocks
+
+    def create_event(
+        self,
+        title: str,
+        start_iso: str,
+        end_iso: str,
+        description: str = "",
+        calendar_id: str = "primary",
+        rationale: str = "",
+    ) -> dict[str, Any]:
+        eid = self._next_id()
+        ev = {
+            "id": eid,
+            "title": title,
+            "start_iso": start_iso,
+            "end_iso": end_iso,
+            "description": description,
+            "rationale": rationale,
+            "calendar_id": calendar_id,
+            "all_day": False,
+        }
+        self._events[eid] = ev
+        return {"id": eid, "title": title, "start_iso": start_iso, "end_iso": end_iso, "status": "created"}
+
+    def modify_event(
+        self,
+        event_id: str,
+        title: str | None = None,
+        start_iso: str | None = None,
+        end_iso: str | None = None,
+        rationale: str = "",
+    ) -> dict[str, Any]:
+        ev = self._events.get(event_id)
+        if ev is None:
+            return {"status": "not_found", "event_id": event_id, "modified": False}
+        if title is not None:
+            ev["title"] = title
+        if start_iso is not None:
+            ev["start_iso"] = start_iso
+        if end_iso is not None:
+            ev["end_iso"] = end_iso
+        if rationale:
+            ev["rationale"] = rationale
+        return {"status": "modified", "event_id": event_id, "modified": True, **{k: ev[k] for k in ("title", "start_iso", "end_iso")}}
+
+    def delete_event(self, event_id: str, rationale: str = "") -> dict[str, Any]:
+        if event_id in self._events:
+            del self._events[event_id]
+            return {"status": "deleted", "event_id": event_id, "deleted": True, "found": True}
+        return {"status": "not_found", "event_id": event_id, "deleted": False, "found": False}
+
+    def propose_modification(
+        self,
+        event_id: str,
+        title: str | None = None,
+        start_iso: str | None = None,
+        end_iso: str | None = None,
+        rationale: str = "",
+    ) -> dict[str, Any]:
+        return {
+            "status": "pending",
+            "event_id": event_id,
+            "title": title,
+            "start_iso": start_iso,
+            "end_iso": end_iso,
+            "rationale": rationale,
+        }
+
+    def propose_deletion(self, event_id: str, rationale: str = "") -> dict[str, Any]:
+        return {"status": "pending_delete", "event_id": event_id, "rationale": rationale}
+
+
 class GoogleCalendarBackend(CalendarBackend):
     """Google Calendar backend.
 
@@ -482,3 +683,24 @@ class CalendarAdapter:
             return ICalBackend(ical_path, write_path)
 
         return _NopBackend()
+
+
+if __name__ == "__main__":
+    # Round-trip self-test for InMemoryCalendarBackend.
+    b = InMemoryCalendarBackend(seed_events=[
+        {"id": "evt_001", "title": "CS 3704 lecture", "start_iso": "2026-05-06T10:00:00+00:00", "end_iso": "2026-05-06T11:00:00+00:00"},
+    ])
+    assert len(b.list_events()) == 1, "seed event missing"
+    created = b.create_event(title="study", start_iso="2026-05-07T14:00:00+00:00", end_iso="2026-05-07T16:00:00+00:00")
+    assert created["status"] == "created"
+    eid = created["id"]
+    assert len(b.list_events()) == 2
+    mod = b.modify_event(event_id=eid, title="study (moved)")
+    assert mod["modified"] is True
+    deleted = b.delete_event(event_id=eid)
+    assert deleted["deleted"] is True and deleted["found"] is True
+    missing = b.delete_event(event_id="evt_999")
+    assert missing["deleted"] is False
+    blocks = b.find_free_blocks(min_minutes=60, horizon_days=1)
+    assert isinstance(blocks, list)
+    print("InMemoryCalendarBackend round-trip OK")
