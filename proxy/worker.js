@@ -1,9 +1,14 @@
 /**
- * Cloudflare Worker proxy: GH Pages -> HF Space.
+ * Cloudflare Worker proxy: GH Pages -> HF Space + Canvas API.
  *
- * Holds HF_TOKEN as a Cloudflare secret (set via: wrangler secret put HF_TOKEN).
- * Public clients post { message: string } to /chat; we call the Space's
- * Gradio 5 ChatInterface and return { final_answer, tool_calls }.
+ * Secrets (set via wrangler secret put):
+ *   HF_TOKEN     — HuggingFace token for the demo Space
+ *   CANVAS_TOKEN — Canvas API token for live iframe calls
+ *
+ * Routes:
+ *   POST /chat   — proxy to HF Space, returns { final_answer, tool_calls }
+ *   POST /canvas — proxy to canvas.vt.edu, returns Canvas API JSON
+ *
  * No tokens are ever exposed to the browser.
  */
 
@@ -75,6 +80,115 @@ async function callSpace(message, env) {
   return { final_answer: responseStr, tool_calls: [] };
 }
 
+const CANVAS_BASE = 'https://canvas.vt.edu';
+const ALLOWED_METHODS = new Set(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']);
+
+async function handleChat(request, env, cors) {
+  if (request.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'POST /chat with { message }' }), {
+      status: 405,
+      headers: { 'Content-Type': 'application/json', ...cors },
+    });
+  }
+
+  let body;
+  try { body = await request.json(); }
+  catch (_) {
+    return new Response(JSON.stringify({ error: 'Invalid JSON body' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json', ...cors },
+    });
+  }
+  if (!body || typeof body.message !== 'string' || !body.message.trim()) {
+    return new Response(JSON.stringify({ error: 'message is required' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json', ...cors },
+    });
+  }
+  if (body.message.length > 4000) {
+    return new Response(JSON.stringify({ error: 'message too long (max 4000 chars)' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json', ...cors },
+    });
+  }
+
+  try {
+    const out = await callSpace(body.message, env);
+    return new Response(JSON.stringify(out), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json', ...cors },
+    });
+  } catch (err) {
+    return new Response(JSON.stringify({ error: String(err.message || err) }), {
+      status: 502,
+      headers: { 'Content-Type': 'application/json', ...cors },
+    });
+  }
+}
+
+async function handleCanvas(request, env, cors) {
+  if (request.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'POST /canvas with { endpoint, method?, body? }' }), {
+      status: 405,
+      headers: { 'Content-Type': 'application/json', ...cors },
+    });
+  }
+
+  let body;
+  try { body = await request.json(); }
+  catch (_) {
+    return new Response(JSON.stringify({ error: 'Invalid JSON body' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json', ...cors },
+    });
+  }
+
+  const { endpoint, method = 'GET', body: canvasBody } = body || {};
+
+  if (typeof endpoint !== 'string' || !endpoint.startsWith('/api/v1/')) {
+    return new Response(JSON.stringify({ error: 'endpoint must start with /api/v1/' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json', ...cors },
+    });
+  }
+
+  const upperMethod = String(method).toUpperCase();
+  if (!ALLOWED_METHODS.has(upperMethod)) {
+    return new Response(JSON.stringify({ error: `method must be one of: ${[...ALLOWED_METHODS].join(', ')}` }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json', ...cors },
+    });
+  }
+
+  if (canvasBody !== undefined && JSON.stringify(canvasBody).length > 4000) {
+    return new Response(JSON.stringify({ error: 'body too large (max 4000 chars serialized)' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json', ...cors },
+    });
+  }
+
+  const upstreamHeaders = {
+    'Authorization': `Bearer ${env.CANVAS_TOKEN}`,
+    'Accept': 'application/json',
+  };
+  const fetchInit = { method: upperMethod, headers: upstreamHeaders };
+  if (canvasBody !== undefined && upperMethod !== 'GET') {
+    fetchInit.headers['Content-Type'] = 'application/json';
+    fetchInit.body = JSON.stringify(canvasBody);
+  }
+
+  const upstream = await fetch(`${CANVAS_BASE}${endpoint}`, fetchInit);
+  const upstreamBody = await upstream.text();
+
+  return new Response(upstreamBody, {
+    status: upstream.status,
+    headers: {
+      'Content-Type': upstream.headers.get('Content-Type') || 'application/json',
+      ...cors,
+    },
+  });
+}
+
 export default {
   async fetch(request, env) {
     const origin = request.headers.get('Origin') || '';
@@ -84,46 +198,14 @@ export default {
       return new Response(null, { status: 204, headers: cors });
     }
 
-    const url = new URL(request.url);
-    if (url.pathname !== '/chat' || request.method !== 'POST') {
-      return new Response(JSON.stringify({ error: 'POST /chat with { message }' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json', ...cors },
-      });
-    }
+    const { pathname } = new URL(request.url);
 
-    let body;
-    try { body = await request.json(); }
-    catch (_) {
-      return new Response(JSON.stringify({ error: 'Invalid JSON body' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json', ...cors },
-      });
-    }
-    if (!body || typeof body.message !== 'string' || !body.message.trim()) {
-      return new Response(JSON.stringify({ error: 'message is required' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json', ...cors },
-      });
-    }
-    if (body.message.length > 4000) {
-      return new Response(JSON.stringify({ error: 'message too long (max 4000 chars)' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json', ...cors },
-      });
-    }
+    if (pathname === '/chat') return handleChat(request, env, cors);
+    if (pathname === '/canvas') return handleCanvas(request, env, cors);
 
-    try {
-      const out = await callSpace(body.message, env);
-      return new Response(JSON.stringify(out), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json', ...cors },
-      });
-    } catch (err) {
-      return new Response(JSON.stringify({ error: String(err.message || err) }), {
-        status: 502,
-        headers: { 'Content-Type': 'application/json', ...cors },
-      });
-    }
+    return new Response(JSON.stringify({ error: 'Not found' }), {
+      status: 404,
+      headers: { 'Content-Type': 'application/json', ...cors },
+    });
   },
 };
