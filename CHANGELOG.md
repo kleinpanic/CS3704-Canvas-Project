@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] — 2026-05-06
+
+### Fixed
+- **publish-pypi**: switched to API token auth (`PYPI_API_TOKEN` secret) and rebuilds SDK from source inside the job for PEP 625-compliant filenames. Fixes the failed publish-pypi step from the v1.2.0 release. (#173)
+- **RMP teacher names** now populate via `?include[]=teachers` on the `/courses` Canvas API call. The pre-fetched `site/data/rmp.json` will fill in starting next pages.yml run. (#173)
+
 ## [1.2.0] — 2026-05-06
 
 ### Added
