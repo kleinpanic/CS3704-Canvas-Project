@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import sys
 import time
@@ -36,6 +37,11 @@ SCRUB_KEYS = {
 _piiranha_available = True
 
 PIIRANHA_URL = "https://api-inference.huggingface.co/models/iiiorg/piiranha-v1-detect-personal-information"
+
+CANVAS_PII_SPACE_URL = os.environ.get(
+    "CANVAS_PII_SPACE_URL",
+    "https://kleinpanic93-canvas-pii-scrub.hf.space",
+)
 
 
 def _piiranha_call(text: str, hf_token: str) -> str | None:
@@ -110,8 +116,20 @@ def scrub_string(text: str, *, hf_token: str = "") -> str:
     return _regex_fallback(text)
 
 
-def scrub_doc(obj: object, *, hf_token: str = "", mode: str = "piiranha-then-regex") -> object:
+def scrub_doc(
+    obj: object,
+    *,
+    hf_token: str = "",
+    mode: str = "piiranha-then-regex",
+    scrub_method: str = "local-piiranha",
+    space_url: str | None = None,
+) -> object:
     """Recursively scrub PII from a document (dict, list, or string)."""
+    if scrub_method == "space":
+        if space_url is None:
+            raise ValueError("space_url required when scrub_method='space'")
+        doc = obj if isinstance(obj, dict) else {"_root": obj}
+        return scrub_via_space(doc, space_url)
     if isinstance(obj, dict):
         out = {}
         for k, v in obj.items():
@@ -127,4 +145,48 @@ def scrub_doc(obj: object, *, hf_token: str = "", mode: str = "piiranha-then-reg
     return obj
 
 
-__all__ = ["SCRUB_KEYS", "scrub_doc", "scrub_string"]
+def scrub_via_space(doc: dict, space_url: str) -> dict:
+    """POST doc to the canvas-pii-scrub Space /scrub endpoint.
+
+    Returns the scrubbed document dict on success.
+    Falls back to scrub_doc(doc) on connection error or non-200 after retry.
+    """
+    payload = json.dumps({"document": doc}).encode()
+    req = urllib.request.Request(
+        f"{space_url}/scrub",
+        data=payload,
+        headers={
+            "Content-Type": "application/json",
+            "User-Agent": "canvas-tracker/share_my_canvas",
+        },
+        method="POST",
+    )
+
+    def _fallback(reason: str) -> dict:
+        print(f"  scrub_via_space: {reason} — falling back to local scrub", file=sys.stderr)
+        return scrub_doc(doc)
+
+    try:
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            return json.loads(resp.read())["document"]
+    except urllib.error.HTTPError as e:
+        if e.code == 503:
+            retry_after = int(e.headers.get("Retry-After", 30)) if e.headers else 30
+            print(
+                f"  scrub_via_space: 503 (Space cold-start), retrying in {retry_after}s…",
+                file=sys.stderr,
+            )
+            time.sleep(retry_after)
+            try:
+                with urllib.request.urlopen(req, timeout=60) as resp:
+                    return json.loads(resp.read())["document"]
+            except Exception as retry_err:
+                return _fallback(f"retry failed ({retry_err})")
+        return _fallback(f"HTTP {e.code}")
+    except urllib.error.URLError as e:
+        return _fallback(f"URLError {e.reason}")
+    except Exception as e:
+        return _fallback(str(e))
+
+
+__all__ = ["SCRUB_KEYS", "scrub_doc", "scrub_string", "scrub_via_space", "CANVAS_PII_SPACE_URL"]

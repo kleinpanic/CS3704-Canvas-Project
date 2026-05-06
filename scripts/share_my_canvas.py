@@ -310,12 +310,18 @@ def main():
                    help="Synonym for --dry-run.")
     p.add_argument("--piiranha-required", action="store_true",
                    help="Abort if Piiranha is unreachable (default: fall back to regex).")
+    p.add_argument("--scrub-via-space", action="store_true",
+                   help="Scrub via the canvas-pii-scrub HF Space. Falls back to local on error.")
     args = p.parse_args()
 
     out = Path(args.output) if args.output else \
         Path("data/collab") / f"{args.contributor}.jsonl"
 
     records = collect(args.contributor)
+
+    if args.scrub_via_space:
+        from canvas_tui.pii import scrub_via_space, CANVAS_PII_SPACE_URL
+        records = [scrub_via_space(r, CANVAS_PII_SPACE_URL) for r in records]
 
     if args.piiranha_required:
         import canvas_tui.pii as _pii
