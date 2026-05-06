@@ -6,6 +6,8 @@ A maintainable, team-ready **Canvas LMS productivity client** with a Textual TUI
 [![Security](https://img.shields.io/github/actions/workflow/status/kleinpanic/CS3704-Canvas-Project/security.yml?branch=main&label=Security)](https://github.com/kleinpanic/CS3704-Canvas-Project/actions/workflows/security.yml)
 [![Pages](https://img.shields.io/github/actions/workflow/status/kleinpanic/CS3704-Canvas-Project/pages.yml?branch=main&label=Pages)](https://github.com/kleinpanic/CS3704-Canvas-Project/actions/workflows/pages.yml)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+[![PyPI](https://img.shields.io/pypi/v/canvas-sdk?label=PyPI)](https://pypi.org/project/canvas-sdk/)
+[![PyPI Python](https://img.shields.io/pypi/pyversions/canvas-sdk)](https://pypi.org/project/canvas-sdk/)
 [![Python](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![HF Model](https://img.shields.io/badge/🤗_Model-canvas--calendar--agent--v7--dpo-yellow)](https://huggingface.co/kleinpanic93/canvas-calendar-agent-v7-dpo)
 [![HF Dataset](https://img.shields.io/badge/🤗_Dataset-canvas--calendar--preferences--v7-blue)](https://huggingface.co/datasets/kleinpanic93/canvas-calendar-preferences-v7)
@@ -301,6 +303,7 @@ All branches must match `<prefix>/<slug>` where slug is lowercase letters, digit
 | Prefix | Use for |
 |--------|---------|
 | `feature/*` | New features |
+| `feat/*` | New features (short form) |
 | `fix/*` | Bug fixes |
 | `docs/*` | Documentation updates |
 | `chore/*` | Maintenance and tooling |
@@ -334,8 +337,6 @@ All commits to protected branches must be **GPG signed**.
 - **[Roadmap](https://kleinpanic.github.io/CS3704-Canvas-Project/roadmap.html)** — planned milestones and feature backlog
 - **[HF Space](https://huggingface.co/spaces/kleinpanic93/canvas-calendar-agent-demo)** — full v7-dpo model behind a Gradio chat UI
 - **[How it Works](https://kleinpanic.github.io/CS3704-Canvas-Project/agent-demo/method.html)** — DPO methodology, 9-method ablation matrix, G1–G13 guardrails, bench harness
-- **[Read the Docs](https://readthedocs.org/projects/canvas-tracker-cs3704/)** — auto-published API + architecture docs (project import pending — see `.readthedocs.yaml`)
-- **[GHCR Docker image](https://github.com/kleinpanic/CS3704-Canvas-Project/pkgs/container/canvas-tui)** — `docker pull ghcr.io/kleinpanic/canvas-tui` (built on push-to-main + tags)
 - **[PyPI: canvas-sdk](https://pypi.org/project/canvas-sdk/)** — `pip install canvas-sdk` (publishes on stable releases via OIDC trusted publishing)
 - **[Architecture docs](https://kleinpanic.github.io/CS3704-Canvas-Project/docs/architecture/)** — system design decisions
 - **[Browser extension docs](https://kleinpanic.github.io/CS3704-Canvas-Project/docs/extension/)** — shared client/runtime architecture
