@@ -20,6 +20,11 @@ import json
 import os
 import re
 import sys
+from pathlib import Path
+
+_SRC = Path(__file__).resolve().parent.parent / "src"
+if _SRC.is_dir() and str(_SRC) not in sys.path:
+    sys.path.insert(0, str(_SRC))
 
 import canvas_tui.pii as _pii_mod
 from canvas_tui.pii import SCRUB_KEYS, _piiranha_call, scrub_string
