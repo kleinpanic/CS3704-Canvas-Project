@@ -1,6 +1,6 @@
 # CS3704 Canvas Project
 
-A maintainable, team-ready **Canvas LMS productivity client** with a Textual TUI frontend and a documented shared-core architecture for future browser-extension parity.
+A maintainable, team-ready **Canvas LMS productivity client** with a Textual TUI frontend, Chrome extension, Python SDK, and a fine-tuned calendar agent — with a documented shared-core architecture.
 
 [![CI](https://img.shields.io/github/actions/workflow/status/kleinpanic/CS3704-Canvas-Project/ci.yml?branch=main&label=CI)](https://github.com/kleinpanic/CS3704-Canvas-Project/actions/workflows/ci.yml)
 [![Security](https://img.shields.io/github/actions/workflow/status/kleinpanic/CS3704-Canvas-Project/security.yml?branch=main&label=Security)](https://github.com/kleinpanic/CS3704-Canvas-Project/actions/workflows/security.yml)
@@ -12,13 +12,63 @@ A maintainable, team-ready **Canvas LMS productivity client** with a Textual TUI
 [![HF Collection](https://img.shields.io/badge/🤗_Collection-Canvas_Calendar_Agent_v3.0-yellow)](https://huggingface.co/collections/kleinpanic93/canvas-calendar-agent-v30-69fa6462f697e0342b21dfe0)
 [![HF Space](https://img.shields.io/badge/🤗_Space-Live_Demo-purple)](https://huggingface.co/spaces/kleinpanic93/canvas-calendar-agent-demo)
 
-## Live demo
+---
+
+## Quick Start
+
+### Chrome Extension
+
+1. Clone or download this repo.
+2. In Chrome, open `chrome://extensions/` and enable **Developer mode**.
+3. Click **Load unpacked** and select the `extension/` directory.
+4. Pin the extension, open a Canvas page, and click the icon.
+
+### Python SDK
+
+```bash
+pip install canvas-sdk[autodownload]    # fetches the v7-dpo Gemma4 model from HF on first run
+pip install canvas-sdk[gemini]          # optional Gemini fallback
+pip install canvas-sdk[all]             # both
+```
+
+```python
+import os
+from canvas_sdk import CanvasAgent
+
+os.environ["CANVAS_TOKEN"]    = "..."        # your Canvas API token
+os.environ["CANVAS_BASE_URL"] = "https://canvas.vt.edu"
+
+agent = CanvasAgent.auto()                   # auto-resolves: env -> local -> HF -> Gemini
+print(agent.run("What is due this week?"))
+```
+
+`CanvasAgent.auto()` resolution order:
+1. `CANVAS_LLM_ENDPOINT` env (skip auto-download, use your own server)
+2. Local cache at `~/.cache/canvas-agent/v7-dpo/` (spawns vLLM on `:8765`)
+3. Download `kleinpanic93/canvas-calendar-agent-v7-dpo` from HF, then (2)
+4. Fall back to Gemini (`gemini-2.5-flash` by default)
+
+### TUI (Terminal UI)
+
+```bash
+export CANVAS_TOKEN="your_canvas_token_here"
+export CANVAS_BASE_URL="https://canvas.vt.edu"   # optional, defaults to VT
+
+pipx install .          # recommended
+# or: pip install .
+
+canvas-tui
+```
+
+---
+
+## Live Demo
 
 Try the fine-tuned Canvas Calendar Agent in your browser — no install required, no tokens needed:
 
-- **Browser chat UI** (mock Canvas data): https://kleinpanic.github.io/CS3704-Canvas-Project/demo/
-- **HF Space (full model, mock tools)**: https://huggingface.co/spaces/kleinpanic93/canvas-calendar-agent-demo
-- **HF Collection (v3.0 method matrix)**: https://huggingface.co/collections/kleinpanic93/canvas-calendar-agent-v30-69fa6462f697e0342b21dfe0
+- **Agent demo** (mock Canvas data, hosted DPO model): https://kleinpanic.github.io/CS3704-Canvas-Project/agent-demo/
+- **HF Space** (full model, mock tools): https://huggingface.co/spaces/kleinpanic93/canvas-calendar-agent-demo
+- **HF Collection** (v3.0 method matrix): https://huggingface.co/collections/kleinpanic93/canvas-calendar-agent-v30-69fa6462f697e0342b21dfe0
 
 ### Demo architecture (no tokens in client JS)
 
@@ -37,90 +87,6 @@ see the proxy URL (`cs3704-demo-proxy.kleinpanic.workers.dev`); they never
 receive any credential. See [`proxy/README.md`](proxy/README.md) for the
 deploy procedure and [`proxy/iframe-fallback.html`](proxy/iframe-fallback.html)
 for a zero-infra alternative that embeds the Space directly.
-
-### v3.0 fine-tuning matrix
-
-The published **9-method matrix** (Gemma-4-E2B-IT trained on the same v7
-dataset, varying only the loss/method) currently ships **DPO**. The remaining
-**8 methods** (SFT, KTO, IPO, APO-Zero, SPPO, NCA, LoRA, QLoRA) plus the
-12-quant GGUF expansion are queued — recipes and exact commands live in
-[`MINIMAX-HANDOFF-v3.md`](https://github.com/kleinpanic/CS3704-DPO-SSOT/blob/main/.planning/MINIMAX-HANDOFF-v3.md)
-in the SSOT repo.
-
-## ML/AI components
-
-The v2 milestone adds a **specialized calendar+study agent** that combines
-Canvas API tool calls with neuroscience-grounded study planning heuristics
-(spaced repetition, deep-work block sizing, exam bracketing).
-
-The v7-DPO model is published on HuggingFace and the accompanying paper is
-on Zenodo.
-
-### Use the SDK in Python
-
-```bash
-pip install -e src/sdk
-pip install canvas-sdk[autodownload]   # auto-pulls the v7-dpo model from HF on first use
-python -m canvas_sdk.demo "What's due this week?"
-```
-
-```python
-import os
-from canvas_sdk import CanvasAgent
-
-os.environ["CANVAS_TOKEN"] = "..."
-os.environ["CANVAS_BASE_URL"] = "https://canvas.vt.edu"
-
-agent = CanvasAgent.auto()             # auto-resolves: env -> local cache -> HF -> Gemini
-print(agent.run("What's due this week?"))
-```
-
-`CanvasAgent.auto()` resolution order:
-1. `CANVAS_LLM_ENDPOINT` env (skip auto-download, use your own server)
-2. Local cache at `~/.cache/canvas-agent/v7-dpo/` (spawns vLLM on `:8765`)
-3. Download `kleinpanic93/canvas-calendar-agent-v7-dpo` from HF, then (2)
-4. Fall back to Gemini (`gemini-2.5-flash` by default)
-
-### Try the fine-tuned model
-
-- **Model card:** [huggingface.co/kleinpanic93/canvas-calendar-agent-v7-dpo](https://huggingface.co/kleinpanic93/canvas-calendar-agent-v7-dpo)
-- **Preference dataset:** [huggingface.co/datasets/kleinpanic93/canvas-calendar-preferences-v7](https://huggingface.co/datasets/kleinpanic93/canvas-calendar-preferences-v7)
-- **Training pipeline (paper + code):** [github.com/kleinpanic/CS3704-DPO-SSOT](https://github.com/kleinpanic/CS3704-DPO-SSOT)
-- **Bench comparison (SFT vs DPO):** [docs/bench_v7_comparison.md](https://github.com/kleinpanic/CS3704-DPO-SSOT/blob/main/docs/bench_v7_comparison.md)
-
-### Try the agent right now
-
-The fine-tuned **v7-dpo Gemma4** weights are hosted as a live HuggingFace Space.
-The browser demo uses a Cloudflare Worker proxy to call the Space — no token
-ever reaches the client. The Python SDK auto-downloads the same weights from
-HuggingFace Hub on first run for local use against your real Canvas token.
-
-- **Browser demo** (mock Canvas data, hosted DPO model): [kleinpanic.github.io/CS3704-Canvas-Project/agent-demo/](https://kleinpanic.github.io/CS3704-Canvas-Project/agent-demo/)
-- **Python SDK** (real Canvas data via your token):
-
-  ```bash
-  pip install canvas-sdk[autodownload]    # fetches the v7-dpo Gemma4 model from HF on first run
-  pip install canvas-sdk[gemini]          # optional last-resort Gemini fallback
-  pip install canvas-sdk[all]             # both
-  ```
-
-  ```python
-  import os
-  from canvas_sdk import CanvasAgent
-
-  os.environ["GOOGLE_API_KEY"]   = "..."        # for the Gemini fallback
-  os.environ["CANVAS_TOKEN"]     = "..."        # your Canvas token
-  os.environ["CANVAS_BASE_URL"]  = "https://canvas.vt.edu"
-
-  agent = CanvasAgent.auto()                    # auto-resolves: env -> local -> HF -> Gemini
-  print(agent.run("What is due this week?"))
-  ```
-
-  Resolution order for `CanvasAgent.auto()`:
-  1. `CANVAS_LLM_ENDPOINT` env (skip auto-download, use your own server)
-  2. Local cache at `~/.cache/canvas-agent/v7-dpo/` (spawns vLLM on :8765)
-  3. Download `kleinpanic/canvas-calendar-agent-v7-dpo` from HF, then (2)
-  4. Fall back to Gemini (`gemini-2.5-flash` by default)
 
 > **Token policy:** the SDK reads `CANVAS_TOKEN` and `GOOGLE_API_KEY` from
 > your local environment. Tokens never enter the published browser demo,
@@ -147,6 +113,49 @@ This is the **CS3704 team project repository** for a Canvas LMS productivity too
 - **Current**: Browser extension with popup, background worker, IndexedDB cache, and shared JS client/runtime layer
 - **Shared core direction**: Reusable domain logic and orchestration where practical across surfaces
 - **Future**: Deeper parity between TUI and browser-facing features
+
+---
+
+## ML/AI Components
+
+The v2 milestone adds a **specialized calendar+study agent** that combines
+Canvas API tool calls with neuroscience-grounded study planning heuristics
+(spaced repetition, deep-work block sizing, exam bracketing).
+
+The v7-DPO model is published on HuggingFace and the accompanying paper is on Zenodo.
+
+### Fine-tuned model resources
+
+- **Model card:** [huggingface.co/kleinpanic93/canvas-calendar-agent-v7-dpo](https://huggingface.co/kleinpanic93/canvas-calendar-agent-v7-dpo)
+- **Preference dataset:** [huggingface.co/datasets/kleinpanic93/canvas-calendar-preferences-v7](https://huggingface.co/datasets/kleinpanic93/canvas-calendar-preferences-v7)
+- **Training pipeline (paper + code):** [github.com/kleinpanic/CS3704-DPO-SSOT](https://github.com/kleinpanic/CS3704-DPO-SSOT)
+- **Bench comparison (SFT vs DPO):** [docs/bench_v7_comparison.md](https://github.com/kleinpanic/CS3704-DPO-SSOT/blob/main/docs/bench_v7_comparison.md)
+
+### v3.0 fine-tuning matrix
+
+The published **9-method matrix** (Gemma-4-E2B-IT trained on the same v7
+dataset, varying only the loss/method) currently ships **DPO**. The remaining
+**8 methods** (SFT, KTO, IPO, APO-Zero, SPPO, NCA, LoRA, QLoRA) plus the
+12-quant GGUF expansion are queued — recipes and exact commands live in
+[`MINIMAX-HANDOFF-v3.md`](https://github.com/kleinpanic/CS3704-DPO-SSOT/blob/main/.planning/MINIMAX-HANDOFF-v3.md)
+in the SSOT repo.
+
+### Run locally with Ollama
+
+The fine-tuned agent is available as a GGUF for local inference via [Ollama](https://ollama.com):
+
+```bash
+ollama pull hf.co/kleinpanic93/canvas-calendar-agent-v7-dpo-gguf:Q4_K_M
+ollama run hf.co/kleinpanic93/canvas-calendar-agent-v7-dpo-gguf:Q4_K_M "What assignments are due this week?"
+```
+
+| Tag | Size | Notes |
+|-----|------|-------|
+| `Q4_K_M` | ~3.2 GB | Recommended — fast + good quality |
+| `Q8_0` | ~4.7 GB | Higher quality, larger memory |
+| `f16` | ~8.7 GB | Reference / no quality loss |
+
+Full GGUF repo: [kleinpanic93/canvas-calendar-agent-v7-dpo-gguf](https://huggingface.co/kleinpanic93/canvas-calendar-agent-v7-dpo-gguf)
 
 ---
 
@@ -228,56 +237,6 @@ flowchart TB
 
 ---
 
-## Quick Start
-
-### Installation
-
-```bash
-# Using pipx (recommended)
-pipx install .
-
-# Or using pip
-pip install .
-```
-
-### Configuration
-
-Set your Canvas API token:
-
-```bash
-export CANVAS_TOKEN="your_canvas_token_here"
-export CANVAS_BASE_URL="https://canvas.vt.edu"  # optional, defaults to VT
-```
-
-### Run
-
-```bash
-canvas-tui
-```
-
----
-
-## Run locally with Ollama
-
-The fine-tuned agent is available as a GGUF for local inference via [Ollama](https://ollama.com):
-
-```bash
-ollama pull hf.co/kleinpanic93/canvas-calendar-agent-v7-dpo-gguf:Q4_K_M
-ollama run hf.co/kleinpanic93/canvas-calendar-agent-v7-dpo-gguf:Q4_K_M "What assignments are due this week?"
-```
-
-Other available quants:
-
-| Tag | Size | Notes |
-|---|---|---|
-| `Q4_K_M` | ~3.2 GB | Recommended — fast + good quality |
-| `Q8_0` | ~4.7 GB | Higher quality, larger memory |
-| `f16` | ~8.7 GB | Reference / no quality loss |
-
-Full GGUF repo: [kleinpanic93/canvas-calendar-agent-v7-dpo-gguf](https://huggingface.co/kleinpanic93/canvas-calendar-agent-v7-dpo-gguf)
-
----
-
 ## Development
 
 ### Setup
@@ -292,7 +251,7 @@ pip install -e ".[dev]"
 
 ```bash
 ruff check src tests      # linting
-pytest -q                  # run tests
+pytest -q                 # run tests
 python -m build           # build package
 ```
 
@@ -302,7 +261,8 @@ python -m build           # build package
 
 ```
 .github/                  CI/CD workflows and governance
-src/canvas_tui/           Application source code
+extension/                Browser extension source (presentation only)
+src/canvas_tui/           TUI application source code
   agent/                  v2 CalendarAgent (tool calls + study planning)
 src/sdk/canvas_sdk/       Python SDK — single source of agent logic
 hf-space/                 HuggingFace Space (Gradio app loading v7-dpo)
@@ -315,7 +275,6 @@ data/
     collab/               Teammate-contributed trajectory JSONL files
     seeds/                Canonical seed examples
   v1-reranker/            Legacy v1 preference pair data
-extension/                Browser extension source (presentation only)
 ```
 
 ---
@@ -330,22 +289,29 @@ extension/                Browser extension source (presentation only)
 
 ### For team members
 1. **Never push directly to `main`**
-2. Create a short-lived feature branch: `feature/your-feature-name`
+2. Create a short-lived branch using one of the prefixes below
 3. Open a Pull Request into `main`
 4. Wait for CI to pass and a maintainer to review
 5. Merge with squash when approved
 
 ### Branch naming convention
-- `feature/*` — new features
-- `fix/*` — bug fixes
-- `chore/*` — maintenance tasks
-- `docs/*` — documentation updates
+
+All branches must match `<prefix>/<slug>` where slug is lowercase letters, digits, dots, and hyphens.
+
+| Prefix | Use for |
+|--------|---------|
+| `feature/*` | New features |
+| `fix/*` | Bug fixes |
+| `docs/*` | Documentation updates |
+| `chore/*` | Maintenance and tooling |
+| `refactor/*` | Code refactoring without behavior change |
+| `test/*` | Test additions or fixes |
+| `hotfix/*` | Urgent production fixes |
+| `dependabot/*` | Automated dependency updates |
 
 ---
 
 ## Automation
-
-This repository has extensive automation:
 
 | Workflow | Purpose |
 |----------|---------|
@@ -364,11 +330,12 @@ All commits to protected branches must be **GPG signed**.
 ## Documentation
 
 - **[Docs site](https://kleinpanic.github.io/CS3704-Canvas-Project/)** — live project docs
-- **[Agent demo](https://kleinpanic.github.io/CS3704-Canvas-Project/agent-demo/)** — chat with the Canvas Calendar Agent in your browser (powered by our fine-tuned Gemma4 v7-dpo on HuggingFace Spaces)
+- **[Agent demo](https://kleinpanic.github.io/CS3704-Canvas-Project/agent-demo/)** — chat with the Canvas Calendar Agent in your browser
+- **[Roadmap](https://kleinpanic.github.io/CS3704-Canvas-Project/roadmap.html)** — planned milestones and feature backlog
 - **[HF Space](https://huggingface.co/spaces/kleinpanic93/canvas-calendar-agent-demo)** — full v7-dpo model behind a Gradio chat UI
-- **[Architecture docs](docs-site/architecture.md)** — system design decisions
-- **[Browser extension docs](docs-site/extension.md)** — shared client/runtime architecture
-- **[Workflow guide](docs-site/workflow.md)** — how the team works
+- **[Architecture docs](https://kleinpanic.github.io/CS3704-Canvas-Project/docs/architecture/)** — system design decisions
+- **[Browser extension docs](https://kleinpanic.github.io/CS3704-Canvas-Project/docs/extension/)** — shared client/runtime architecture
+- **[Workflow guide](https://kleinpanic.github.io/CS3704-Canvas-Project/docs/workflow/)** — how the team works
 - **[Contributing](CONTRIBUTING.md)** — contribution guidelines
 - **[Maintainers](MAINTAINERS.md)** — maintainer responsibilities
 - **[Security policy](SECURITY.md)** — security procedures
