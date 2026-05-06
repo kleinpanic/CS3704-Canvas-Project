@@ -28,6 +28,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **HF Space integration test** + HF badges (#116)
 
 ### Changed
+- **README split**: slimmed to end-user-facing content only (install, demo, distribution, license); developer/team content moved to CONTRIBUTING.md
+- **CONTRIBUTING.md expanded**: added dev setup, repo structure, branch naming, commit conventions, PR expectations, automation table, course context
 - **README modernized**: structure, links, quick-start, badge expansion, PyPI badges, Distribution table for 3-package channels (#131, #158, #159, #161)
 - **docs/method.html**: rewrite with cited corrections from SSOT truth source (#148)
 - **MkDocs deduplication**: removed root `mkdocs.yml`, resolved nav conflicts (#156)
