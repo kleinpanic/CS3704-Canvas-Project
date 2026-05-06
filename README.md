@@ -148,6 +148,14 @@ For team workflow, branch naming, repo structure, and dev setup, see [`CONTRIBUT
 
 ---
 
+## Contributors
+
+[![Contributors](https://contrib.rocks/image?repo=kleinpanic/CS3704-Canvas-Project)](https://github.com/kleinpanic/CS3704-Canvas-Project/graphs/contributors)
+
+Made with [contrib.rocks](https://contrib.rocks).
+
+---
+
 ## License
 
 GPL-3.0-or-later. See [LICENSE](LICENSE).
