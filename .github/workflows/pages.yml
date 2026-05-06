@@ -48,11 +48,9 @@ jobs:
           sed -i 's|<script src="chrome_shim.js"></script>|<script src="chrome_shim_prod.js"></script>|g' \
             site/extension/src/popup/index.html
 
-      # Tokens are NO LONGER injected into client-side JS.
-      # Canvas token: not needed at runtime — popup uses static JSON only.
-      # HF token: held as a Cloudflare Worker secret; the Worker proxies
-      # browser requests so the token never reaches the public site.
-      # See: proxy/README.md
+      # HF token lives in CF Worker secret (see proxy/) — not in GH Actions.
+      # TODO: move fetch_canvas_data.py behind a CF Worker so CANVAS_API_TOKEN
+      #       can be removed from GH Actions (same pattern as HF token migration).
 
       # Pre-fetch live Canvas data and bake as static JSON
       - name: Fetch Canvas data snapshot
@@ -61,31 +59,15 @@ jobs:
         run: |
           python3 docs-site/fetch_canvas_data.py --out site/data
 
-      # Inject Canvas token into homepage shim at build time (never in source)
-      - name: Inject token into homepage
-        env:
-          CANVAS_API_TOKEN: ${{ secrets.CANVAS_API_TOKEN }}
-        run: |
-          sed -i "s|__CANVAS_TOKEN__|${CANVAS_API_TOKEN}|g" \
-            docs-site/index.html
-
       # Place the Tailwind homepage at site root
       - name: Install homepage
         run: cp docs-site/index.html site/index.html
 
-      # Copy the standalone Gemini-backed agent demo (no untrusted input)
+      # Copy the agent demo page
       - name: Install agent demo
         run: |
           mkdir -p site/agent-demo
           cp docs-site/agent-demo/index.html site/agent-demo/index.html
-
-      # Inject HF token into agent demo so authenticated requests bypass
-      # the small ZeroGPU anonymous quota. Token is read-only / inference-scoped.
-      - name: Inject HF token into agent demo
-        env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: |
-          sed -i "s|__HF_TOKEN__|${HF_TOKEN}|g" site/agent-demo/index.html
 
       - uses: actions/upload-pages-artifact@v3
         with:

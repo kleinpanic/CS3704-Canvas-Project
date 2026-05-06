@@ -50,7 +50,7 @@ class Config:
     # LLM agent settings — OpenAI-compatible endpoint for fine-tuned Gemma4
     llm_endpoint: str = "http://localhost:18080/v1"
     llm_model: str = "google/gemma-4-e2b-it"
-    llm_api_key: str = "forge"
+    llm_api_key: str = field(default_factory=lambda: os.environ.get("SPARK_API_KEY", "forge"))
     agent_max_turns: int = 8
 
     config_dir: str = field(default_factory=lambda: os.path.expanduser("~/.config/canvas-tui"))

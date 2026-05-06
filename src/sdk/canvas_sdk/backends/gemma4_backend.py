@@ -7,6 +7,7 @@ spark-proxy, etc.). Default points at the local spark-proxy router on :18080.
 from __future__ import annotations
 
 import json
+import os
 from typing import Any
 
 try:
@@ -29,7 +30,7 @@ class Gemma4Backend:
         self,
         endpoint: str = "http://localhost:18080/v1",
         model: str = "google/gemma-4-e2b-it",
-        api_key: str = "forge",
+        api_key: str = os.environ.get("SPARK_API_KEY", "forge"),
         timeout: float = 60.0,
     ):
         self.endpoint = endpoint.rstrip("/")

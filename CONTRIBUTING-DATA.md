@@ -30,7 +30,7 @@ Replace `yourpid` with your VT PID or GitHub handle. The script pulls your full 
 **4. Submit your file**
 
 - **PR:** Add `data/collab/yourpid.jsonl` and open a pull request.
-- **Email:** Send the file to rodie105@gmail.com with subject `[CS3704] data - yourpid`.
+- **Email:** Open a [GitHub issue](https://github.com/kleinpanic/CS3704-Canvas-Project/issues) and we'll coordinate directly.
 
 That's it. Klein handles everything else.
 
