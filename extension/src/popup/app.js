@@ -154,7 +154,7 @@ function renderAssignmentItem(item, { showCourse = true } = {}) {
   const cls        = urgencyClass(dueDate);
 
   return `
-    <li class="assignment-item ${cls}" data-id="${id}">
+    <li class="assignment-item ${cls}" data-id="${id}" data-html-url="${esc(item.html_url || "")}">
       <div class="assignment-main">
         ${showCourse && courseName ? `<div class="course-name">${esc(courseName)}</div>` : ""}
         <div class="assignment-name">${esc(item.title || item.assignment?.name || "Assignment")}</div>
@@ -179,8 +179,16 @@ function attachItemHandlers(list) {
     });
   });
   list.querySelectorAll(".open-btn").forEach(btn => {
-    btn.addEventListener("click", () => {
+    btn.addEventListener("click", e => {
+      e.stopPropagation();
       const url = btn.dataset.url;
+      if (url) window.open(url, "_blank");
+    });
+  });
+  list.querySelectorAll(".assignment-item").forEach(li => {
+    li.addEventListener("click", e => {
+      if (e.target.closest(".dismiss-btn") || e.target.closest(".open-btn")) return;
+      const url = li.dataset.htmlUrl;
       if (url) window.open(url, "_blank");
     });
   });
