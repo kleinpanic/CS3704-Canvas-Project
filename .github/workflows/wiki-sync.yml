@@ -1,7 +1,3 @@
-# PREREQUISITE: The GitHub Wiki must be initialized before this workflow runs.
-# Go to https://github.com/kleinpanic/CS3704-Canvas-Project/wiki and create
-# the first page manually — GitHub only provisions the wiki.git repo on first use.
-
 name: Sync docs to Wiki
 
 on:
@@ -18,7 +14,12 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Harden runner
+        uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450  # v2
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
 
       - name: Clone wiki
         env:
@@ -28,12 +29,12 @@ jobs:
 
       - name: Copy docs
         run: |
-          # Copy top-level .md files; rename index.md → Home.md (wiki landing page convention)
+          # Copy top-level .md files; rename index.md -> Home.md (wiki landing page convention)
           cp docs-site/docs/*.md wiki-out/ 2>/dev/null || true
           if [ -f wiki-out/index.md ]; then
             mv wiki-out/index.md wiki-out/Home.md
           fi
-          # Copy .md files from subdirectories (skip index.md — already handled above)
+          # Copy .md files from subdirectories (skip index.md -- already handled above)
           find docs-site/docs -mindepth 2 -name "*.md" -not -name "index.md" | while read f; do
             cp "$f" wiki-out/
           done
