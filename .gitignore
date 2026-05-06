@@ -67,6 +67,7 @@ spark-maker-data/
 
 # AI / GSD workflow artifacts (local only, not app code)
 .planning/
+.claude/
 CLAUDE.md
 scripts/.claude/
 scripts/claude_gsd_cron.sh
