@@ -1,139 +1,69 @@
 # Architecture
 
-This project now has two active product surfaces:
-- a Python/Textual TUI
-- a browser extension with its own shared JS client/runtime layer
+The project has four components:
 
-## Design Principles
+- **canvas_sdk** (`src/sdk/canvas_sdk/`) — Python library wrapping the Canvas REST API. Typed resource classes, a paginated request layer, and an agent tool registry used by the HF Space demo.
+- **canvas_tui** (`src/canvas_tui/`) — Python/Textual terminal UI that consumes `canvas_sdk` directly.
+- **extension** (`extension/`) — Chrome MV3 browser extension. Calls Canvas via `canvas-client.js`; optionally bridges to a local SDK host process through native messaging.
+- **proxy** (`proxy/`) — Cloudflare Worker that stands between the live demo page and the HF Space, keeping the HF token out of public JS.
 
-- **Offline-first** where practical, using persistent cache layers
-- **Shared contracts** instead of scattered UI-to-service coupling
-- **Platform-specific adapters** for storage, notifications, and runtime details
-- **Governed delivery** through CI/CD and protected `main`
-
-## High-Level Layout
+## Data Flow
 
 ```text
-TUI (Python)
-  -> src/canvas_tui/
-  -> Canvas API + SQLite-backed local state
+canvas_tui  ──────────────────────────────────>  Canvas API
+   (via canvas_sdk)
 
-Extension (JS)
-  -> extension/src/popup/
-  -> extension/src/background.js
-  -> extension/src/lib/canvas-client.js
-  -> extension/src/lib/cache.js
-  -> Canvas API + IndexedDB-backed local state
+extension  ──── canvas-client.js ─────────────>  Canvas API
+   (IndexedDB cache)
+   └── native messaging ──────────────────────>  canvas_sdk host process
+
+browser demo  ──POST /chat──>  Cloudflare Worker  ──Bearer HF_TOKEN──>  HF Space
 ```
 
-## TUI Architecture
+The Cloudflare Worker only proxies demo chat traffic. It is not involved in Canvas API access.
 
-| Layer | Components | Files |
-|-------|------------|-------|
-| **Application** | App orchestration, routing, screens | `app.py`, `cli.py`, `screens/`, `widgets/` |
-| **Domain/Data** | API, models, state, caching | `api.py`, `models.py`, `state.py`, `cache.py` |
-| **Infrastructure** | Config, sync helpers, adapters | `config.py`, `prefetch.py`, `adapters/` |
+## canvas_sdk
 
-## Browser Extension Architecture
+`src/sdk/canvas_sdk/` is a standalone Python package. The `Canvas` class in `canvas.py` is the entry point. The `agent_tools/` subpackage provides a tool registry (`REGISTRY`, `get_schemas()`, `dispatch()`) in Ollama/Gemma function-calling format, used by the HF Space agent.
 
-The extension is no longer just an aspirational diagram. It now has a real layered structure.
+## canvas_tui
 
-| Layer | Role | Files |
-|------|------|------|
-| **UI** | Popup rendering and interaction | `extension/src/popup/*` |
-| **Runtime bridge** | Message helpers and shared contract | `extension/src/lib/extension-api.js`, `extension/src/lib/extension-contract.js` |
-| **Service orchestration** | Background handlers, badge updates, notifications | `extension/src/background.js` |
-| **Canvas access** | Shared browser-side client methods | `extension/src/lib/canvas-client.js` |
-| **Persistence** | IndexedDB stale-while-revalidate cache | `extension/src/lib/cache.js` |
+`src/canvas_tui/` is the terminal application built on Textual.
 
-## Why the Extension Refactor Matters
+| Layer | Files |
+|-------|-------|
+| App shell | `app.py`, `cli.py` |
+| Screens | `screens/` (dashboard, grades, files, syllabi, announcements, analytics, week view, settings) |
+| Widgets | `widgets/` (command bar, pomodoro, plots) |
+| Data | `api.py`, `models.py`, `state.py`, `cache.py`, `normalize.py`, `filtering.py` |
+| Infrastructure | `config.py`, `prefetch.py`, `adapters/` (SQLite cache backend) |
 
-Recent work moved the extension away from:
-- raw endpoint strings spread across multiple files
-- popup code depending on raw Chrome runtime message names
-- background logic acting as both transport and domain layer
+Canvas responses are cached in SQLite through `CacheBackendAdapter`.
 
-The new structure centralizes:
-- Canvas auth and endpoint access in `canvas-client.js`
-- runtime message names in `extension-contract.js`
-- popup/background calls in `extension-api.js`
+## Browser Extension
 
-That makes the extension easier to reason about and safer to extend.
+`canvas-client.js` owns all Canvas API calls and authentication. `extension-contract.js` defines message names shared between popup and background. `extension-api.js` wraps those so popup code never depends on raw runtime message strings. `background.js` handles service worker lifecycle, badge updates, and notification dispatch. `cache.js` implements a stale-while-revalidate store in IndexedDB.
 
-## Cache Strategy
+The manifest declares `nativeMessaging` permission. `native-host.js` manages a persistent connection to `com.cs3704.canvas_tracker`, letting the extension delegate Canvas queries to the Python SDK host process when running locally.
 
-| Surface | Cache |
-|---------|-------|
-| **TUI** | SQLite / local Python-side persistence |
-| **Extension** | IndexedDB with stale-while-revalidate helpers |
+## Cloudflare Worker Proxy
 
-The two surfaces do **not** share a runtime cache implementation today, but they follow similar separation principles.
+The live demo calls a fine-tuned Gemma model on a private HF Space. The Worker (`proxy/worker.js`) receives `POST /chat` from the browser and forwards it with a bearer token stored as a Cloudflare secret. The token never reaches the browser.
+
+```text
+Browser  ──POST /chat──>  Cloudflare Worker  ──Bearer HF_TOKEN──>  HF Space
+                              ^
+                          HF_TOKEN set via: wrangler secret put HF_TOKEN
+```
+
+An earlier build pipeline injected secrets into deployed JS via `sed` at deploy time. Because the secret never entered the git index, gitleaks could not detect the leak, but `curl` against the live site exposed the token in plaintext. Both leaked tokens were rotated, the build-time injection was removed, and the Worker pattern replaced it. The release checklist now includes a deployed-site grep verification step.
+
+CORS is restricted to an origin whitelist. Request bodies are capped at 4000 characters. Rotating the token requires one command and no redeploy: `wrangler secret put HF_TOKEN`.
+
+If the Worker is not deployed, [`proxy/iframe-fallback.html`](https://github.com/kleinpanic/CS3704-Canvas-Project/blob/main/proxy/iframe-fallback.html) embeds the HF Space in an iframe — no tokens anywhere, but loses the chat UI.
 
 ## Documentation Assets
 
-### Static diagrams
 - [Full Architecture SVG](https://github.com/kleinpanic/CS3704-Canvas-Project/blob/main/docs/architecture/complex-architecture.svg)
 - [Sync Flow SVG](https://github.com/kleinpanic/CS3704-Canvas-Project/blob/main/docs/architecture/sync-flow.svg)
-
-### Source diagrams
-- `docs/architecture/complex-architecture.mmd`
-- `docs/architecture/sync-sequence.mmd`
-
-## Security Architecture
-
-### Browser demo: no tokens in client JS
-
-The live demo at `kleinpanic.github.io/CS3704-Canvas-Project/demo/` calls the
-fine-tuned Gemma4 v7-dpo model on a private HuggingFace Space. To do this
-without exposing the HF token to the public:
-
-```
-Browser  ----POST /chat---->  Cloudflare Worker  ----Bearer HF_TOKEN---->  HF Space
-                                  ^
-                                  |
-                              HF_TOKEN held as a Cloudflare secret
-                              (set via `wrangler secret put HF_TOKEN`)
-                              never reaches the browser, never in code
-```
-
-The Worker source lives at [`proxy/worker.js`](https://github.com/kleinpanic/CS3704-Canvas-Project/blob/main/proxy/worker.js).
-Deploy procedure and rotation steps: [`proxy/README.md`](https://github.com/kleinpanic/CS3704-Canvas-Project/blob/main/proxy/README.md).
-
-### Why this exists
-
-An earlier build pipeline (pre-v3.0) injected secrets into a deployed JS file
-via `sed` substitution at GitHub-Pages-deploy time. Because the secret never
-entered the git index, gitleaks could not detect the leak — but `curl` against
-the deployed site exposed the tokens in plaintext. Both leaked tokens were
-rotated; the build-time injection was removed; the Worker pattern took its
-place. The release checklist now requires a deployed-site grep verification
-step before any release announcement.
-
-### Properties of this design
-
-- HF_TOKEN never reaches the browser; cannot be extracted from public JS.
-- CORS whitelist restricts which origins may use the proxy.
-- Body length cap (4000 chars) blocks trivial abuse.
-- Free-tier Cloudflare (100k req/day, 10ms CPU per request) handles class
-  demo load comfortably; the heavy lifting is on the HF Space.
-- Rotation is one command (`wrangler secret put HF_TOKEN`), no code change
-  and no redeploy.
-
-### Zero-infra alternative
-
-If the Worker is not deployed, [`proxy/iframe-fallback.html`](https://github.com/kleinpanic/CS3704-Canvas-Project/blob/main/proxy/iframe-fallback.html)
-embeds the HF Space directly in an iframe. Still no tokens anywhere, but
-loses the polished chat UI.
-
-## Current Reality vs Future Goal
-
-### Current reality
-- strong TUI codebase
-- working extension foundation
-- shared browser-side client layer
-- repo governance cleaned up around `main`
-
-### Future goal
-- deeper shared-core parity where business logic can be reused more directly across surfaces
-- stronger tests around the extension runtime bridge and client methods
-- broader extension feature coverage for files, announcements, and richer Canvas context
+- Source: `docs/architecture/complex-architecture.mmd`, `docs/architecture/sync-sequence.mmd`
