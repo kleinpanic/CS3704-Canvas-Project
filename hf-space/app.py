@@ -624,26 +624,27 @@ with gr.Blocks(theme=THEME, css=CUSTOM_CSS, title="Canvas Calendar Agent") as de
                 elem_id="calendar-pane",
             )
 
-    with gr.Accordion("Calendar examples (5 tools)", open=True):
-        with gr.Row():
+    gr.Markdown("### Try one of the 18 tools")
+    with gr.Row():
+        with gr.Column():
+            gr.Markdown("**Calendar (5)**")
             for ex in CALENDAR_EXAMPLES:
                 btn = gr.Button(ex, elem_classes=["example-btn"], size="sm")
-                btn.click(lambda x=ex: x, outputs=msg)
-    with gr.Accordion("Canvas examples (8 tools)", open=False):
-        with gr.Row():
-            for ex in CANVAS_EXAMPLES:
-                btn = gr.Button(ex, elem_classes=["example-btn"], size="sm")
-                btn.click(lambda x=ex: x, outputs=msg)
-    with gr.Accordion("Study examples (4 tools)", open=False):
-        with gr.Row():
-            for ex in STUDY_EXAMPLES:
-                btn = gr.Button(ex, elem_classes=["example-btn"], size="sm")
-                btn.click(lambda x=ex: x, outputs=msg)
-    with gr.Accordion("Reranker examples (1 tool)", open=False):
-        with gr.Row():
+                btn.click(lambda x=ex: x, outputs=msg, api_name=False)
+            gr.Markdown("**Reranker (1)**")
             for ex in RERANKER_EXAMPLES:
                 btn = gr.Button(ex, elem_classes=["example-btn"], size="sm")
-                btn.click(lambda x=ex: x, outputs=msg)
+                btn.click(lambda x=ex: x, outputs=msg, api_name=False)
+        with gr.Column():
+            gr.Markdown("**Canvas (8)**")
+            for ex in CANVAS_EXAMPLES:
+                btn = gr.Button(ex, elem_classes=["example-btn"], size="sm")
+                btn.click(lambda x=ex: x, outputs=msg, api_name=False)
+        with gr.Column():
+            gr.Markdown("**Study (4)**")
+            for ex in STUDY_EXAMPLES:
+                btn = gr.Button(ex, elem_classes=["example-btn"], size="sm")
+                btn.click(lambda x=ex: x, outputs=msg, api_name=False)
 
     # Wire send button + Enter-key submit. Outputs order MUST match chat() return:
     # (history, state, calendar_html).
@@ -651,13 +652,15 @@ with gr.Blocks(theme=THEME, css=CUSTOM_CSS, title="Canvas Calendar Agent") as de
         fn=chat,
         inputs=[msg, chatbot, state],
         outputs=[chatbot, state, calendar_html],
-    ).then(lambda: "", outputs=msg)
+        api_name=False,
+    ).then(lambda: "", outputs=msg, api_name=False)
 
     msg.submit(
         fn=chat,
         inputs=[msg, chatbot, state],
         outputs=[chatbot, state, calendar_html],
-    ).then(lambda: "", outputs=msg)
+        api_name=False,
+    ).then(lambda: "", outputs=msg, api_name=False)
 
 
 if __name__ == "__main__":
