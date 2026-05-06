@@ -18,10 +18,10 @@ jobs:
         run: |
           echo "Checking branch: $BRANCH_NAME"
           # Allow dependabot branches or standard feature branches
-          if [[ "$BRANCH_NAME" =~ ^(feature|fix|chore|docs|refactor|test|hotfix)/[a-z0-9._-]+$ ]] || [[ "$BRANCH_NAME" =~ ^dependabot/ ]]; then
+          if [[ "$BRANCH_NAME" =~ ^(feature|feat|fix|chore|docs|refactor|test|hotfix)/[a-z0-9._-]+$ ]] || [[ "$BRANCH_NAME" =~ ^dependabot/ ]]; then
             echo "✅ Branch name is valid"
           else
             echo "❌ Invalid branch name: $BRANCH_NAME"
-            echo "Expected: feature/*, fix/*, chore/*, docs/*, refactor/*, test/*, hotfix/*, or dependabot/*"
+            echo "Expected: feature/*, feat/*, fix/*, chore/*, docs/*, refactor/*, test/*, hotfix/*, or dependabot/*"
             exit 1
           fi
