@@ -710,7 +710,7 @@ RERANKER_EXAMPLES = [
 ]
 
 
-with gr.Blocks(title="Canvas Calendar Agent") as demo:
+with gr.Blocks(theme=THEME, css=CUSTOM_CSS, title="Canvas Calendar Agent") as demo:
     gr.HTML("""
     <div style="background:#1a0a0a;border:1px solid #d63e36;border-radius:6px;
                 padding:10px 14px;margin-bottom:8px;font-size:0.82rem;color:#d4d4db;">
@@ -783,6 +783,7 @@ with gr.Blocks(title="Canvas Calendar Agent") as demo:
             </div>
             """)
             chatbot = gr.Chatbot(
+                type="messages",
                 # gradio 6.x: `type="messages"` is the default and the keyword
                 # was removed. Specifying it crashes the Space at startup.
                 height=440,
@@ -856,4 +857,4 @@ with gr.Blocks(title="Canvas Calendar Agent") as demo:
 
 
 if __name__ == "__main__":
-    demo.queue().launch(server_name="0.0.0.0", server_port=7860, theme=THEME, css=CUSTOM_CSS)
+    demo.queue().launch(server_name="0.0.0.0", server_port=7860)
