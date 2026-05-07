@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Security — v2.1 Dependabot medium-alert closure
+
+- Bumped `transformers >= 4.53.0` and `torch >= 2.8.0` across `requirements.txt`, `hf-space/requirements.txt`, and `hf-space-pii/requirements.txt`. Closes ~26 of the 28 open MEDIUM-severity Dependabot alerts (multiple CVEs in transformers 4.4x and torch 2.6.x). Phase 2 hardening closed all critical+high; this closes the medium-severity tail. Some lows remain (RC versions only — `5.0.0rc3` and `2.7.1-rc1` — not pinning to RCs).
+
 ### Security — v2.1 Phase 2: OSSF Scorecard Score Lift
 
 - Workflow permissions scope-downs across 8 workflows: top-level `permissions: read-all` + job-level write grants only where required. Closes the OSSF Token-Permissions check (was 0/10).
