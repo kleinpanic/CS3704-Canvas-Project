@@ -1,0 +1,77 @@
+name: Scorecard Gate
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      floor:
+        description: "Minimum score (default 6.5)"
+        required: false
+        default: "6.5"
+
+permissions: read-all
+
+jobs:
+  scorecard-gate:
+    name: OSSF Scorecard Score Gate
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      id-token: write
+      contents: read
+      actions: read
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450  # v2
+        with:
+          egress-policy: audit
+
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+        with:
+          persist-credentials: false
+
+      - name: Download and verify Scorecard CLI
+        env:
+          SCORECARD_VERSION: "5.5.0"
+          SCORECARD_SHA256: "83b90a05c1540ef1390db1cd5711e5fd04be9c1d8537fb84d39d02092d6a8dff"
+        run: |
+          TARBALL="scorecard_${SCORECARD_VERSION}_linux_amd64.tar.gz"
+          curl -sL "https://github.com/ossf/scorecard/releases/download/v${SCORECARD_VERSION}/${TARBALL}" \
+            -o "${TARBALL}"
+          echo "${SCORECARD_SHA256}  ${TARBALL}" | sha256sum --check --strict
+          tar -xzf "${TARBALL}" scorecard
+          chmod +x scorecard
+
+      - name: Run Scorecard and enforce floor
+        env:
+          GITHUB_AUTH_TOKEN: ${{ secrets.SCORECARD_READ_TOKEN || github.token }}
+          FLOOR: ${{ inputs.floor || '6.5' }}
+        run: |
+          ./scorecard \
+            --repo="https://github.com/${{ github.repository }}" \
+            --format=json \
+            --show-details \
+            > scorecard-results.json 2>&1 || true
+
+          SCORE=$(python3 -c "
+          import json, sys
+          with open('scorecard-results.json') as f:
+              data = json.load(f)
+          print(data.get('score', 0))
+          " 2>/dev/null || echo "0")
+
+          echo "Scorecard score: ${SCORE}"
+          echo "Floor: ${FLOOR}"
+
+          python3 -c "
+          import sys
+          score = float('${SCORE}')
+          floor = float('${FLOOR}')
+          if score < floor:
+              print(f'FAIL: score {score} is below floor {floor}')
+              sys.exit(1)
+          else:
+              print(f'PASS: score {score} >= floor {floor}')
+          "
