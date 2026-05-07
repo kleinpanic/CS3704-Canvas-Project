@@ -63,14 +63,14 @@ See [Quick Start](docs/QUICKSTART.md) · [Examples](examples/) · [Public Roadma
 
 | Surface | Channel | Status |
 |---------|---------|--------|
-| **canvas-sdk** (Python) | [PyPI](https://pypi.org/project/canvas-sdk/) | publish queued — see `release.yml` `publish-pypi` job |
-| **canvas-tui** (Python) | [PyPI](https://pypi.org/project/canvas-tui/) | publish queued — `pyproject.toml` v1.2.0 |
+| **canvas-sdk** (Python) | [PyPI](https://pypi.org/project/canvas-sdk/) | live — v1.2.3 on PyPI |
+| **canvas-tui** (Python) | [PyPI](https://pypi.org/project/canvas-tui/) | not yet published — pyproject.toml v2.0.0; tracked in [#177](https://github.com/kleinpanic/CS3704-Canvas-Project/issues/177) |
 | **canvas-tui** (Docker) | `ghcr.io/kleinpanic/canvas-tui` | live — built nightly + on tag (#140) |
 | **Chrome extension** | [Chrome Web Store](https://chromewebstore.google.com/) | listing in progress — install via `Load unpacked` for now |
 | **HF Space demo** | [Live](https://huggingface.co/spaces/kleinpanic93/canvas-calendar-agent-demo) | live — auto-deploys on push to `main` |
 | **HF Model** | [v7-DPO](https://huggingface.co/kleinpanic93/canvas-calendar-agent-v7-dpo) | live |
 
-> **PyPI publication queued — Chrome Web Store listing in progress.** Trusted publisher registration at pypi.org pending; first stable tag (`v1.0.0`+) will fire `publish-pypi`.
+> **canvas-sdk v1.2.3 live on PyPI (API token).** OIDC trusted publisher not yet registered at pypi.org. Chrome Web Store listing in progress — install via `Load unpacked` for now.
 
 ---
 
@@ -90,6 +90,9 @@ pip install canvas-sdk[autodownload]    # fetches the v7-dpo Gemma4 model from H
 pip install canvas-sdk[gemini]          # optional Gemini fallback
 pip install canvas-sdk[all]             # both
 ```
+
+> **Note:** PyPI publishes v1.2.3. The v2.0.0 local source (with the updated agent architecture)
+> can be installed with `pip install -e src/sdk/`.
 
 ```python
 import os
@@ -112,7 +115,7 @@ print(agent.run("What is due this week?"))
 
 ```bash
 export CANVAS_TOKEN="your_canvas_token_here"
-export CANVAS_BASE_URL="https://canvas.vt.edu"   # optional, defaults to VT
+export CANVAS_BASE_URL="https://canvas.yourschool.edu"  # required — no default; tool exits with error if unset
 
 pipx install .          # recommended
 # or: pip install .
