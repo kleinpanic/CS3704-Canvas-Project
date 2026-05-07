@@ -11,6 +11,12 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+# Skip these tests when the Space's runtime deps aren't installed in the env
+# (CI runners outside the deploy-pii-space workflow won't have fastapi/uvicorn).
+pytest.importorskip("fastapi")
+pytest.importorskip("uvicorn")
+pytest.importorskip("slowapi")
+
 # ---------------------------------------------------------------------------
 # Path setup: hf-space-pii/ is not a package; add it to sys.path so we can
 # import app.py. We also need to mock transformers.pipeline before import.

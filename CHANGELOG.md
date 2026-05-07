@@ -5,6 +5,44 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-05-06
+
+### Public-Contribution Hardening — 12-phase milestone
+
+This release lands the v2.0 Public-Contribution Hardening milestone: 91 atomic
+GPG-signed commits across 12 phases. Highlights:
+
+- Phase 0/1: clean-room SDK rewrite — 14,400 derived lines deleted, 472-LOC
+  pure-stdlib `CanvasClient` written via two-agent clean-room procedure
+  (Gemini SPEC.md → Sonnet implementer with strict isolation). `canvas-sdk`
+  is now original code under GPL-3.0; `requests`/`arrow`/`pytz`/`canvasapi-port`
+  removed from the runtime.
+- Phase 2/3/4: dataset contribution pipeline secured — Piiranha v1 PII scrub in
+  `share_my_canvas.py`, `--dry-run`/`--inspect` flags, regression test against
+  the existing `Williammm23.jsonl` leak, new `dataset-validation.yml` CI gate,
+  dedicated `kleinpanic93/canvas-pii-scrub` HF Space (FastAPI + Piiranha).
+- Phase 5: standalone-release readiness — `CANVAS_BASE_URL` required, env-driven
+  config, fork CI guards, SPDX headers, `--no-scrub` and `?nopiiscrub=1`
+  foot-guns removed.
+- Phase 6: SOTA CI/CD + supply-chain — every workflow pinned to commit SHAs +
+  `step-security/harden-runner`; OSSF Scorecard; SBOM (cyclonedx); SLSA
+  provenance; sigstore-signed multi-arch (amd64+arm64) Docker; OIDC
+  trusted-publisher PyPI; coverage gate raised.
+- Phase 7: HF Space UI upgrade — `gr.Examples`, `gr.HTML` hero, streaming via
+  `TextIteratorStreamer`, browser-chrome mock, post-deploy smoke test.
+- Phase 8: TUI/extension SDK discipline — `app.py` decomposed into screens,
+  keybinding registry, `tests/{sdk,tui,extension,integration}/` layered.
+  Closes GH issues #43, #45, #46, #47, #50, #51, #52.
+- Phase 9: badges + devcontainer + Codecov — live coverage %, official HF
+  badges, PyPI badges, OSSF badge, `.devcontainer/devcontainer.json`.
+- Phase 10: SOTA polish — `examples/`, public `ROADMAP.md`, `docs/QUICKSTART.md`,
+  expanded `SECURITY.md`/`MAINTAINERS.md`, all-contributors bot, `.editorconfig`.
+- Phase 11: cleanup — dead `release.yml` blocks deleted, AI-tell docstrings
+  rewritten, `tools/clean.sh` + `make clean`, pre-commit smell-marker grep gate.
+
+Test count: 416 → 612 (+196 tests, 84% coverage).
+GH issues closed: 6. Issue tracker: #177.
+
 ## [Unreleased]
 
 ### BREAKING CHANGES
