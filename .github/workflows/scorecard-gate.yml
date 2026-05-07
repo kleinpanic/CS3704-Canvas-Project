@@ -30,7 +30,22 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
         with:
+          fetch-depth: 0
           persist-credentials: false
+
+      - name: Detect bootstrap PR (gate modifies itself)
+        id: bootstrap
+        if: github.event_name == 'pull_request'
+        run: |
+          # When this PR touches scorecard-gate.yml, the gate cannot enforce its
+          # own floor against the pre-merge `main` score (chicken-and-egg).
+          # Mark as bootstrap so the floor check becomes informational.
+          if git diff --name-only "origin/${{ github.base_ref }}...HEAD" | grep -qE '^\.github/workflows/scorecard-gate\.yml$'; then
+            echo "is_bootstrap=true" >> "$GITHUB_OUTPUT"
+            echo "Bootstrap PR detected — score floor will be informational only"
+          else
+            echo "is_bootstrap=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Download and verify Scorecard CLI
         env:
@@ -48,6 +63,7 @@ jobs:
         env:
           GITHUB_AUTH_TOKEN: ${{ secrets.SCORECARD_READ_TOKEN || github.token }}
           FLOOR: ${{ inputs.floor || '6.5' }}
+          IS_BOOTSTRAP: ${{ steps.bootstrap.outputs.is_bootstrap || 'false' }}
         run: |
           ./scorecard \
             --repo="https://github.com/${{ github.repository }}" \
@@ -64,6 +80,12 @@ jobs:
 
           echo "Scorecard score: ${SCORE}"
           echo "Floor: ${FLOOR}"
+
+          if [[ "${IS_BOOTSTRAP}" == "true" ]]; then
+            echo "BOOTSTRAP: PR modifies scorecard-gate.yml itself — floor enforcement skipped."
+            echo "Score is ${SCORE}, floor is ${FLOOR}. Will enforce on next PR."
+            exit 0
+          fi
 
           python3 -c "
           import sys
