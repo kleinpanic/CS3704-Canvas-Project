@@ -6,6 +6,6 @@ transformers==5.8.0  # pinned because git-HEAD broke us once
 # The torch CVEs fixed in 2.8.0 are not exposed in this Space's request path
 # (model.safetensors is loaded once, no torch.load on user input). Revisit when
 # transformers 6.x lands or when v2-piiranha-style retraining happens.
-torch==2.7.0
+torch==2.8.0
 accelerate==1.7.0  # pinned because git-HEAD broke us once
 spaces
