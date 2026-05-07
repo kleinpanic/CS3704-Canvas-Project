@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Fixed — README badges rendering as raw markdown on github.com
+
+- `README.md`: surrounded the two stripped-badge HTML comments (`<!-- codecov badge: removed... -->` and `<!-- canvas-tui badge restored when #177 ships -->`) with blank lines. CommonMark spec rule 4 (HTML block start): an HTML comment without surrounding blank lines triggers HTML block mode for everything below it until the next blank line — meaning every badge after the codecov comment was being rendered as LITERAL `[![PyPI canvas-sdk](...)](...)` markdown text on github.com instead of as images. Only the 4 workflow status badges (CI/Security/Pages/Release) above the comment were rendering. Fix: blank lines around both comments.
+
 ### Fixed — pip syntax regression in pii-scrub requirements
 
 - `huggingface/pii-scrub/requirements.txt`: changed `torch>=2.8.0+cpu` to `torch==2.8.0+cpu`. PEP 440 requires the `+local` version label (e.g., `+cpu`) to be paired with `==` or `!=`, not `>=`. The previous syntax broke the `Dependency Graph` workflow on `main` (`InstallationError: Local version label can only be used with == or != operators`).
