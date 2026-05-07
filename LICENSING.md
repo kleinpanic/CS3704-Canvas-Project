@@ -9,8 +9,8 @@ All source code under `src/` carries `SPDX-License-Identifier: GPL-3.0-or-later`
 
 Two Hugging Face Space deployments in this repository declare `apache-2.0` in their frontmatter:
 
-- `hf-space/README.md` — `license: apache-2.0`
-- `hf-space-pii/README.md` — `license: apache-2.0`
+- `huggingface/agent-demo/README.md` — `license: apache-2.0`
+- `huggingface/pii-scrub/README.md` — `license: apache-2.0`
 
 ### Rationale
 

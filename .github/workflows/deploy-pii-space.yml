@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - "hf-space-pii/**"
+      - "huggingface/pii-scrub/**"
   workflow_dispatch:
 
 permissions:
@@ -25,14 +25,14 @@ jobs:
         if: ${{ env.HAS_HF_TOKEN == 'true' }}
         run: pip install "huggingface_hub[cli]>=0.23"
 
-      - name: Upload hf-space-pii/ to HuggingFace Space
+      - name: Upload huggingface/pii-scrub/ to HuggingFace Space
         if: ${{ env.HAS_HF_TOKEN == 'true' }}
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
           GIT_SHA: ${{ github.sha }}
         run: |
           hf upload kleinpanic93/canvas-pii-scrub \
-            hf-space-pii/ . \
+            huggingface/pii-scrub/ . \
             --repo-type space \
             --commit-message "deploy: $GIT_SHA"
 

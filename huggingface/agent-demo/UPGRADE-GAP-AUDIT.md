@@ -1,6 +1,6 @@
 # HF Space Upgrade — Gap Audit
 
-Audit performed during the `feat/hf-space-state-calendar-upgrade` PR. Captures the state of `hf-space/app.py` as deployed (commit `8210d61`-era) and the deltas applied in this PR.
+Audit performed during the `feat/hf-space-state-calendar-upgrade` PR. Captures the state of `huggingface/agent-demo/app.py` as deployed (commit `8210d61`-era) and the deltas applied in this PR.
 
 ## Why mocks at all?
 
@@ -40,12 +40,12 @@ Net change in surfaced examples: **8 → 18**.
 The advisor brief said "tool dispatch becomes `result = ListEvents(adapter).run(args)` etc." That literal API does not exist:
 
 1. `canvas_sdk.agent_tools.calendar_tools.ListEvents` uses `@staticmethod def call(args)`, not `.run(args)`.
-2. The static `call(args)` resolves the adapter via `CalendarAdapter.from_config()`, which calls `from canvas_tui.config import load_config` — `canvas_tui` is a separate package not installable from PyPI and not in `hf-space/requirements.txt`.
-3. `hf-space/requirements.txt` doesn't include `canvas-sdk`, and the deploy workflow only uploads the `hf-space/` directory to the Space (not `src/sdk/`).
+2. The static `call(args)` resolves the adapter via `CalendarAdapter.from_config()`, which calls `from canvas_tui.config import load_config` — `canvas_tui` is a separate package not installable from PyPI and not in `huggingface/agent-demo/requirements.txt`.
+3. `huggingface/agent-demo/requirements.txt` doesn't include `canvas-sdk`, and the deploy workflow only uploads the `huggingface/agent-demo/` directory to the Space (not `src/sdk/`).
 
 The achievable form of "SDK reuse" is therefore:
 - **SDK side:** add `InMemoryCalendarBackend` to `src/sdk/canvas_sdk/backends/calendar_adapter.py` so the SDK gains a real, in-memory backend matching the `CalendarBackend` abstract contract — with its own round-trip self-test under `if __name__ == "__main__"`. Anyone with `canvas-sdk` installed can now use it.
-- **Space side:** inline a copy of the same class into `hf-space/app.py`. The contract is identical to the SDK class. Both stay in lockstep on contract — not on import.
+- **Space side:** inline a copy of the same class into `huggingface/agent-demo/app.py`. The contract is identical to the SDK class. Both stay in lockstep on contract — not on import.
 
 This is documented as a deviation in the SUMMARY.md (Rule 3 — blocked dependency path).
 

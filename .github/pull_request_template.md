@@ -31,6 +31,6 @@
 
 - [ ] No new top-level files outside `ALLOWLIST` (or ALLOWLIST updated with rationale)
 - [ ] No new root-level `*.md` files outside `ALLOWLIST`
-- [ ] New Dockerfile (if any) is in `docker/` or `hf-space*/`
+- [ ] New Dockerfile (if any) is in `docker/` or `huggingface/`
 - [ ] New `pyproject.toml` (if any) is in `src/sdk/` or repo root
 - [ ] `tools/check-repo-org.sh` shows no NEW warnings beyond what was on `main` before this PR

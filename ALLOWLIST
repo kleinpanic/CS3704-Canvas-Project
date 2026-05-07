@@ -40,8 +40,7 @@ docs                    # Canonical user docs (Phase 13 will sync to Wiki + GH P
 docs-site               # GitHub Pages source (HTML/Tailwind/JS — built by Pages, not docs/ source)
 examples                # Runnable usage examples
 extension               # Browser extension source
-hf-space                # Canvas Calendar Agent Demo HF Space (sdk: gradio)
-hf-space-pii            # canvas-pii-scrub HF Space (Dockerfile-based)
+huggingface              # HF Space sources (agent-demo + pii-scrub) consolidated under one parent
 newsfragments           # Towncrier fragments (Phase 5 will formalize as primary changelog mechanism)
 proxy                   # Cloudflare Worker source (CF Worker proxies HF Space agent calls)
 scripts                 # Build/release scripts

@@ -53,7 +53,8 @@ extension/                Browser extension source (presentation only)
 src/canvas_tui/           TUI application source code
   agent/                  v2 CalendarAgent (tool calls + study planning)
 src/sdk/canvas_sdk/       Python SDK — single source of agent logic
-hf-space/                 HuggingFace Space (Gradio app loading v7-dpo)
+huggingface/agent-demo/   HuggingFace Space (Gradio app loading v7-dpo)
+huggingface/pii-scrub/    HuggingFace PII Scrub Space (FastAPI)
 tests/                    Test suite
 scripts/                  Data contribution utilities (see scripts/README.md)
 docs/                     Architecture and research docs
@@ -162,7 +163,7 @@ Types: `feat`, `fix`, `docs`, `chore`, `refactor`, `test`, `perf`, `style`, `ci`
 
 Examples:
 - `feat(sdk): add calendar adapter migration`
-- `fix(hf-space): guard empty-send path`
+- `fix(agent-demo): guard empty-send path`
 - `docs(readme): add distribution table`
 
 PRs with non-conventional titles will be rejected by the `pr-quality` CI check.

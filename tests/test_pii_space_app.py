@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Tests for hf-space-pii/app.py — FastAPI PII scrub Space."""
+"""Tests for huggingface/pii-scrub/app.py — FastAPI PII scrub Space."""
 
 from __future__ import annotations
 
@@ -18,11 +18,11 @@ pytest.importorskip("uvicorn")
 pytest.importorskip("slowapi")
 
 # ---------------------------------------------------------------------------
-# Path setup: hf-space-pii/ is not a package; add it to sys.path so we can
+# Path setup: huggingface/pii-scrub/ is not a package; add it to sys.path so we can
 # import app.py. We also need to mock transformers.pipeline before import.
 # ---------------------------------------------------------------------------
 
-_HF_SPACE_DIR = str(Path(__file__).resolve().parent.parent / "hf-space-pii")
+_HF_SPACE_DIR = str(Path(__file__).resolve().parent.parent / "huggingface" / "pii-scrub")
 if _HF_SPACE_DIR not in sys.path:
     sys.path.insert(0, _HF_SPACE_DIR)
 
