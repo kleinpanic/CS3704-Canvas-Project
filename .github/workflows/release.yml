@@ -158,8 +158,7 @@ jobs:
         run: |
           find sdk-dist/ -name "canvas_sdk-*.tar.gz" \
             -exec mv {} "sdk-dist/canvas-sdk-${VERSION}.tar.gz" \;
-          find sdk-dist/ -name "canvas_sdk-*-py3-none-any.whl" \
-            -exec mv {} "sdk-dist/canvas-sdk-${VERSION}-py3-none-any.whl" \;
+          # Wheel intentionally NOT renamed — PEP 427 requires underscored package name in wheel filename. PyPI rejects hyphen-named wheels with metadata errors.
 
       - name: Compute artifact hashes
         id: hash
