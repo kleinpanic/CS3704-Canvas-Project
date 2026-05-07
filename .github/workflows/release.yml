@@ -419,6 +419,7 @@ jobs:
         with:
           skip-existing: true
           packages-dir: dist/
+          password: ${{ secrets.PYPI_API_TOKEN }}
 
 
   generate-sbom:
