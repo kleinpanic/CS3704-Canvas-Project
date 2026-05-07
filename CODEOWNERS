@@ -9,7 +9,7 @@
 /extension/               @Williammm23
 
 # SDK
-/sdk/                     @kleinpanic
+/src/sdk/                  @kleinpanic
 
 # Docs
 /docs-site/               @pjie22
