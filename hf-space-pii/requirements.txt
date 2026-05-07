@@ -1,0 +1,11 @@
+# pinned: transformers model API stability — avoid git-HEAD breakage (see hf-space/requirements.txt)
+transformers==4.47.1
+# pinned: CPU-only wheel keeps image under 3 GB on HF Spaces CPU Basic
+torch==2.5.1+cpu
+# pinned: FastAPI + Uvicorn for HTTP layer
+fastapi==0.115.6
+uvicorn==0.32.1
+# rate limiting middleware
+slowapi==0.1.9
+# pydantic ships with FastAPI but pin for reproducibility
+pydantic==2.10.3

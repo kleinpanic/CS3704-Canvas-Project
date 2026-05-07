@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """OpenAI-compatible LLM backend for Gemma4 inference.
 
 Talks to any OpenAI-compatible chat-completions endpoint (vLLM, llama.cpp, forge,

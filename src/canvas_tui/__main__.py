@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Package entry point for ``python -m canvas_tui``."""
 
 from .app import main

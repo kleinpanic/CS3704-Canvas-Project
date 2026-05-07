@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Modal prompt screens for Canvas TUI."""
 
 from __future__ import annotations

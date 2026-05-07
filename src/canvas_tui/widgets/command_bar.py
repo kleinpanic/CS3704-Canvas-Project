@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Paginated command bar — shows keybindings in groups, cycled with [ and ]."""
 
 from __future__ import annotations

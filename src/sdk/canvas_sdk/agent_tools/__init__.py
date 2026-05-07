@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Agent tool registry for the Canvas Calendar Agent.
 
 Each tool class exposes:

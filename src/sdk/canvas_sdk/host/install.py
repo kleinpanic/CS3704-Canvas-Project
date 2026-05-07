@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """
 Install the Canvas Tracker native messaging host.
 
@@ -13,13 +14,11 @@ unpacked extension in developer mode.
 
 import argparse
 import json
-import os
 import platform
 import stat
 import sys
 import textwrap
 from pathlib import Path
-
 
 HOST_NAME = "com.cs3704.canvas_tracker"
 
@@ -42,7 +41,6 @@ def install(extension_id: str) -> None:
         sys.exit(1)
 
     python_exe = sys.executable
-    host_dir = Path(__file__).parent
 
     # Write wrapper script that the manifest `path` points to
     wrapper_path = Path.home() / ".local" / "bin" / "canvas_tracker_host"

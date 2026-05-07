@@ -4,12 +4,19 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import os
 import re
+import threading
 from typing import Any
 
 import gradio as gr
 import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer, TextIteratorStreamer
+
+# CANVAS_STREAMING=0 disables TextIteratorStreamer and falls back to the
+# blocking generate_step() path (chat()). Set this in HF Space Settings ->
+# Variables if streaming breaks on ZeroGPU.
+_STREAMING = os.environ.get("CANVAS_STREAMING", "1") == "1"
 
 try:
     import spaces
@@ -421,6 +428,104 @@ def generate_step(messages):
     return tokenizer.decode(out[0, input_ids.shape[1]:], skip_special_tokens=False)
 
 
+@GPU_DECORATOR
+def generate_step_streaming(messages):
+    input_ids = _to_input_ids(messages)
+    if torch.cuda.is_available():
+        model.to("cuda")
+        input_ids = input_ids.to("cuda")
+    streamer = TextIteratorStreamer(
+        tokenizer, skip_prompt=True, skip_special_tokens=False
+    )
+    gen_kwargs = dict(
+        input_ids=input_ids,
+        do_sample=True, temperature=1.0, top_p=0.95, top_k=64,
+        max_new_tokens=MAX_NEW_TOKENS,
+        pad_token_id=tokenizer.eos_token_id,
+        streamer=streamer,
+    )
+    t = threading.Thread(target=model.generate, kwargs=gen_kwargs)
+    t.start()
+    for token_text in streamer:
+        yield token_text
+    t.join()
+
+
+def chat_stream(message: str, history: list, state: dict | None):
+    """Generator version of chat(). Yields (history, state, calendar_html) tuples
+    with progressively longer assistant messages.
+
+    If _STREAMING is False, delegates to the blocking chat() and yields once.
+    """
+    if not _STREAMING:
+        yield from [chat(message, history, state)]
+        return
+
+    if state is None:
+        state = init_state()
+    if not (message or "").strip():
+        yield history or [], state, render_calendar_html(state)
+        return
+
+    msgs = [{"role": "system", "content": SYSTEM_PROMPT}]
+    for h in history or []:
+        if isinstance(h, dict):
+            msgs.append({"role": h.get("role", "user"), "content": h.get("content", "")})
+        elif isinstance(h, (list, tuple)) and len(h) >= 2:
+            if h[0]: msgs.append({"role": "user", "content": h[0]})
+            if h[1]: msgs.append({"role": "assistant", "content": h[1]})
+    msgs.append({"role": "user", "content": message})
+
+    tool_log: list[dict] = []
+    raw = ""
+    MAX_CALLS_PER_TURN = 2
+    for _ in range(MAX_TURNS):
+        partial = ""
+        for token in generate_step_streaming(msgs):
+            partial += token
+            partial_history = (history or []) + [
+                {"role": "user", "content": message},
+                {"role": "assistant", "content": partial},
+            ]
+            yield partial_history, state, render_calendar_html(state)
+        raw = partial
+        calls = parse_tool_calls(raw)[:MAX_CALLS_PER_TURN]
+        msgs.append({"role": "assistant", "content": raw})
+        if not calls:
+            break
+        for call in calls:
+            already = any(
+                t["tool"] == call["tool"] and t["args"] == call["args"]
+                for t in tool_log
+            )
+            if already:
+                continue
+            result, state = apply_tool(call["tool"], call["args"], state)
+            tool_log.append({"tool": call["tool"], "args": call["args"], "result": result})
+            msgs.append({"role": "user", "content": format_tool_result(call["tool"], result)})
+
+    final = extract_final_answer(raw)
+    if not final or final == "(no final answer)":
+        final = summarize_tool_results(tool_log)
+    if tool_log:
+        rows = "\n".join(
+            f"| `{t['tool']}` | `{json.dumps(t['args'])[:70]}` | `{json.dumps(t['result'])[:90]}` |"
+            for t in tool_log
+        )
+        table = f"| Tool | Args | Result |\n|------|------|--------|\n{rows}"
+        label = f"{len(tool_log)} tool call{'s' if len(tool_log) > 1 else ''}"
+        reply = f"{final}\n\n<details><summary>🔧 {label} (mock data — session-local state)</summary>\n\n{table}\n\n</details>"
+    else:
+        reply = final
+
+    new_history = (history or []) + [
+        {"role": "user", "content": message},
+        {"role": "assistant", "content": reply},
+    ]
+    state["tool_log"].extend(tool_log)
+    yield new_history, state, render_calendar_html(state)
+
+
 # ---------------------------------------------------------------------------
 # Chat function — bound to gr.Blocks layout.
 # Signature: (message, history, state) -> (history, state, calendar_html).
@@ -559,7 +664,14 @@ button.example-btn {
 button.example-btn:hover { border-color: #d63e36 !important; background: #1f1010 !important; color: #ffffff !important; }
 .description { font-size: 0.82rem !important; line-height: 1.6 !important; color: #9ca3af !important; }
 #calendar-pane { background: #111114; border: 1px solid #2e2e38; border-radius: 8px; min-height: 440px; max-height: 600px; overflow-y: auto; }
+#chat-panel { border-radius: 0 0 8px 8px !important; border-top: none !important; }
 """
+
+_MODEL_URL = "https://huggingface.co/kleinpanic93/canvas-calendar-agent-v7-dpo"
+_DATASET_URL = "https://huggingface.co/datasets/kleinpanic93/canvas-calendar-preferences-v7"
+_COLLECTION_URL = "https://huggingface.co/collections/kleinpanic93/canvas-calendar-agent-v30-69fa6462f697e0342b21dfe0"
+_GITHUB_URL = "https://github.com/kleinpanic/CS3704-Canvas-Project"
+_DOCS_URL = "https://kleinpanic.github.io/CS3704-Canvas-Project/agent-demo/method.html"
 
 DESCRIPTION_MD = """
 Fine-tuned **Gemma-4-E2B-IT** with DPO (β=0.3, small-N regularization). Speaks the native Gemma-4 tool protocol for **18 tools** across 4 families. _Trajectory counts and bench scores are TBD post-phase-1/4; numbers shown in v7-broken artifacts are pre-rebuild and not verified. See [How it Works](https://kleinpanic.github.io/CS3704-Canvas-Project/agent-demo/method.html) for the cited methodology._
@@ -567,9 +679,6 @@ Fine-tuned **Gemma-4-E2B-IT** with DPO (β=0.3, small-N regularization). Speaks 
 `canvas.*` assignments · grades · syllabi · planner &nbsp;|&nbsp; `calendar.*` scheduling · free blocks &nbsp;|&nbsp; `reranker.*` priority hints &nbsp;|&nbsp; `study.*` exam prep · spaced repetition
 
 > ⚠️ **Mock data** — no Canvas credentials in this Space. Calendar uses a **session-local in-memory backend** (mirrors `canvas_sdk.backends.calendar_adapter.InMemoryCalendarBackend`) so create/delete/modify/list round-trips behave coherently within a single browser tab. For live data: `pip install canvas-sdk[autodownload]`.
-> ⏱ Cold-start after inactivity ~30 s (ZeroGPU). Subsequent responses are fast.
-
-[Model](https://huggingface.co/kleinpanic93/canvas-calendar-agent-v7-dpo) · [Dataset](https://huggingface.co/datasets/kleinpanic93/canvas-calendar-preferences-v7) · [Collection](https://huggingface.co/collections/kleinpanic93/canvas-calendar-agent-v30-69fa6462f697e0342b21dfe0) · [GitHub](https://github.com/kleinpanic/CS3704-Canvas-Project) · [Docs](https://kleinpanic.github.io/CS3704-Canvas-Project/agent-demo/method.html)
 """
 
 
@@ -602,18 +711,83 @@ RERANKER_EXAMPLES = [
 
 
 with gr.Blocks(theme=THEME, css=CUSTOM_CSS, title="Canvas Calendar Agent") as demo:
-    gr.Markdown("# Canvas Calendar Agent")
+    gr.HTML("""
+    <div style="background:#1a0a0a;border:1px solid #d63e36;border-radius:6px;
+                padding:10px 14px;margin-bottom:8px;font-size:0.82rem;color:#d4d4db;">
+      <strong style="color:#d63e36;">&#9200; Cold-start notice:</strong>
+      The first message after a quiet period takes ~30&nbsp;s while the GPU warms up
+      (ZeroGPU free tier). Subsequent messages are fast.
+    </div>
+    """)
+    gr.HTML(f"""
+    <div style="background:#111114;border:1px solid #2e2e38;border-radius:8px;
+                padding:14px 18px;margin-bottom:12px;display:flex;flex-wrap:wrap;
+                align-items:center;gap:16px;">
+      <div style="flex:1;min-width:200px;">
+        <div style="color:#d63e36;font-weight:700;font-size:1.05rem;">
+          Canvas Calendar Agent
+        </div>
+        <div style="color:#9ca3af;font-size:0.78rem;margin-top:2px;">
+          Fine-tuned Gemma-4-E2B-IT &middot; DPO &beta;=0.3 &middot;
+          <span style="background:#2e2e38;color:#d63e36;border-radius:4px;
+                       padding:1px 6px;font-size:0.72rem;">v7-DPO</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:20px;flex-wrap:wrap;">
+        <div style="text-align:center;">
+          <div style="color:#d63e36;font-weight:700;font-size:1.2rem;">1,071</div>
+          <div style="color:#9ca3af;font-size:0.7rem;">DPO pairs</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="color:#d63e36;font-weight:700;font-size:1.2rem;">18</div>
+          <div style="color:#9ca3af;font-size:0.7rem;">tools</div>
+        </div>
+      </div>
+      <div style="font-size:0.78rem;display:flex;gap:10px;flex-wrap:wrap;">
+        <a href="{_MODEL_URL}" target="_blank"
+           style="color:#d63e36;text-decoration:none;">Model</a>
+        <a href="{_DATASET_URL}" target="_blank"
+           style="color:#d63e36;text-decoration:none;">Dataset</a>
+        <a href="{_COLLECTION_URL}" target="_blank"
+           style="color:#d63e36;text-decoration:none;">Collection</a>
+        <a href="{_GITHUB_URL}" target="_blank"
+           style="color:#d63e36;text-decoration:none;">GitHub</a>
+        <a href="{_DOCS_URL}" target="_blank"
+           style="color:#d63e36;text-decoration:none;">How it Works</a>
+      </div>
+    </div>
+    """)
     gr.Markdown(DESCRIPTION_MD, elem_classes=["description"])
 
     state = gr.State(value=init_state)
 
     with gr.Row(equal_height=True):
         with gr.Column(scale=3):
+            gr.HTML("""
+            <div style="background:#1e1e24;border:1px solid #2e2e38;border-radius:8px 8px 0 0;
+                        padding:8px 12px;display:flex;align-items:center;gap:10px;
+                        border-bottom:none;">
+              <div style="display:flex;gap:5px;">
+                <span style="width:11px;height:11px;border-radius:50%;
+                             background:#ff5f56;display:inline-block;"></span>
+                <span style="width:11px;height:11px;border-radius:50%;
+                             background:#ffbd2e;display:inline-block;"></span>
+                <span style="width:11px;height:11px;border-radius:50%;
+                             background:#27c93f;display:inline-block;"></span>
+              </div>
+              <div style="flex:1;background:#111114;border:1px solid #2e2e38;border-radius:4px;
+                          padding:3px 10px;font-size:0.72rem;color:#6b7280;
+                          font-family:'Cascadia Code',monospace;">
+                canvas.vt.edu/calendar — Canvas Calendar Agent Demo
+              </div>
+            </div>
+            """)
             chatbot = gr.Chatbot(
                 type="messages",
                 height=440,
                 show_label=False,
                 avatar_images=None,
+                elem_id="chat-panel",
             )
             with gr.Row(elem_classes=["input-row"]):
                 msg = gr.Textbox(
@@ -630,39 +804,51 @@ with gr.Blocks(theme=THEME, css=CUSTOM_CSS, title="Canvas Calendar Agent") as de
                 elem_id="calendar-pane",
             )
 
-    gr.Markdown("### Try one of the 18 tools")
-    with gr.Row():
-        with gr.Column():
-            gr.Markdown("**Calendar (5)**")
-            for ex in CALENDAR_EXAMPLES:
-                btn = gr.Button(ex, elem_classes=["example-btn"], size="sm")
-                btn.click(lambda x=ex: x, outputs=msg, api_name=False)
-            gr.Markdown("**Reranker (1)**")
-            for ex in RERANKER_EXAMPLES:
-                btn = gr.Button(ex, elem_classes=["example-btn"], size="sm")
-                btn.click(lambda x=ex: x, outputs=msg, api_name=False)
-        with gr.Column():
-            gr.Markdown("**Canvas (8)**")
-            for ex in CANVAS_EXAMPLES:
-                btn = gr.Button(ex, elem_classes=["example-btn"], size="sm")
-                btn.click(lambda x=ex: x, outputs=msg, api_name=False)
-        with gr.Column():
-            gr.Markdown("**Study (4)**")
-            for ex in STUDY_EXAMPLES:
-                btn = gr.Button(ex, elem_classes=["example-btn"], size="sm")
-                btn.click(lambda x=ex: x, outputs=msg, api_name=False)
+    gr.Examples(
+        examples=[
+            # Canvas (8)
+            ["List my courses"],
+            ["Tell me about my CS 3704 course"],
+            ["What assignments do I have due this week?"],
+            ["What are my current grades?"],
+            ["Show me the syllabus for MATH 2114"],
+            ["What's on my Canvas todo list?"],
+            ["Any new announcements in my courses?"],
+            ["What's on my planner this week?"],
+            # Calendar (5)
+            ["What's on my calendar this week?"],
+            ["Find a 2-hour free block tomorrow afternoon"],
+            ["Schedule a study block tomorrow 3-5pm"],
+            ["Move my 2pm event to 4pm"],
+            ["Cancel my 3pm meeting"],
+            # Study (4)
+            ["Build a study bracket for the May 12 final"],
+            ["What study block size do you recommend for me?"],
+            ["Build a semester study schedule"],
+            ["Plan spaced repetition for Linear Algebra final"],
+            # Reranker (1)
+            ["Rank my todos by priority"],
+        ],
+        inputs=msg,
+        fn=chat_stream,
+        outputs=[chatbot, state, calendar_html],
+        run_on_click=True,
+        cache_examples=False,
+        label="Try one of the 18 tools — click to auto-submit",
+        elem_classes=["example-btn"],
+    )
 
-    # Wire send button + Enter-key submit. Outputs order MUST match chat() return:
+    # Wire send button + Enter-key submit. Outputs order MUST match chat_stream() yield:
     # (history, state, calendar_html).
     send_btn.click(
-        fn=chat,
+        fn=chat_stream,
         inputs=[msg, chatbot, state],
         outputs=[chatbot, state, calendar_html],
         api_name=False,
     ).then(lambda: "", outputs=msg, api_name=False)
 
     msg.submit(
-        fn=chat,
+        fn=chat_stream,
         inputs=[msg, chatbot, state],
         outputs=[chatbot, state, calendar_html],
         api_name=False,

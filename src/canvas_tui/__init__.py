@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Canvas TUI — A terminal interface for Canvas LMS."""
 
 __version__ = "1.1.0"

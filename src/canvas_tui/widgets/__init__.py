@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Custom widgets for Canvas TUI."""
 
 from .command_bar import CommandBar

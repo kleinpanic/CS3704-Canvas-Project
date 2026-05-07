@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Data model types for Canvas TUI.
 
 Re-exports all model classes for convenience.

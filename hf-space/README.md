@@ -1,8 +1,8 @@
 ---
 title: Canvas Calendar Agent Demo
 emoji: 📚
-colorFrom: blue
-colorTo: purple
+colorFrom: red
+colorTo: gray
 sdk: gradio
 sdk_version: 5.7.1
 python_version: "3.11"

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Normalization — convert raw Canvas API responses to CanvasItem objects."""
 
 from __future__ import annotations

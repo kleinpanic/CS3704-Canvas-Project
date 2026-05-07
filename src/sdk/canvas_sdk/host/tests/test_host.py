@@ -1,28 +1,35 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Unit tests for canvas_sdk.host.__main__
 
 Tests cover:
-  - _serialize with a mock CanvasObject
+  - _serialize with plain objects and dataclasses
   - _drain limits output to 100 items
   - _handle returns error when no token
   - _handle returns error for unknown method
 """
 
-import pytest
+import dataclasses
 from unittest.mock import MagicMock, patch
 
 # Import the module under test
-from canvas_sdk.host.__main__ import _serialize, _drain, _handle
-
+from canvas_sdk.host.__main__ import _drain, _handle, _serialize
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 
 class FakeCanvasObject:
-    """Minimal stand-in for a CanvasObject with instance variables."""
+    """Minimal stand-in for a plain object with instance variables."""
 
     def __init__(self, **attrs):
         for k, v in attrs.items():
             setattr(self, k, v)
+
+
+@dataclasses.dataclass
+class FakeCourse:
+    id: int = 0
+    name: str = ""
+    extra_fields: dict = dataclasses.field(default_factory=dict)
 
 
 # ── _serialize tests ──────────────────────────────────────────────────────────
@@ -73,13 +80,17 @@ class TestSerialize:
             def __str__(self):
                 return "weird-string"
 
-        # Weird has no __dict__-based attrs we want, but it does have __dict__
-        # via Python's default instance dict.  The serializer will use vars().
-        # An object with no interesting attributes should serialize to {}.
         obj = Weird()
         result = _serialize(obj)
-        # It has a __dict__ (empty), so we get {}
         assert isinstance(result, dict)
+
+    def test_dataclass_fields_flattened(self):
+        course = FakeCourse(id=7, name="Math", extra_fields={"term": {"name": "Spring"}})
+        result = _serialize(course)
+        assert result["id"] == 7
+        assert result["name"] == "Math"
+        assert "extra_fields" not in result
+        assert result["term"] == {"name": "Spring"}
 
 
 # ── _drain tests ──────────────────────────────────────────────────────────────
@@ -134,7 +145,7 @@ class TestHandle:
         mock_canvas = MagicMock()
         mock_canvas.get_current_user.return_value = FakeCanvasObject(id=1, name="User")
 
-        with patch("canvas_sdk.host.__main__.Canvas", return_value=mock_canvas):
+        with patch("canvas_sdk.host.__main__.CanvasClient", return_value=mock_canvas):
             msg = {"method": "notARealMethod", "token": "fake-token"}
             result = _handle(msg)
 
@@ -146,7 +157,7 @@ class TestHandle:
         mock_canvas = MagicMock()
         mock_canvas.get_current_user.return_value = mock_user
 
-        with patch("canvas_sdk.host.__main__.Canvas", return_value=mock_canvas):
+        with patch("canvas_sdk.host.__main__.CanvasClient", return_value=mock_canvas):
             msg = {"method": "getUser", "token": "fake-token"}
             result = _handle(msg)
 
@@ -158,7 +169,7 @@ class TestHandle:
         mock_canvas = MagicMock()
         mock_canvas.get_current_user.return_value = mock_user
 
-        with patch("canvas_sdk.host.__main__.Canvas", return_value=mock_canvas):
+        with patch("canvas_sdk.host.__main__.CanvasClient", return_value=mock_canvas):
             msg = {"method": "validateToken", "token": "fake-token"}
             result = _handle(msg)
 
@@ -170,7 +181,7 @@ class TestHandle:
         mock_canvas = MagicMock()
         mock_canvas.get_courses.return_value = mock_courses
 
-        with patch("canvas_sdk.host.__main__.Canvas", return_value=mock_canvas):
+        with patch("canvas_sdk.host.__main__.CanvasClient", return_value=mock_canvas):
             msg = {"method": "getCourses", "token": "fake-token"}
             result = _handle(msg)
 
@@ -183,7 +194,7 @@ class TestHandle:
         mock_canvas = MagicMock()
         mock_canvas.get_todo_items.return_value = mock_todos
 
-        with patch("canvas_sdk.host.__main__.Canvas", return_value=mock_canvas):
+        with patch("canvas_sdk.host.__main__.CanvasClient", return_value=mock_canvas):
             msg = {"method": "getTodo", "token": "fake-token"}
             result = _handle(msg)
 
@@ -195,7 +206,7 @@ class TestHandle:
         mock_canvas = MagicMock()
         mock_canvas.get_planner_notes.return_value = mock_notes
 
-        with patch("canvas_sdk.host.__main__.Canvas", return_value=mock_canvas):
+        with patch("canvas_sdk.host.__main__.CanvasClient", return_value=mock_canvas):
             msg = {"method": "getPlannerNotes", "token": "fake-token"}
             result = _handle(msg)
 
@@ -205,7 +216,7 @@ class TestHandle:
     def test_course_method_missing_course_id_returns_error(self):
         mock_canvas = MagicMock()
 
-        with patch("canvas_sdk.host.__main__.Canvas", return_value=mock_canvas):
+        with patch("canvas_sdk.host.__main__.CanvasClient", return_value=mock_canvas):
             msg = {"method": "getCourseAssignments", "token": "fake-token", "params": {}}
             result = _handle(msg)
 
@@ -214,12 +225,10 @@ class TestHandle:
 
     def test_get_course_assignments_method(self):
         mock_assignment = FakeCanvasObject(id=1, name="HW1")
-        mock_course = MagicMock()
-        mock_course.get_assignments.return_value = [mock_assignment]
         mock_canvas = MagicMock()
-        mock_canvas.get_course.return_value = mock_course
+        mock_canvas.get_assignments.return_value = [mock_assignment]
 
-        with patch("canvas_sdk.host.__main__.Canvas", return_value=mock_canvas):
+        with patch("canvas_sdk.host.__main__.CanvasClient", return_value=mock_canvas):
             msg = {
                 "method": "getCourseAssignments",
                 "token": "fake-token",
@@ -232,12 +241,10 @@ class TestHandle:
 
     def test_get_course_grades_method(self):
         mock_enrollment = FakeCanvasObject(id=1, current_score=95.0)
-        mock_course = MagicMock()
-        mock_course.get_enrollments.return_value = [mock_enrollment]
         mock_canvas = MagicMock()
-        mock_canvas.get_course.return_value = mock_course
+        mock_canvas.get_enrollments.return_value = [mock_enrollment]
 
-        with patch("canvas_sdk.host.__main__.Canvas", return_value=mock_canvas):
+        with patch("canvas_sdk.host.__main__.CanvasClient", return_value=mock_canvas):
             msg = {
                 "method": "getCourseGrades",
                 "token": "fake-token",
@@ -250,12 +257,10 @@ class TestHandle:
 
     def test_get_course_announcements_method(self):
         mock_topic = FakeCanvasObject(id=1, title="Announcement 1")
-        mock_course = MagicMock()
-        mock_course.get_discussion_topics.return_value = [mock_topic]
         mock_canvas = MagicMock()
-        mock_canvas.get_course.return_value = mock_course
+        mock_canvas.get_discussion_topics.return_value = [mock_topic]
 
-        with patch("canvas_sdk.host.__main__.Canvas", return_value=mock_canvas):
+        with patch("canvas_sdk.host.__main__.CanvasClient", return_value=mock_canvas):
             msg = {
                 "method": "getCourseAnnouncements",
                 "token": "fake-token",
@@ -268,12 +273,10 @@ class TestHandle:
 
     def test_get_course_modules_method(self):
         mock_module = FakeCanvasObject(id=1, name="Week 1")
-        mock_course = MagicMock()
-        mock_course.get_modules.return_value = [mock_module]
         mock_canvas = MagicMock()
-        mock_canvas.get_course.return_value = mock_course
+        mock_canvas.get_modules.return_value = [mock_module]
 
-        with patch("canvas_sdk.host.__main__.Canvas", return_value=mock_canvas):
+        with patch("canvas_sdk.host.__main__.CanvasClient", return_value=mock_canvas):
             msg = {
                 "method": "getCourseModules",
                 "token": "fake-token",
@@ -286,12 +289,10 @@ class TestHandle:
 
     def test_get_course_files_method(self):
         mock_file = FakeCanvasObject(id=1, display_name="syllabus.pdf")
-        mock_course = MagicMock()
-        mock_course.get_files.return_value = [mock_file]
         mock_canvas = MagicMock()
-        mock_canvas.get_course.return_value = mock_course
+        mock_canvas.get_files.return_value = [mock_file]
 
-        with patch("canvas_sdk.host.__main__.Canvas", return_value=mock_canvas):
+        with patch("canvas_sdk.host.__main__.CanvasClient", return_value=mock_canvas):
             msg = {
                 "method": "getCourseFiles",
                 "token": "fake-token",
@@ -304,10 +305,9 @@ class TestHandle:
 
     def test_get_upcoming_assignments_method(self):
         mock_canvas = MagicMock()
-        # get_upcoming_events returns a plain list (not PaginatedList)
         mock_canvas.get_upcoming_events.return_value = [{"id": 1, "title": "Quiz"}]
 
-        with patch("canvas_sdk.host.__main__.Canvas", return_value=mock_canvas):
+        with patch("canvas_sdk.host.__main__.CanvasClient", return_value=mock_canvas):
             msg = {"method": "getUpcomingAssignments", "token": "fake-token"}
             result = _handle(msg)
 

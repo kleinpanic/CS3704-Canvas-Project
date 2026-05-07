@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Canvas LMS logo — rendered from the official Canvas circular icon.
 
 The Canvas logo is a circular starburst/pinwheel pattern. This is a

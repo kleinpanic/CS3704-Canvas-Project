@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Platform compatibility helpers for terminal rendering.
 
 On Windows, braille Unicode characters (U+2800-U+28FF) often render as boxes

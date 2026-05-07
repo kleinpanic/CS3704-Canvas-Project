@@ -1,79 +1,34 @@
-"""Custom exceptions raised by the Canvas API client."""
-
-from typing import Any
+# SPDX-License-Identifier: GPL-3.0-or-later
+from __future__ import annotations
 
 
 class CanvasException(Exception):
-    """Base exception for all Canvas API errors."""
-
-    def __init__(self, message: str) -> None:
-        super().__init__(message)
-        self.message = message
-
-
-class BadRequest(CanvasException):
-    """
-    Raised when the API returns a 400 error.
-    """
-
-    pass
-
-
-class Unauthorized(CanvasException):
-    """
-    Raised when the API returns a 401 error.
-    """
-
-    pass
-
-
-class Forbidden(CanvasException):
-    """
-    Raised when the API returns a 403 error.
-    """
-
-    pass
-
-
-class RateLimitExceeded(CanvasException):
-    """
-    Raised when the API returns a 429 error.
-    """
-
-    pass
-
-
-class ResourceDoesNotExist(CanvasException):
-    """
-    Raised when the API returns a 404 error.
-    """
-
-    pass
-
-
-class Conflict(CanvasException):
-    """
-    Raised when the API returns a 409 error.
-    """
-
-    pass
-
-
-class UnprocessableEntity(CanvasException):
-    """
-    Raised when the API returns a 422 error.
-    """
-
-    pass
+    """Base class for all Canvas SDK exceptions."""
 
 
 class InvalidAccessToken(CanvasException):
-    """Raised when the access token is invalid or expired (WWW-Authenticate header present)."""
-
-    pass
+    """The provided access token is invalid or expired (HTTP 401)."""
 
 
-class RequiredFieldMissing(CanvasException):
-    """Raised when a required parameter is missing from a request body."""
+class Forbidden(CanvasException):
+    """The user lacks permission to access the resource (HTTP 403)."""
 
-    pass
+
+class ResourceNotFound(CanvasException):
+    """The requested resource does not exist (HTTP 404)."""
+
+
+class Conflict(CanvasException):
+    """The request conflicts with current resource state (HTTP 409)."""
+
+
+class UnprocessableEntity(CanvasException):
+    """The request is well-formed but cannot be processed due to semantic errors (HTTP 422)."""
+
+
+class RateLimitExceeded(CanvasException):
+    """The request was throttled; raised after retries are exhausted (HTTP 429)."""
+
+
+class CanvasServerError(CanvasException):
+    """The Canvas API returned a server-side error (HTTP 5xx)."""

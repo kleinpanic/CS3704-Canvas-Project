@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Data models for Canvas TUI — typed dataclasses replacing raw dicts.
 
 New layout (v2): one class per file under models/

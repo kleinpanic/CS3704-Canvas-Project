@@ -155,9 +155,7 @@ serve: ## Serve documentation locally
 
 clean: ## Clean build artifacts
 	@printf "$(CYAN)Cleaning...$(RESET)\n"
-	@rm -rf build/ dist/ *.egg-info .pytest_cache .coverage htmlcov .mypy_cache .ruff_cache
-	@rm -rf $(SRC_DIR)/*.egg-info
-	@find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
+	@bash tools/clean.sh
 	@printf "$(GREEN)✓ Cleaned$(RESET)\n"
 
 clean-all: clean ## Clean everything including venv

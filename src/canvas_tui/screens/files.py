@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """File manager screen — browse and download course files."""
 
 from __future__ import annotations

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """CanvasItem — normalized planner/announcement item."""
 
 from __future__ import annotations
@@ -51,8 +52,8 @@ def _due_label(due_iso: str) -> str | None:
         dt = _dt.datetime.fromisoformat(due_iso.replace("Z", "+00:00"))
     except ValueError:
         return None
-    now = _dt.datetime.now(_dt.timezone.utc)
-    dt_utc = dt.astimezone(_dt.timezone.utc)
+    now = _dt.datetime.now(_dt.UTC)
+    dt_utc = dt.astimezone(_dt.UTC)
     delta_h = (dt_utc - now).total_seconds() / 3600.0
     if delta_h < -1:
         return "OVERDUE"

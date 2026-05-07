@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """UI state types — modals, navigation, and screen context."""
 
 from __future__ import annotations

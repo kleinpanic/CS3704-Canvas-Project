@@ -1,4 +1,4 @@
-# Requires HF_TOKEN secret set in repo Settings → Secrets → Actions.
+# Requires HF_TOKEN secret set in repo Settings -> Secrets -> Actions.
 # Token needs write access to the Space.
 name: Deploy HF Space
 
@@ -15,8 +15,16 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      HAS_HF_TOKEN: ${{ secrets.HF_TOKEN != '' }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Harden runner
+        uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450  # v2
+        with:
+          egress-policy: audit
+          # allow-list: huggingface.co, cdn-lfs.huggingface.co, github.com, pypi.org, files.pythonhosted.org
+
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
         with:
           fetch-depth: 0
 
@@ -24,6 +32,7 @@ jobs:
         run: pip install "huggingface_hub[cli]>=0.23"
 
       - name: Upload hf-space/ to HuggingFace Space
+        if: ${{ env.HAS_HF_TOKEN == 'true' }}
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
@@ -32,8 +41,59 @@ jobs:
             --repo-type space \
             --commit-message "deploy: ${{ github.sha }}"
 
+      - name: Skip notice (fork - no HF_TOKEN)
+        if: ${{ env.HAS_HF_TOKEN != 'true' }}
+        run: |
+          echo "fork: skipping HF Space deploy (HF_TOKEN not configured); see CONTRIBUTING.md"
+
       - name: Print logs URL on failure
         if: failure()
         run: |
           echo "Deployment failed. View logs at:"
           echo "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+  smoke-test:
+    name: Post-deploy smoke test
+    runs-on: ubuntu-latest
+    needs: deploy
+    if: ${{ secrets.HF_TOKEN != '' }}
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450  # v2
+        with:
+          egress-policy: audit
+          # allow-list: huggingface.co, cdn-lfs.huggingface.co, github.com, pypi.org, files.pythonhosted.org
+
+      - name: Poll Space until healthy (max 90s for ZeroGPU cold-start)
+        run: |
+          SPACE_URL="https://kleinpanic93-canvas-calendar-agent-demo.hf.space"
+          deadline=$((SECONDS + 90))
+          status=0
+          while [ $SECONDS -lt $deadline ]; do
+            http_code=$(curl -s -o /dev/null -w "%{http_code}" "$SPACE_URL")
+            if [ "$http_code" = "200" ]; then
+              status=200
+              break
+            fi
+            echo "Space returned $http_code - waiting..."
+            sleep 10
+          done
+          if [ "$status" != "200" ]; then
+            echo "ERROR: Space did not return 200 within 90s (last code: $http_code)"
+            exit 1
+          fi
+          echo "Space is up (200 OK)"
+
+      - name: Assert expected content in HTML
+        run: |
+          SPACE_URL="https://kleinpanic93-canvas-calendar-agent-demo.hf.space"
+          body=$(curl -sf "$SPACE_URL")
+          if ! echo "$body" | grep -q "Canvas"; then
+            echo "ERROR: 'Canvas' not found in Space HTML"
+            exit 1
+          fi
+          if ! echo "$body" | grep -q "v7-DPO"; then
+            echo "ERROR: 'v7-DPO' not found in Space HTML"
+            exit 1
+          fi
+          echo "Smoke test passed: Canvas + v7-DPO found in Space HTML"

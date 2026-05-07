@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Rate My Professor integration for the Canvas TUI.
 
 Provides professor rating lookups matched against Canvas course instructors.

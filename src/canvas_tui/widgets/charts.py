@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Terminal chart rendering — Rich-native implementation.
 
 All functions return Rich Text objects ready for Textual Static widgets.

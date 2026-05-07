@@ -5,6 +5,100 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-05-06
+
+### Public-Contribution Hardening — 12-phase milestone
+
+This release lands the v2.0 Public-Contribution Hardening milestone: 91 atomic
+GPG-signed commits across 12 phases. Highlights:
+
+- Phase 0/1: clean-room SDK rewrite — 14,400 derived lines deleted, 472-LOC
+  pure-stdlib `CanvasClient` written via two-agent clean-room procedure
+  (Gemini SPEC.md → Sonnet implementer with strict isolation). `canvas-sdk`
+  is now original code under GPL-3.0; `requests`/`arrow`/`pytz`/`canvasapi-port`
+  removed from the runtime.
+- Phase 2/3/4: dataset contribution pipeline secured — Piiranha v1 PII scrub in
+  `share_my_canvas.py`, `--dry-run`/`--inspect` flags, regression test against
+  the existing `Williammm23.jsonl` leak, new `dataset-validation.yml` CI gate,
+  dedicated `kleinpanic93/canvas-pii-scrub` HF Space (FastAPI + Piiranha).
+- Phase 5: standalone-release readiness — `CANVAS_BASE_URL` required, env-driven
+  config, fork CI guards, SPDX headers, `--no-scrub` and `?nopiiscrub=1`
+  foot-guns removed.
+- Phase 6: SOTA CI/CD + supply-chain — every workflow pinned to commit SHAs +
+  `step-security/harden-runner`; OSSF Scorecard; SBOM (cyclonedx); SLSA
+  provenance; sigstore-signed multi-arch (amd64+arm64) Docker; OIDC
+  trusted-publisher PyPI; coverage gate raised.
+- Phase 7: HF Space UI upgrade — `gr.Examples`, `gr.HTML` hero, streaming via
+  `TextIteratorStreamer`, browser-chrome mock, post-deploy smoke test.
+- Phase 8: TUI/extension SDK discipline — `app.py` decomposed into screens,
+  keybinding registry, `tests/{sdk,tui,extension,integration}/` layered.
+  Closes GH issues #43, #45, #46, #47, #50, #51, #52.
+- Phase 9: badges + devcontainer + Codecov — live coverage %, official HF
+  badges, PyPI badges, OSSF badge, `.devcontainer/devcontainer.json`.
+- Phase 10: SOTA polish — `examples/`, public `ROADMAP.md`, `docs/QUICKSTART.md`,
+  expanded `SECURITY.md`/`MAINTAINERS.md`, all-contributors bot, `.editorconfig`.
+- Phase 11: cleanup — dead `release.yml` blocks deleted, AI-tell docstrings
+  rewritten, `tools/clean.sh` + `make clean`, pre-commit smell-marker grep gate.
+
+Test count: 416 → 612 (+196 tests, 84% coverage).
+GH issues closed: 6. Issue tracker: #177.
+
+## [Unreleased]
+
+### BREAKING CHANGES
+
+- `CANVAS_BASE_URL` is now required at all entry points; the previous silent default
+  (`https://canvas.vt.edu`) has been removed. Set this env var to your institution's
+  Canvas URL before running any command or importing the SDK.
+  Migration: `export CANVAS_BASE_URL=https://canvas.yourschool.edu`
+
+### Fixed
+
+- **DPO model namespace**: `DEFAULT_HF_REPO` corrected from `kleinpanic/canvas-calendar-agent-v7-dpo`
+  to `kleinpanic93/canvas-calendar-agent-v7-dpo`. SDK users without `CANVAS_LLM_ENDPOINT` set
+  were getting 404 errors on model download.
+
+### Added
+
+- Keybinding registry (`src/canvas_tui/keybindings.py`) with conflict detection at startup; `validate_all()` raises `ValueError` on duplicate `(screen, key)` pairs (#50)
+- Multi-screen nav: `app.py` slimmed to screen router (109 lines); `HomeScreen` extracted to `screens/home.py` (#51)
+- `?` keybinding overlay auto-generated from registry via `BaseScreen.show_help_overlay()`
+- `BaseScreen` ABC (`src/canvas_tui/screens/base.py`) providing keybinding help overlay support for all screens
+- RMP TUI screen (`src/canvas_tui/screens/rmp.py`): search → results → details professor ratings view; `R` keybinding opens from HomeScreen (#45, closes #43)
+- `docs/tui-architecture.md`: TUI screen inventory, keybinding registry docs, extension SDK contract (#47)
+- Chrome extension routes 14 Canvas API MESSAGE_TYPES through native host first via `routeViaHost()` helper; automatic fallback to browser-fetch (#52)
+- Native host extended with 4 new methods: `getDashboardCards`, `getSyllabus`, `getAssignmentGroups`, `getSubmission`
+
+### Changed
+
+- `canvas_tui.api.CanvasAPI` now wraps `canvas_sdk.CanvasClient` for HTTP; retry, pagination, and rate-limiting delegated to SDK (D-06/D-07)
+- Tests reorganized by layer: SDK tests in `tests/sdk/`, TUI tests in `tests/tui/`, extension layer reserved in `tests/extension/` (D-08/D-09)
+- `data/trajectories/README.md` marks `collab/` as a closed legacy dataset; references to deleted `collect_trajectories.py` removed (D-17)
+- `scripts/README.md` reduced to a one-line pointer; `docs/contributing-data.md` is the canonical contributor guide (D-18)
+
+### Fixed
+
+- Extension ratings UI verified complete per PR #94 (ext-ui redesign + professor ratings layout) (#46)
+
+- `src/canvas_tui/config_env.py`: centralised env-driven constants for all entry points.
+  Fork users need only set `CANVAS_BASE_URL` and `CANVAS_TOKEN` to get a working install.
+- `.env.example`: documents all supported env vars with defaults.
+- Fork-friendly CI secret guards (`HAS_CANVAS_TOKEN`, `HAS_HF_TOKEN`, `HAS_PYPI_TOKEN`):
+  forked repos see yellow (skipped) CI jobs rather than red failures when secrets are absent.
+- Branch policy loosened to `^[a-z]+/[a-z0-9._-]+$` — any lowercase prefix is accepted.
+- `CONTRIBUTING.md`: "If you fork this repo" section with env-var table, secrets table,
+  branch naming docs, and git identity guidance.
+- `SPDX-License-Identifier: GPL-3.0-or-later` header added to all `.py` files under
+  `src/`, `scripts/`, `tools/`, `tests/`.
+
+### Removed
+
+- `--no-scrub` flag in `docs-site/fetch_canvas_data.py` — deleted; use a temporary
+  local source edit for debugging. Running with raw PII is no longer possible via a flag.
+- `?nopiiscrub=1` URL parameter in `proxy/worker.js` — removed; bypass now requires
+  an `Authorization: Bearer <INTERNAL_PASSTHROUGH_TOKEN>` header with the Cloudflare
+  env secret set. The public endpoint always scrubs.
+
 ## [1.2.3] — 2026-05-06
 
 ### Fixed

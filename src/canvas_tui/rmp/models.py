@@ -1,9 +1,9 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Data models for Rate My Professor integration."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Optional
 
 
 @dataclass(frozen=True)
@@ -17,7 +17,7 @@ class ProfessorRating:
     rating: float  # 1.0 - 5.0
     difficulty: float  # 1.0 - 5.0
     num_ratings: int
-    would_take_again_percent: Optional[float] = None
+    would_take_again_percent: float | None = None
     url: str = ""
 
     @property
@@ -44,10 +44,10 @@ class MatchResult:
     """Result of matching a Canvas instructor to an RMP professor."""
 
     canvas_name: str
-    matched: Optional[ProfessorRating] = None
+    matched: ProfessorRating | None = None
     confidence: str = "none"  # exact, fuzzy, none
     candidates: list[ProfessorRating] = field(default_factory=list)
-    error: Optional[str] = None
+    error: str | None = None
 
     @property
     def is_matched(self) -> bool:

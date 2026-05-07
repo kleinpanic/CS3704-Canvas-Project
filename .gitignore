@@ -41,6 +41,7 @@ Thumbs.db
 # Local project state
 .env
 .env.*
+!.env.example
 state.json
 cache/
 *.log
