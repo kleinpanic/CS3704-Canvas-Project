@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Fixed — agent-demo gradio 6 API breakage + docker SBOM perms
+
+- `huggingface/agent-demo/app.py`: moved `theme=` and `css=` from `gr.Blocks(...)` constructor to `demo.launch(...)` per gradio 6.0 breaking change. The constructor warning was actually a hard error — Space crashed at startup.
+- `.github/workflows/docker.yml`: added `attestations: write` to build-push job permissions. Previous SBOM step failed with "Resource not accessible by integration".
+
 ### Fixed — release.yml publish-pypi environment matches existing trusted publisher
 
 - `.github/workflows/release.yml`: changed `publish-pypi` job environment from `pypi` to `test-pypi` to match the trusted publisher entry already configured at pypi.org. The previous mismatch caused both jobs to fail with `Trusted publishing exchange failure` (`sub: ...:environment:test-pypi` claim didn't match `environment:pypi` workflow). One-line config fix instead of requiring a maintainer to reconfigure pypi.org.
