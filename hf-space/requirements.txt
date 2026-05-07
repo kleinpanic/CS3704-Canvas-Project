@@ -1,5 +1,5 @@
 gradio==5.7.1  # pinned because git-HEAD broke us once
-transformers==5.8.0  # pinned because git-HEAD broke us once
+transformers==5.0.0rc3  # pinned because git-HEAD broke us once
 torch==2.7.0  # pinned because git-HEAD broke us once
 accelerate==1.7.0  # pinned because git-HEAD broke us once
 spaces

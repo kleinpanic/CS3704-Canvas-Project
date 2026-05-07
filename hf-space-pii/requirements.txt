@@ -1,5 +1,5 @@
 # pinned: transformers model API stability — avoid git-HEAD breakage (see hf-space/requirements.txt)
-transformers==4.47.1
+transformers==5.0.0rc3
 # pinned: CPU-only wheel keeps image under 3 GB on HF Spaces CPU Basic
 torch==2.5.1+cpu
 # pinned: FastAPI + Uvicorn for HTTP layer
