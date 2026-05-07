@@ -390,7 +390,7 @@ jobs:
     if: ${{ !contains(needs.build-sdk-linux.outputs.version, '-') }}
     runs-on: ubuntu-latest
     environment:
-      name: pypi
+      name: test-pypi
       url: https://pypi.org/project/canvas-sdk/${{ needs.build-sdk-linux.outputs.version }}/
     permissions:
       id-token: write

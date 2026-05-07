@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Fixed — release.yml publish-pypi environment matches existing trusted publisher
+
+- `.github/workflows/release.yml`: changed `publish-pypi` job environment from `pypi` to `test-pypi` to match the trusted publisher entry already configured at pypi.org. The previous mismatch caused both jobs to fail with `Trusted publishing exchange failure` (`sub: ...:environment:test-pypi` claim didn't match `environment:pypi` workflow). One-line config fix instead of requiring a maintainer to reconfigure pypi.org.
+
 ### Fixed — agent-demo CONFIG_ERROR: ZeroGPU torch version
 
 - `huggingface/agent-demo/requirements.txt`: removed explicit `torch` pin entirely. PR #205's `torch==2.7.0` triggered `No candidate PyTorch version found for ZeroGPU` because the `spaces` package bundles its own ZeroGPU-compatible torch wheel; explicit pin conflicted. Letting `spaces` resolve torch is the canonical pattern for ZeroGPU Spaces.
