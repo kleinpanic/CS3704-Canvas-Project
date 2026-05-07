@@ -181,6 +181,37 @@ class CanvasClient:
         url = self._build_url(path, params)
         return list(self._paginate(url))
 
+    @staticmethod
+    def _qs_from_params(params: dict) -> str:
+        pairs: list[tuple[str, str]] = []
+        for key, value in params.items():
+            if value is None:
+                continue
+            if isinstance(value, list):
+                for item in value:
+                    pairs.append((key, str(item)))
+            elif isinstance(value, bool):
+                pairs.append((key, "true" if value else "false"))
+            else:
+                pairs.append((key, str(value)))
+        return urllib.parse.urlencode(pairs, doseq=True) if pairs else ""
+
+    def _attach_params(self, url: str, params: Optional[dict]) -> str:
+        if not params:
+            return url
+        qs = self._qs_from_params(params)
+        if not qs:
+            return url
+        sep = "&" if "?" in url else "?"
+        return url + sep + qs
+
+    def get_json(self, url: str, params: Optional[dict] = None) -> dict:
+        body, _ = self._get_with_retry(self._attach_params(url, params))
+        return json.loads(body)
+
+    def get_all(self, url: str, params: Optional[dict] = None) -> list[dict]:
+        return list(self._paginate(self._attach_params(url, params)))
+
     def get_current_user(self) -> User:
         data = self._get_single("/api/v1/users/self")
         return User.from_api(data)

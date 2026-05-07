@@ -338,5 +338,48 @@ class TestUrlConstruction(unittest.TestCase):
         self.assertIn("/api/v1/courses/42/assignments", captured[0])
 
 
+class TestPublicUrlMethods(unittest.TestCase):
+    """get_json and get_all accept full URLs (the api.py adapter pattern)."""
+
+    def test_get_json_round_trips(self):
+        c = CanvasClient("https://canvas.example", "tok")
+        with patch("urllib.request.urlopen") as m:
+            resp = MagicMock()
+            resp.read.return_value = b'{"hello": "world"}'
+            resp.headers.items.return_value = []
+            m.return_value.__enter__.return_value = resp
+            data = c.get_json("https://canvas.example/api/v1/users/self")
+            self.assertEqual(data, {"hello": "world"})
+
+    def test_get_all_paginates(self):
+        c = CanvasClient("https://canvas.example", "tok")
+        page1 = MagicMock()
+        page1.read.return_value = b'[{"id": 1}]'
+        page1.headers.items.return_value = [
+            ("Link", '<https://canvas.example/api/v1/x?page=2>; rel="next"')
+        ]
+        page2 = MagicMock()
+        page2.read.return_value = b'[{"id": 2}]'
+        page2.headers.items.return_value = []
+        with patch("urllib.request.urlopen") as m:
+            m.return_value.__enter__.side_effect = [page1, page2]
+            items = c.get_all("https://canvas.example/api/v1/x")
+            self.assertEqual(items, [{"id": 1}, {"id": 2}])
+
+    def test_attach_params_appends_correctly(self):
+        c = CanvasClient("https://canvas.example", "tok")
+        self.assertEqual(c._attach_params("https://x/a", None), "https://x/a")
+        self.assertEqual(c._attach_params("https://x/a", {"b": 1}), "https://x/a?b=1")
+        self.assertEqual(c._attach_params("https://x/a?z=1", {"b": 2}), "https://x/a?z=1&b=2")
+        self.assertEqual(
+            c._attach_params("https://x/a", {"tag[]": ["x", "y"]}),
+            "https://x/a?tag%5B%5D=x&tag%5B%5D=y",
+        )
+        self.assertEqual(
+            c._attach_params("https://x/a", {"flag": True, "skip": None}),
+            "https://x/a?flag=true",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
