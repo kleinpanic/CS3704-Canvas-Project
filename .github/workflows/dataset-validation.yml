@@ -17,6 +17,8 @@ jobs:
   validate:
     name: Dataset Validation
     runs-on: ubuntu-latest
+    env:
+      HAS_HF_TOKEN: ${{ secrets.HF_TOKEN != '' }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
         with:
@@ -63,7 +65,7 @@ jobs:
         run: python tools/validate_collab_jsonl.py $CHANGED_FILES
 
       - name: PII check
-        if: ${{ secrets.HF_TOKEN != '' }}
+        if: ${{ env.HAS_HF_TOKEN == 'true' }}
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
           CHANGED_FILES: ${{ steps.changed.outputs.files }}
@@ -74,7 +76,7 @@ jobs:
             $CHANGED_FILES
 
       - name: PII check (fork - token absent)
-        if: ${{ secrets.HF_TOKEN == '' }}
+        if: ${{ env.HAS_HF_TOKEN != 'true' }}
         run: |
           echo "fork: HF_TOKEN not set -- PII step skipped; maintainer must validate before merge"
 
