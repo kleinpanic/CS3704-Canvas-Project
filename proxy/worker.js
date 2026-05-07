@@ -145,7 +145,10 @@ async function handleChat(request, env, cors) {
       headers: { 'Content-Type': 'application/json', ...cors },
     });
   } catch (err) {
-    return new Response(JSON.stringify({ error: String(err.message || err) }), {
+    // CodeQL: don't expose raw error messages (potential stack-trace exposure).
+    // Log internally; return a generic 502 to clients.
+    console.error('handleChat error:', err);
+    return new Response(JSON.stringify({ error: 'Upstream Space error' }), {
       status: 502,
       headers: { 'Content-Type': 'application/json', ...cors },
     });
