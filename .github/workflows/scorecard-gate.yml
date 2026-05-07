@@ -34,8 +34,8 @@ jobs:
 
       - name: Download and verify Scorecard CLI
         env:
-          SCORECARD_VERSION: "5.5.0"
-          SCORECARD_SHA256: "83b90a05c1540ef1390db1cd5711e5fd04be9c1d8537fb84d39d02092d6a8dff"
+          SCORECARD_VERSION: "5.1.1"
+          SCORECARD_SHA256: "a894eb7390308069a49a3ace0f68dddf995cdfa1b6e7f8b2e1ea77de131e4962"
         run: |
           TARBALL="scorecard_${SCORECARD_VERSION}_linux_amd64.tar.gz"
           curl -sL "https://github.com/ossf/scorecard/releases/download/v${SCORECARD_VERSION}/${TARBALL}" \

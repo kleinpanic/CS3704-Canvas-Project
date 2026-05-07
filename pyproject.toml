@@ -42,7 +42,7 @@ ai = [
 dev = [
     "black",
     "build",
-    "gradio-client>=1.5",
+    "gradio-client>=2.2",
     "mkdocs",
     "mkdocs-material",
     "mypy",
