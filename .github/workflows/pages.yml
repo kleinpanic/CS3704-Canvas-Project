@@ -61,8 +61,11 @@ jobs:
       # CANVAS_TOKEN secret). The build-time snapshot fetch below still uses the GHA
       # secret until fetch_canvas_data.py is moved behind the Worker.
 
-      # PII scrub regex sanity check -- fail the build if regexes regress
+      # PII scrub regex sanity check -- fail the build if regexes regress.
+      # Self-test does no live HTTP; CANVAS_BASE_URL just satisfies the env-required check.
       - name: PII scrub self-test
+        env:
+          CANVAS_BASE_URL: ${{ secrets.CANVAS_BASE_URL || 'https://canvas.example.edu' }}
         run: |
           python3 docs-site/fetch_canvas_data.py --self-test
 
