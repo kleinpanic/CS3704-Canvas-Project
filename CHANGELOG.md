@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Fixed — release.yml wheel rename violated PEP 427
+
+- `.github/workflows/release.yml`: removed the build-sdk-linux step that renamed `canvas_sdk-*.whl` → `canvas-sdk-*.whl`. PEP 427 mandates underscored package name in wheel filenames; the hyphenated form caused twine to parse the filename incorrectly and fail with "Metadata is missing required fields: Name, Version". Sdist rename to hyphenated form is preserved (sdist names are more permissive).
+
 ### Fixed — bump src/sdk/pyproject.toml to 2.0.5
 
 - `src/sdk/pyproject.toml`: version `2.0.0` -> `2.0.5`. Build was producing `canvas_sdk-2.0.0-py3-none-any.whl` regardless of tag (release.yml's build runs `python -m build src/sdk/` which uses pyproject's hardcoded version). Phase 5 release-standardization will replace this with version.txt + sed substitution at build time.
