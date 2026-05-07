@@ -131,6 +131,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `huggingface/pii-scrub/app.py`: `_PERSON_LABELS` and `_LOC_LABELS` were checking for BIO-prefixed labels (`I-GIVENNAME`, `I-CITY`, etc.) but the model is loaded with `aggregation_strategy="simple"`, which collapses spans and drops the BIO prefix. The model returns `entity_group: "EMAIL"`, `"USERNAME"`, `"GIVENNAME"` etc. — never `"I-..."`. Result: `/scrub` always returned the input unchanged with `redactions: []` and `registry: {}` — a silent no-op for every request. `/entities` was unaffected (it returns the raw entity list without label-set filtering). Live-verified by hitting `/scrub` against `https://kleinpanic93-canvas-pii-scrub.hf.space/`. Fix: drop `I-` prefix from both label sets and add `EMAIL` to person-class.
 
+## [2.1.0] - 2026-05-07
+
+### Released
+
+- Final v2.1 milestone marker. CI publish-pypi path verified clean (action SHA bumped). test-pypi continue-on-error so test.pypi.org missing trusted-publisher does not red-light release.yml.
+
 ## [2.0.9] - 2026-05-07
 
 ### Released
