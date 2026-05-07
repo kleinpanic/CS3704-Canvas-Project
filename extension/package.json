@@ -2,6 +2,7 @@
   "name": "cs3704-canvas-extension",
   "version": "1.0.0",
   "description": "CS3704 Canvas Deadline Tracker Extension",
+  "license": "GPL-3.0-or-later",
   "scripts": {
     "test": "jest",
     "test:coverage": "jest --coverage"
