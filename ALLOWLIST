@@ -1,0 +1,64 @@
+# ALLOWLIST — sanctioned top-level repo entries
+#
+# Phase 4 of v2.1 milestone (Repo Recovery & Standardization) locks this list.
+# Pre-commit hook `tools/check-repo-org.sh` WARNS on entries not in this list.
+# Hook is currently in WARNING mode (exit 0) per Phase 4 D-06; promotes to
+# blocking after one stable milestone of clean usage (per Phase 9 enforcement
+# layer pattern).
+#
+# To add a new top-level file or directory:
+#   1. Append it below with a one-line `# rationale` comment
+#   2. Open the PR; the warning hook will recognize it
+#
+# To remove an entry: delete the line + commit; coordinate with anyone
+# depending on the path.
+
+# === Top-level files ===
+BREAKING.md             # SDK breaking-change ledger
+CHANGELOG.md            # Keep-a-Changelog format (canonical via towncrier in Phase 5)
+CODE_OF_CONDUCT.md      # Contributor Covenant
+CODEOWNERS              # GitHub code-ownership map
+CONTRIBUTING.md         # Developer onboarding
+CONTRIBUTORS.md         # All-Contributors generated list
+LICENSE                 # GPL-3.0-or-later (canonical project license)
+LICENSING.md            # Per-component license map (added Phase 3)
+MAINTAINERS.md          # Active maintainer list
+Makefile                # Tooling shortcuts
+MANIFEST.in             # Python sdist file inclusions
+README.md               # Project entry point
+ROADMAP.md              # Public-facing roadmap (separate from .planning/ROADMAP.md)
+SECURITY.md             # Vulnerability disclosure policy
+ALLOWLIST               # This file (self-reference for completeness)
+pyproject.toml          # Root Python project (canvas_tui workspace root)
+requirements.txt        # Tooling/CI minimal install only — NOT a runtime dep manifest
+ruff.toml               # Ruff lint+format config
+
+# === Top-level directories ===
+data                    # Public datasets + trajectories
+docker                  # Docker contexts (canvas-tui)
+docs                    # Canonical user docs (Phase 13 will sync to Wiki + GH Pages /docs/)
+docs-site               # GitHub Pages source (HTML/Tailwind/JS — built by Pages, not docs/ source)
+examples                # Runnable usage examples
+extension               # Browser extension source
+hf-space                # Canvas Calendar Agent Demo HF Space (sdk: gradio)
+hf-space-pii            # canvas-pii-scrub HF Space (Dockerfile-based)
+newsfragments           # Towncrier fragments (Phase 5 will formalize as primary changelog mechanism)
+proxy                   # Cloudflare Worker source (CF Worker proxies HF Space agent calls)
+scripts                 # Build/release scripts
+src                     # Python source (canvas_tui at root; canvas_sdk under src/sdk/)
+tests                   # Pytest test suites (sdk/, tui/, extension/, integration/)
+tools                   # Repo tooling (linters, hooks, checkers)
+
+# === Hidden top-level entries with rationale ===
+.all-contributorsrc     # All-Contributors bot config
+.claude                 # Claude Code session/worktree state (local dev convenience; gitignored when needed)
+.czrc                   # Commitizen commit-message linter config
+.devcontainer           # GitHub Codespaces devcontainer config
+.editorconfig           # Cross-editor formatting rules
+.env.example            # Required env-var documentation (CANVAS_TOKEN, CANVAS_BASE_URL, etc.)
+.github                 # GitHub Actions workflows + templates + community files
+.gitignore              # Standard
+.planning               # GSD planning artifacts (gitignored except .planning/archive/ for class deliverables)
+.pre-commit-config.yaml # Pre-commit hook registry
+.readthedocs.yaml       # ReadTheDocs build config
+.yamllint.yml           # YAML lint config

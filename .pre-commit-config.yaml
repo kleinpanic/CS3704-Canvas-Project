@@ -43,3 +43,13 @@ repos:
         entry: python tools/check-readme-claims.py
         pass_filenames: false
         stages: [pre-push]
+      - id: repo-org-warn
+        name: Repo Org Compliance (warning-only)
+        language: script
+        entry: tools/check-repo-org.sh
+        pass_filenames: false
+        always_run: true
+        verbose: true
+        stages: [pre-commit]
+        # WARNING MODE: prints non-conformance warnings, exits 0.
+        # Promotes to blocking after one milestone of stable usage (Phase 9 enforcement-layer pattern).

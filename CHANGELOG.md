@@ -37,6 +37,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - New `LICENSING.md` documenting the HF Space `apache-2.0` exception and GPL-3.0-or-later canonicality across the codebase.
 - New `tools/check-readme-claims.py` linter (registered as pre-push hook) catches stale claims, badge regressions, and license declaration drift in CI.
 
+### Changed — v2.1 Phase 4: Repo Organization Standard + Warning-Layer Enforcement
+
+- **Removed from public tree:** ghost root `package.json` (dated `v1.0.0`, no real consumer, `index.js` never existed) + paired `package-lock.json`. Class deliverables `IMPLEMENTATION.md` and `docs/CS3704-PM3-REVIEW.md` archived under `.planning/archive/v2.1-class-deliverables/` (out of public-facing tree; original content preserved in git history).
+- **New `ALLOWLIST` at repo root:** every sanctioned top-level file/directory listed with a one-line `# rationale` comment. Source of truth for repo-org policy.
+- **New `tools/check-repo-org.sh` warning hook:** 4 checks against repo top-level structure (entries off ALLOWLIST, root `*.md` unjustified, Dockerfile outside `docker/` + `hf-space*/`, `pyproject.toml` outside `src/sdk/` + repo root). Registered in `.pre-commit-config.yaml`. **WARNING MODE** — prints to stderr, always exits 0. Promotes to blocking after one milestone of stable usage.
+- **PR template (`.github/pull_request_template.md`):** new "Repo Org Compliance" checklist section makes ALLOWLIST + repo-org-warn expectations explicit at PR-open time.
+
 ## [2.0.0] - 2026-05-06
 
 ### Public-Contribution Hardening — 12-phase milestone
