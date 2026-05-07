@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Fixed — publish-pypi uses API token (bypass trusted publisher click-op)
+
+- `.github/workflows/release.yml`: `publish-pypi` job now passes `password: ${{ secrets.PYPI_API_TOKEN }}` to `pypa/gh-action-pypi-publish`. Bypasses the OIDC trusted-publisher exchange that was failing on every release. PYPI_API_TOKEN repo secret added 2026-05-07. Trusted publisher can be re-adopted later when configured cleanly; for now token-auth ships releases.
+
 ### Fixed — agent-demo: roll back gradio to 5.7.1 (stop-bleed)
 
 - `huggingface/agent-demo/{requirements.txt,README.md,app.py}`: rolled gradio back from 6.x to `5.7.1` and restored `type="messages"` on `gr.Chatbot`. Gradio 6.x was crashing the Space with chat_stream signature introspection bug despite the wiring matching. CVE GHSA-39mp-8hj3-5c49 (gradio path traversal HIGH) is not exposed in this Space — there are no filesystem-input components. Proper gradio 6 migration is a separate phase.
