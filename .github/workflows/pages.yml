@@ -19,6 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       HAS_CANVAS_TOKEN: ${{ secrets.CANVAS_API_TOKEN != '' }}
+      HAS_CANVAS_BASE_URL: ${{ secrets.CANVAS_BASE_URL != '' }}
       HAS_HF_TOKEN: ${{ secrets.HF_TOKEN != '' }}
     steps:
       - name: Harden runner
@@ -69,15 +70,28 @@ jobs:
         run: |
           python3 docs-site/fetch_canvas_data.py --self-test
 
-      # Pre-fetch live Canvas data and bake as static JSON (PII-scrubbed)
+      # Pre-fetch live Canvas data and bake as static JSON (PII-scrubbed).
+      # Skip gracefully when CANVAS_BASE_URL secret is unset (forks; or maintainer
+      # hasn't configured it yet). The site still publishes; data is just static.
       - name: Fetch Canvas data snapshot
-        if: ${{ env.HAS_CANVAS_TOKEN == 'true' }}
+        if: ${{ env.HAS_CANVAS_TOKEN == 'true' && env.HAS_CANVAS_BASE_URL == 'true' }}
         env:
           CANVAS_TOKEN: ${{ secrets.CANVAS_API_TOKEN }}
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
           CANVAS_BASE_URL: ${{ secrets.CANVAS_BASE_URL }}
+          HAS_CANVAS_BASE_URL: ${{ secrets.CANVAS_BASE_URL != '' }}
         run: |
           python3 docs-site/fetch_canvas_data.py --out site/data
+
+      - name: Skip notice (CANVAS_BASE_URL secret unset)
+        if: ${{ env.HAS_CANVAS_TOKEN == 'true' }}
+        env:
+          HAS_CANVAS_BASE_URL: ${{ secrets.CANVAS_BASE_URL != '' }}
+        run: |
+          if [ "$HAS_CANVAS_BASE_URL" != "true" ]; then
+            echo "CANVAS_BASE_URL secret not configured -- skipping live fetch."
+            echo "Set it in repo Settings -> Secrets -> Actions to enable live data."
+          fi
 
       - name: Skip notice (fork - no CANVAS_API_TOKEN)
         if: ${{ env.HAS_CANVAS_TOKEN != 'true' }}
