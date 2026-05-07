@@ -18,6 +18,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 9 stale Dependabot alerts dismissed as `tolerable_risk` (8 against zombie bare `requirements.txt` path, 1 with no upstream fix).
 - `.github/workflows/docker.yml` build-push job: `contents: read` added (was implicitly `none` after job-level perm narrowing — broke `actions/checkout`).
 
+### Fixed — v2.1 Phase 2 hot-fix (post-merge regressions)
+
+- `hf-space-pii/Dockerfile`: HF Spaces' build parser rejected `FROM image@sha256:DIGEST  # tag-comment` with "FROM requires either one or three arguments". Standard `docker build` is lenient; HF's buildkit treats the inline comment as extra arguments. Fix: move `# tag:` comment to its own line above FROM. Same defensive fix applied to `docker/canvas-tui/Dockerfile`.
+- `hf-space/README.md`: bumped `sdk_version: 5.7.1` → `6.7.0` to resolve gradio resolver conflict between HF's pre-baked `gradio[oauth]==5.7.1` and our `gradio>=6.7.0` floor in `requirements.txt`.
+
 ### Notes
 
 - SCORECARD_READ_TOKEN repo secret created out-of-band 2026-05-07T04:09:55Z; should be rotated post-merge (was pasted in plaintext during a prior orchestration session).
