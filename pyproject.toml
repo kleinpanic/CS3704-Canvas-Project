@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "canvas-tui"
-version = "2.0.5"
+version = "2.0.7"
 description = "Canvas LMS TUI client for the CS3704 Canvas project"
 readme = "README.md"
 license = "GPL-3.0-or-later"
