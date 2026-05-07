@@ -36,6 +36,24 @@ jobs:
             --repo-type space \
             --commit-message "deploy: $GIT_SHA"
 
+      - name: Propagate HF_TOKEN as Space runtime secret
+        if: ${{ env.HAS_HF_TOKEN == 'true' }}
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          python3 - <<'PY'
+          import os
+          from huggingface_hub import HfApi
+          api = HfApi()
+          api.add_space_secret(
+              repo_id="kleinpanic93/canvas-pii-scrub",
+              key="HF_TOKEN",
+              value=os.environ["HF_TOKEN"],
+              description="Inherited from GH repo secret via deploy-pii-space.yml",
+          )
+          print("HF_TOKEN propagated to Space runtime secrets")
+          PY
+
       - name: Fork notice (no HF_TOKEN)
         if: ${{ env.HAS_HF_TOKEN != 'true' }}
         run: |

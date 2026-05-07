@@ -835,7 +835,6 @@ with gr.Blocks(theme=THEME, css=CUSTOM_CSS, title="Canvas Calendar Agent") as de
         run_on_click=True,
         cache_examples=False,
         label="Try one of the 18 tools — click to auto-submit",
-        elem_classes=["example-btn"],
     )
 
     # Wire send button + Enter-key submit. Outputs order MUST match chat_stream() yield:
