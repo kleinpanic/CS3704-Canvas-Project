@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Fixed — agent-demo Space RUNTIME_ERROR after torch 2.8 bump
+
+- `huggingface/agent-demo/requirements.txt`: rolled back `torch>=2.8.0` to `torch==2.7.0`. PR #200's bump caused the canvas-calendar-agent-demo Space to fail with RUNTIME_ERROR at startup (model.safetensors loaded 10.2 GB, crashed at `generation_config.json` step). torch 2.7.0 was the last known-working version with this Space's transformers + Gemma-4 model combo. The torch CVEs fixed in 2.8.0 are not in this Space's request path (model is loaded once at startup, no `torch.load` on user input).
+
+### Fixed — release.yml publish-pypi unblocked from TestPyPI gate
+
+- `.github/workflows/release.yml`: removed `test-pypi` from `publish-pypi` `needs:`. TestPyPI's trusted publisher config is a separate maintainer click-op (`test.pypi.org/manage/account/publishing/`) that wasn't yet set up for this repo. v2.0.1 release.yml ran with publish-pypi SKIPPED because the dry-run failed. Decoupling lets the next release publish to PyPI directly via its already-configured trusted publisher (`pypi.org/manage/...` already done). The Test PyPI Dry-Run job remains in the workflow for opt-in verification but no longer gates the real publish.
+
 ### Fixed — README badges rendering as raw markdown on github.com
 
 - `README.md`: surrounded the two stripped-badge HTML comments (`<!-- codecov badge: removed... -->` and `<!-- canvas-tui badge restored when #177 ships -->`) with blank lines. CommonMark spec rule 4 (HTML block start): an HTML comment without surrounding blank lines triggers HTML block mode for everything below it until the next blank line — meaning every badge after the codecov comment was being rendered as LITERAL `[![PyPI canvas-sdk](...)](...)` markdown text on github.com instead of as images. Only the 4 workflow status badges (CI/Security/Pages/Release) above the comment were rendering. Fix: blank lines around both comments.

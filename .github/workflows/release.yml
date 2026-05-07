@@ -380,7 +380,13 @@ jobs:
   # Requires trusted publisher configured at pypi.org. See docs/release-process.md.
   # Forks: this job will be skipped automatically if the 'pypi' environment is not configured.
   publish-pypi:
-    needs: [release, build-sdk-linux, test-pypi]
+    # `test-pypi` removed from `needs:` — TestPyPI's trusted-publisher config is
+    # a separate maintainer click-op (test.pypi.org/manage/account/publishing/)
+    # and was blocking v2.0.1 publish-pypi (skipped because test-pypi failed).
+    # The dry-run is a defense-in-depth check, not a correctness gate; pypi.org
+    # has its own trusted publisher already configured. test-pypi job remains
+    # in the workflow for opt-in verification but no longer gates publish-pypi.
+    needs: [release, build-sdk-linux]
     if: ${{ !contains(needs.build-sdk-linux.outputs.version, '-') }}
     runs-on: ubuntu-latest
     environment:
