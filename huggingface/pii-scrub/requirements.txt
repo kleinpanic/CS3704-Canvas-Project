@@ -1,7 +1,9 @@
 # pinned: transformers model API stability — avoid git-HEAD breakage (see huggingface/agent-demo/requirements.txt)
 transformers>=4.53.0
-# pinned: CPU-only wheel keeps image under 3 GB on HF Spaces CPU Basic
-torch>=2.8.0+cpu
+# pinned: CPU-only wheel keeps image under 3 GB on HF Spaces CPU Basic.
+# `+cpu` local-version-label requires `==` or `!=` — pip rejects it with `>=`.
+# Phase 5 release-standardization will manage version bumps via Dependabot/towncrier.
+torch==2.8.0+cpu
 # pinned: FastAPI + Uvicorn for HTTP layer
 fastapi==0.115.6
 uvicorn==0.32.1
