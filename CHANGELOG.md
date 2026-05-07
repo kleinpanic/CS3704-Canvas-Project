@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Fixed — pip syntax regression in pii-scrub requirements
+
+- `huggingface/pii-scrub/requirements.txt`: changed `torch>=2.8.0+cpu` to `torch==2.8.0+cpu`. PEP 440 requires the `+local` version label (e.g., `+cpu`) to be paired with `==` or `!=`, not `>=`. The previous syntax broke the `Dependency Graph` workflow on `main` (`InstallationError: Local version label can only be used with == or != operators`).
+
+### Added — Repo Org Compliance CI workflow (programmatic enforcement)
+
+- New `.github/workflows/repo-org.yml`: runs `tools/check-repo-org.sh` on every PR + push to main in **BLOCKING mode** (fails the workflow if any `WARN [repo-org]:` line is emitted, even though the local pre-commit hook is warning-only). Contributors still get nag-only warnings during local development; CI enforces the standard at PR time. Closes the gap between Phase 4's policy file (ALLOWLIST) and actual GitHub enforcement.
+
 ### Changed — top-level Hugging Face directory consolidation
 
 - Consolidated `hf-space/` (canvas-calendar-agent-demo) and `hf-space-pii/` (canvas-pii-scrub) into a single top-level `huggingface/` parent. Each Space now lives at `huggingface/agent-demo/` and `huggingface/pii-scrub/`. Cleans up the top-level repo tree (was 2 entries, now 1) and groups all HF deployment surfaces under one umbrella.

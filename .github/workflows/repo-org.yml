@@ -1,0 +1,50 @@
+name: Repo Org Compliance
+
+# Phase 4 of v2.1 introduced ALLOWLIST + tools/check-repo-org.sh as a local
+# warning-only pre-commit hook. The hook only runs after `pre-commit install`
+# locally. This workflow runs the same script on every PR in BLOCKING MODE
+# so the standard cannot be silently regressed.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions: read-all
+
+jobs:
+  repo-org-blocking:
+    name: Repo Org Compliance (blocking)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450  # v2
+        with:
+          egress-policy: audit
+
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+        with:
+          persist-credentials: false
+
+      - name: Run repo-org checker (BLOCKING)
+        run: |
+          set +e
+          OUTPUT="$(bash tools/check-repo-org.sh 2>&1)"
+          STATUS=$?
+          set -e
+
+          echo "${OUTPUT}"
+
+          if [ "${STATUS}" -ne 0 ]; then
+            echo "::error::tools/check-repo-org.sh exited non-zero (${STATUS})"
+            exit "${STATUS}"
+          fi
+
+          if echo "${OUTPUT}" | grep -qE '^WARN \[repo-org\]:'; then
+            echo "::error::Repo Org Compliance violations detected. Either update ALLOWLIST with the new entries (one-line rationale per entry) or move offending files to a sanctioned location."
+            exit 1
+          fi
+
+          echo "::notice::Repo Org Compliance: clean."
