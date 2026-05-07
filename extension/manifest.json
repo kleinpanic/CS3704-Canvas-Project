@@ -35,5 +35,6 @@
       "resources": ["assets/*"],
       "matches": ["https://canvas.vt.edu/*"]
     }
-  ]
+  ],
+  "license": "GPL-3.0-or-later"
 }

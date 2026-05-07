@@ -37,3 +37,9 @@ repos:
         entry: bash tools/check-smell-markers.sh
         pass_filenames: false
         stages: [pre-commit]
+      - id: check-readme-claims
+        name: README honesty linter
+        language: python
+        entry: python tools/check-readme-claims.py
+        pass_filenames: false
+        stages: [pre-push]

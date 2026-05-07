@@ -29,10 +29,10 @@ See [Quick Start](docs/QUICKSTART.md) · [Examples](examples/) · [Public Roadma
 [![Security](https://img.shields.io/github/actions/workflow/status/kleinpanic/CS3704-Canvas-Project/security.yml?branch=main&label=Security)](https://github.com/kleinpanic/CS3704-Canvas-Project/actions/workflows/security.yml)
 [![Pages](https://img.shields.io/github/actions/workflow/status/kleinpanic/CS3704-Canvas-Project/pages.yml?branch=main&label=Pages)](https://github.com/kleinpanic/CS3704-Canvas-Project/actions/workflows/pages.yml)
 [![Release](https://img.shields.io/github/actions/workflow/status/kleinpanic/CS3704-Canvas-Project/release.yml?label=Release)](https://github.com/kleinpanic/CS3704-Canvas-Project/actions/workflows/release.yml)
-[![codecov](https://codecov.io/gh/kleinpanic/CS3704-Canvas-Project/branch/main/graph/badge.svg)](https://codecov.io/gh/kleinpanic/CS3704-Canvas-Project)
+<!-- codecov badge: removed pending codecov.io registration; see Phase 5/8 for restoration when CODECOV_TOKEN is wired -->
 <br>
 [![PyPI canvas-sdk](https://img.shields.io/pypi/v/canvas-sdk?label=canvas-sdk)](https://pypi.org/project/canvas-sdk/)
-[![PyPI canvas-tui](https://img.shields.io/pypi/v/canvas-tui?label=canvas-tui)](https://pypi.org/project/canvas-tui/)
+<!-- canvas-tui badge restored when #177 ships -->
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/canvas-sdk)](https://pypi.org/project/canvas-sdk/)
 [![ghcr.io](https://img.shields.io/badge/ghcr.io-canvas--tui-2496ED?logo=docker&logoColor=white)](https://github.com/kleinpanic/CS3704-Canvas-Project/pkgs/container/canvas-tui)
 <br>
@@ -43,7 +43,7 @@ See [Quick Start](docs/QUICKSTART.md) · [Examples](examples/) · [Public Roadma
 <br>
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 [![code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000?logo=ruff)](https://github.com/astral-sh/ruff)
-[![types: mypy](https://img.shields.io/badge/types-mypy-blue?logo=python&logoColor=white)](https://mypy-lang.org/)
+[![mypy: advisory](https://img.shields.io/badge/mypy-advisory-yellow?logo=python&logoColor=white)](https://github.com/kleinpanic/CS3704-Canvas-Project/actions/workflows/quick-checks.yml)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://pre-commit.com/)
 [![Commitizen friendly](https://img.shields.io/badge/commitizen-friendly-brightgreen.svg)](http://commitizen.github.io/cz-cli/)
 [![OSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/kleinpanic/CS3704-Canvas-Project/badge)](https://securityscorecards.dev/viewer/?uri=github.com/kleinpanic/CS3704-Canvas-Project)
@@ -63,14 +63,14 @@ See [Quick Start](docs/QUICKSTART.md) · [Examples](examples/) · [Public Roadma
 
 | Surface | Channel | Status |
 |---------|---------|--------|
-| **canvas-sdk** (Python) | [PyPI](https://pypi.org/project/canvas-sdk/) | publish queued — see `release.yml` `publish-pypi` job |
-| **canvas-tui** (Python) | [PyPI](https://pypi.org/project/canvas-tui/) | publish queued — `pyproject.toml` v1.2.0 |
+| **canvas-sdk** (Python) | [PyPI](https://pypi.org/project/canvas-sdk/) | live — v1.2.3 on PyPI |
+| **canvas-tui** (Python) | [PyPI](https://pypi.org/project/canvas-tui/) | not yet published — pyproject.toml v2.0.0; tracked in [#177](https://github.com/kleinpanic/CS3704-Canvas-Project/issues/177) |
 | **canvas-tui** (Docker) | `ghcr.io/kleinpanic/canvas-tui` | live — built nightly + on tag (#140) |
 | **Chrome extension** | [Chrome Web Store](https://chromewebstore.google.com/) | listing in progress — install via `Load unpacked` for now |
 | **HF Space demo** | [Live](https://huggingface.co/spaces/kleinpanic93/canvas-calendar-agent-demo) | live — auto-deploys on push to `main` |
 | **HF Model** | [v7-DPO](https://huggingface.co/kleinpanic93/canvas-calendar-agent-v7-dpo) | live |
 
-> **PyPI publication queued — Chrome Web Store listing in progress.** Trusted publisher registration at pypi.org pending; first stable tag (`v1.0.0`+) will fire `publish-pypi`.
+> **canvas-sdk v1.2.3 live on PyPI (API token).** OIDC trusted publisher not yet registered at pypi.org. Chrome Web Store listing in progress — install via `Load unpacked` for now.
 
 ---
 
@@ -90,6 +90,9 @@ pip install canvas-sdk[autodownload]    # fetches the v7-dpo Gemma4 model from H
 pip install canvas-sdk[gemini]          # optional Gemini fallback
 pip install canvas-sdk[all]             # both
 ```
+
+> **Note:** PyPI publishes v1.2.3. The v2.0.0 local source (with the updated agent architecture)
+> can be installed with `pip install -e src/sdk/`.
 
 ```python
 import os
@@ -112,7 +115,7 @@ print(agent.run("What is due this week?"))
 
 ```bash
 export CANVAS_TOKEN="your_canvas_token_here"
-export CANVAS_BASE_URL="https://canvas.vt.edu"   # optional, defaults to VT
+export CANVAS_BASE_URL="https://canvas.yourschool.edu"  # required — no default; tool exits with error if unset
 
 pipx install .          # recommended
 # or: pip install .

@@ -8,6 +8,7 @@ version = "2.0.0"
 description = "Pure-Python (stdlib only) Canvas LMS read-only client and agent SDK"
 readme = "README.md"
 requires-python = ">=3.9"
+license = "GPL-3.0-or-later"
 dependencies = ["httpx>=0.24"]
 
 [project.optional-dependencies]
