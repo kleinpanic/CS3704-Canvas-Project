@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Fixed — agent-demo CONFIG_ERROR (sdk_version unquoted)
+
+- `huggingface/agent-demo/README.md`: re-quoted `sdk_version: 6.7.0` -> `sdk_version: "6.7.0"` per HF Spaces config reference. PR #195 changed it from quoted "5.7.1" to unquoted 6.7.0; HF YAML parser treats unquoted as non-string and triggers CONFIG_ERROR. ref: https://huggingface.co/docs/hub/spaces-config-reference
+
 ### Fixed — agent-demo Space RUNTIME_ERROR after torch 2.8 bump
 
 - `huggingface/agent-demo/requirements.txt`: rolled back `torch>=2.8.0` to `torch==2.7.0`. PR #200's bump caused the canvas-calendar-agent-demo Space to fail with RUNTIME_ERROR at startup (model.safetensors loaded 10.2 GB, crashed at `generation_config.json` step). torch 2.7.0 was the last known-working version with this Space's transformers + Gemma-4 model combo. The torch CVEs fixed in 2.8.0 are not in this Space's request path (model is loaded once at startup, no `torch.load` on user input).
