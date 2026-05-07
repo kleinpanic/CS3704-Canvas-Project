@@ -11,7 +11,7 @@ A maintainable, team-ready **Canvas LMS productivity client** with a Textual TUI
 <!-- asciinema cast: docs-site/casts/tui-demo.cast -->
 <!-- TODO: record cast with `asciinema rec docs-site/casts/tui-demo.cast` + upload to asciinema.org -->
 <!-- Static screenshot fallback: -->
-![TUI demo](docs-site/screenshots/01-home-live.png)
+![TUI demo](docs-site/screenshots/10-final-home.png)
 
 | Deploy | Link |
 |--------|------|
