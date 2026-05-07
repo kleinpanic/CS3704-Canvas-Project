@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Fixed — bump src/sdk/pyproject.toml to 2.0.5
+
+- `src/sdk/pyproject.toml`: version `2.0.0` -> `2.0.5`. Build was producing `canvas_sdk-2.0.0-py3-none-any.whl` regardless of tag (release.yml's build runs `python -m build src/sdk/` which uses pyproject's hardcoded version). Phase 5 release-standardization will replace this with version.txt + sed substitution at build time.
+
 ### Fixed — publish-pypi uses API token (bypass trusted publisher click-op)
 
 - `.github/workflows/release.yml`: `publish-pypi` job now passes `password: ${{ secrets.PYPI_API_TOKEN }}` to `pypa/gh-action-pypi-publish`. Bypasses the OIDC trusted-publisher exchange that was failing on every release. PYPI_API_TOKEN repo secret added 2026-05-07. Trusted publisher can be re-adopted later when configured cleanly; for now token-auth ships releases.
@@ -110,6 +114,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed — v2.1 pii-scrub silent-no-op regression (pre-existing)
 
 - `huggingface/pii-scrub/app.py`: `_PERSON_LABELS` and `_LOC_LABELS` were checking for BIO-prefixed labels (`I-GIVENNAME`, `I-CITY`, etc.) but the model is loaded with `aggregation_strategy="simple"`, which collapses spans and drops the BIO prefix. The model returns `entity_group: "EMAIL"`, `"USERNAME"`, `"GIVENNAME"` etc. — never `"I-..."`. Result: `/scrub` always returned the input unchanged with `redactions: []` and `registry: {}` — a silent no-op for every request. `/entities` was unaffected (it returns the raw entity list without label-set filtering). Live-verified by hitting `/scrub` against `https://kleinpanic93-canvas-pii-scrub.hf.space/`. Fix: drop `I-` prefix from both label sets and add `EMAIL` to person-class.
+
+## [2.0.5] - 2026-05-07
+
+### Released
+
+- Bundle of v2.1 milestone work merged since v2.0.0: Phases 2-4 (OSSF Scorecard lift, README honesty + license correction, repo organization standard + ALLOWLIST + CI enforcement) plus 11 follow-up hot-fixes.
 
 ## [2.0.0] - 2026-05-06
 
