@@ -1,13 +1,85 @@
 version: 2
 updates:
+  # Root pip package (canvas-tui)
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 10
+    versioning-strategy: increase-if-necessary
     labels:
       - "dependencies"
       - "security"
+    ignore:
+      # ML deps need a manual re-test cycle on major bumps; v2.0 closed PRs
+      # #183/#184/#185 (torch +cpu suffix drop, transformers RC, gradio major).
+      - dependency-name: "torch"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "transformers"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "gradio"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "accelerate"
+        update-types: ["version-update:semver-major"]
+      # Pre-releases (rc, alpha, beta, dev) are never auto-bumped
+      - dependency-name: "*"
+        versions: ["*-rc*", "*-alpha*", "*-beta*", "*.dev*"]
+
+  # SDK pip package (src/sdk)
+  - package-ecosystem: "pip"
+    directory: "/src/sdk"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    versioning-strategy: increase-if-necessary
+    labels:
+      - "dependencies"
+      - "sdk"
+    ignore:
+      - dependency-name: "*"
+        versions: ["*-rc*", "*-alpha*", "*-beta*", "*.dev*"]
+
+  # HF Space (gradio app)
+  - package-ecosystem: "pip"
+    directory: "/hf-space"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    versioning-strategy: increase-if-necessary
+    labels:
+      - "dependencies"
+      - "hf-space"
+    ignore:
+      - dependency-name: "torch"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "transformers"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "gradio"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "*"
+        versions: ["*-rc*", "*-alpha*", "*-beta*", "*.dev*"]
+
+  # PII Scrub HF Space (FastAPI app)
+  - package-ecosystem: "pip"
+    directory: "/hf-space-pii"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    versioning-strategy: increase-if-necessary
+    labels:
+      - "dependencies"
+      - "hf-space-pii"
+    ignore:
+      - dependency-name: "torch"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "transformers"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "fastapi"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "*"
+        versions: ["*-rc*", "*-alpha*", "*-beta*", "*.dev*"]
+
+  # GitHub Actions (already SHA-pinned; dependabot bumps SHA + version comment)
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
