@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Optional
 
 
 def _from_api(cls, data: dict):
@@ -20,131 +19,131 @@ def _from_api(cls, data: dict):
 
 @dataclasses.dataclass
 class Course:
-    id: Optional[int] = None
-    name: Optional[str] = None
-    course_code: Optional[str] = None
-    workflow_state: Optional[str] = None
-    start_at: Optional[str] = None
-    end_at: Optional[str] = None
-    enrollment_term_id: Optional[int] = None
-    time_zone: Optional[str] = None
-    default_view: Optional[str] = None
-    syllabus_body: Optional[str] = None
+    id: int | None = None
+    name: str | None = None
+    course_code: str | None = None
+    workflow_state: str | None = None
+    start_at: str | None = None
+    end_at: str | None = None
+    enrollment_term_id: int | None = None
+    time_zone: str | None = None
+    default_view: str | None = None
+    syllabus_body: str | None = None
     extra_fields: dict = dataclasses.field(default_factory=dict, repr=False)
 
     @classmethod
-    def from_api(cls, data: dict) -> "Course":
+    def from_api(cls, data: dict) -> Course:
         return _from_api(cls, data)
 
 
 @dataclasses.dataclass
 class Assignment:
-    id: Optional[int] = None
-    course_id: Optional[int] = None
-    name: Optional[str] = None
-    description: Optional[str] = None
-    due_at: Optional[str] = None
-    unlock_at: Optional[str] = None
-    lock_at: Optional[str] = None
-    points_possible: Optional[float] = None
-    submission_types: Optional[list] = None
-    workflow_state: Optional[str] = None
-    html_url: Optional[str] = None
+    id: int | None = None
+    course_id: int | None = None
+    name: str | None = None
+    description: str | None = None
+    due_at: str | None = None
+    unlock_at: str | None = None
+    lock_at: str | None = None
+    points_possible: float | None = None
+    submission_types: list | None = None
+    workflow_state: str | None = None
+    html_url: str | None = None
     extra_fields: dict = dataclasses.field(default_factory=dict, repr=False)
 
     @classmethod
-    def from_api(cls, data: dict) -> "Assignment":
+    def from_api(cls, data: dict) -> Assignment:
         return _from_api(cls, data)
 
 
 @dataclasses.dataclass
 class DiscussionTopic:
-    id: Optional[int] = None
-    course_id: Optional[int] = None
-    title: Optional[str] = None
-    message: Optional[str] = None
-    html_url: Optional[str] = None
-    posted_at: Optional[str] = None
-    delayed_post_at: Optional[str] = None
-    last_reply_at: Optional[str] = None
-    discussion_type: Optional[str] = None
-    read_state: Optional[str] = None
-    unread_count: Optional[int] = None
-    workflow_state: Optional[str] = None
-    is_announcement: Optional[bool] = None
+    id: int | None = None
+    course_id: int | None = None
+    title: str | None = None
+    message: str | None = None
+    html_url: str | None = None
+    posted_at: str | None = None
+    delayed_post_at: str | None = None
+    last_reply_at: str | None = None
+    discussion_type: str | None = None
+    read_state: str | None = None
+    unread_count: int | None = None
+    workflow_state: str | None = None
+    is_announcement: bool | None = None
     extra_fields: dict = dataclasses.field(default_factory=dict, repr=False)
 
     @classmethod
-    def from_api(cls, data: dict) -> "DiscussionTopic":
+    def from_api(cls, data: dict) -> DiscussionTopic:
         return _from_api(cls, data)
 
 
 @dataclasses.dataclass
 class Todo:
-    type: Optional[str] = None
-    assignment: Optional[dict] = None
-    ignore: Optional[str] = None
-    ignore_permanently: Optional[str] = None
-    html_url: Optional[str] = None
-    needs_grading_count: Optional[int] = None
-    context_type: Optional[str] = None
-    course_id: Optional[int] = None
-    group_id: Optional[int] = None
+    type: str | None = None
+    assignment: dict | None = None
+    ignore: str | None = None
+    ignore_permanently: str | None = None
+    html_url: str | None = None
+    needs_grading_count: int | None = None
+    context_type: str | None = None
+    course_id: int | None = None
+    group_id: int | None = None
     extra_fields: dict = dataclasses.field(default_factory=dict, repr=False)
 
     @classmethod
-    def from_api(cls, data: dict) -> "Todo":
+    def from_api(cls, data: dict) -> Todo:
         return _from_api(cls, data)
 
 
 @dataclasses.dataclass
 class PlannerNote:
-    id: Optional[int] = None
-    title: Optional[str] = None
-    details: Optional[str] = None
-    user_id: Optional[int] = None
-    course_id: Optional[int] = None
-    workflow_state: Optional[str] = None
-    todo_date: Optional[str] = None
+    id: int | None = None
+    title: str | None = None
+    details: str | None = None
+    user_id: int | None = None
+    course_id: int | None = None
+    workflow_state: str | None = None
+    todo_date: str | None = None
     extra_fields: dict = dataclasses.field(default_factory=dict, repr=False)
 
     @classmethod
-    def from_api(cls, data: dict) -> "PlannerNote":
+    def from_api(cls, data: dict) -> PlannerNote:
         return _from_api(cls, data)
 
 
 @dataclasses.dataclass
 class Enrollment:
-    id: Optional[int] = None
-    course_id: Optional[int] = None
-    course_section_id: Optional[int] = None
-    user_id: Optional[int] = None
-    type: Optional[str] = None
-    role: Optional[str] = None
-    enrollment_state: Optional[str] = None
-    grades: Optional[dict] = None
-    html_url: Optional[str] = None
+    id: int | None = None
+    course_id: int | None = None
+    course_section_id: int | None = None
+    user_id: int | None = None
+    type: str | None = None
+    role: str | None = None
+    enrollment_state: str | None = None
+    grades: dict | None = None
+    html_url: str | None = None
     extra_fields: dict = dataclasses.field(default_factory=dict, repr=False)
 
     @classmethod
-    def from_api(cls, data: dict) -> "Enrollment":
+    def from_api(cls, data: dict) -> Enrollment:
         return _from_api(cls, data)
 
 
 @dataclasses.dataclass
 class User:
-    id: Optional[int] = None
-    name: Optional[str] = None
-    sortable_name: Optional[str] = None
-    short_name: Optional[str] = None
-    login_id: Optional[str] = None
-    email: Optional[str] = None
-    avatar_url: Optional[str] = None
-    bio: Optional[str] = None
-    time_zone: Optional[str] = None
-    locale: Optional[str] = None
+    id: int | None = None
+    name: str | None = None
+    sortable_name: str | None = None
+    short_name: str | None = None
+    login_id: str | None = None
+    email: str | None = None
+    avatar_url: str | None = None
+    bio: str | None = None
+    time_zone: str | None = None
+    locale: str | None = None
     extra_fields: dict = dataclasses.field(default_factory=dict, repr=False)
 
     @classmethod
-    def from_api(cls, data: dict) -> "User":
+    def from_api(cls, data: dict) -> User:
         return _from_api(cls, data)

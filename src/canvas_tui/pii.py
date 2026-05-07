@@ -189,4 +189,4 @@ def scrub_via_space(doc: dict, space_url: str) -> dict:
         return _fallback(str(e))
 
 
-__all__ = ["SCRUB_KEYS", "scrub_doc", "scrub_string", "scrub_via_space", "CANVAS_PII_SPACE_URL"]
+__all__ = ["CANVAS_PII_SPACE_URL", "SCRUB_KEYS", "scrub_doc", "scrub_string", "scrub_via_space"]

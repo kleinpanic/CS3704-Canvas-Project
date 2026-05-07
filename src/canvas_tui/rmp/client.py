@@ -13,6 +13,7 @@ Uses the same scraping approach as tisuela/ratemyprof-api but with:
 
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 import os
@@ -170,10 +171,8 @@ class RMPClient:
                 json.dump(data, f, indent=2)
             os.replace(tmp_path, str(cache_file))
         except Exception:
-            try:
+            with contextlib.suppress(OSError):
                 os.unlink(tmp_path)
-            except OSError:
-                pass
             raise
 
     def fetch_professors(self, force_refresh: bool = False) -> list[ProfessorRating]:
@@ -276,16 +275,12 @@ class RMPClient:
 
             # These may be in nested structures or direct fields depending on API version
             if "tNumRatings" in entry:
-                try:
+                with contextlib.suppress(ValueError, TypeError):
                     num_ratings = int(entry["tNumRatings"])
-                except (ValueError, TypeError):
-                    pass
 
             if "rDifficulty" in entry:
-                try:
+                with contextlib.suppress(ValueError, TypeError):
                     difficulty = float(entry["rDifficulty"])
-                except (ValueError, TypeError):
-                    pass
 
             if "rWouldTakeAgain" in entry:
                 try:
@@ -327,9 +322,10 @@ class RMPClient:
 
         matches = []
         for prof in all_profs:
-            if prof.last_name.lower() == last_lower:
-                if not first_lower or prof.first_name.lower() == first_lower or first_lower in prof.first_name.lower():
-                    matches.append(prof)
+            if prof.last_name.lower() == last_lower and (
+                not first_lower or prof.first_name.lower() == first_lower or first_lower in prof.first_name.lower()
+            ):
+                matches.append(prof)
 
         return matches
 

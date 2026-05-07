@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 from __future__ import annotations
 
+import contextlib
 import json
 import random
 import re
@@ -8,7 +9,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from typing import Iterator, Optional
+from collections.abc import Iterator
 
 from canvas_sdk.entities import (
     Assignment,
@@ -77,10 +78,10 @@ class CanvasClient:
         self._access_token = access_token
         self._timeout = timeout
         self._sleep = time.sleep
-        self.latest_request_cost: Optional[float] = None
-        self.rate_limit_remaining: Optional[float] = None
+        self.latest_request_cost: float | None = None
+        self.rate_limit_remaining: float | None = None
 
-    def _build_url(self, path: str, params: Optional[dict] = None) -> str:
+    def _build_url(self, path: str, params: dict | None = None) -> str:
         url = self._base_url + path
         if params:
             pairs = []
@@ -113,71 +114,64 @@ class CanvasClient:
                 return body, headers
         except urllib.error.HTTPError as exc:
             body = exc.read()
-            raise exc.__class__(
-                exc.url, exc.code, exc.msg, exc.headers, None
-            ) from None
+            raise exc.__class__(exc.url, exc.code, exc.msg, exc.headers, None) from None
 
     def _get_with_retry(self, url: str) -> tuple[bytes, dict]:
-        last_exc: Optional[urllib.error.HTTPError] = None
+        last_exc: urllib.error.HTTPError | None = None
         for attempt in range(_MAX_RETRIES + 1):
             try:
                 body, headers = self._raw_get(url)
                 cost_str = headers.get("x-request-cost")
                 remaining_str = headers.get("x-rate-limit-remaining")
                 if cost_str is not None:
-                    try:
+                    with contextlib.suppress(ValueError):
                         self.latest_request_cost = float(cost_str)
-                    except ValueError:
-                        pass
                 if remaining_str is not None:
-                    try:
+                    with contextlib.suppress(ValueError):
                         self.rate_limit_remaining = float(remaining_str)
-                    except ValueError:
-                        pass
                 return body, headers
             except urllib.error.HTTPError as exc:
                 status = exc.code
                 if status in (429,) or (500 <= status < 600):
                     last_exc = exc
                     if attempt < _MAX_RETRIES:
-                        delay = (2 ** attempt) + random.uniform(0, 1)
+                        delay = (2**attempt) + random.uniform(0, 1)
                         self._sleep(delay)
                         continue
                     body = exc.read() if hasattr(exc, "read") else b""
                     path = urllib.parse.urlparse(url).path
-                    raise _map_http_error(status, body, path)
+                    raise _map_http_error(status, body, path) from None
                 else:
                     body = exc.read() if hasattr(exc, "read") else b""
                     path = urllib.parse.urlparse(url).path
-                    raise _map_http_error(status, body, path)
+                    raise _map_http_error(status, body, path) from None
         body = last_exc.read() if last_exc and hasattr(last_exc, "read") else b""
         path = urllib.parse.urlparse(url).path
         raise _map_http_error(last_exc.code if last_exc else 500, body, path)
 
-    def _parse_next_link(self, link_header: Optional[str]) -> Optional[str]:
+    def _parse_next_link(self, link_header: str | None) -> str | None:
         if not link_header:
             return None
         m = _LINK_NEXT_RE.search(link_header)
         return m.group(1) if m else None
 
     def _paginate(self, url: str) -> Iterator[dict]:
-        next_url: Optional[str] = url
+        next_url: str | None = url
         while next_url:
             body, headers = self._get_with_retry(next_url)
             items = json.loads(body)
             if not isinstance(items, list):
                 yield items
                 return
-            for item in items:
-                yield item
+            yield from items
             next_url = self._parse_next_link(headers.get("link"))
 
-    def _get_single(self, path: str, params: Optional[dict] = None) -> dict:
+    def _get_single(self, path: str, params: dict | None = None) -> dict:
         url = self._build_url(path, params)
         body, _ = self._get_with_retry(url)
         return json.loads(body)
 
-    def _get_list(self, path: str, params: Optional[dict] = None) -> list[dict]:
+    def _get_list(self, path: str, params: dict | None = None) -> list[dict]:
         url = self._build_url(path, params)
         return list(self._paginate(url))
 
@@ -196,7 +190,7 @@ class CanvasClient:
                 pairs.append((key, str(value)))
         return urllib.parse.urlencode(pairs, doseq=True) if pairs else ""
 
-    def _attach_params(self, url: str, params: Optional[dict]) -> str:
+    def _attach_params(self, url: str, params: dict | None) -> str:
         if not params:
             return url
         qs = self._qs_from_params(params)
@@ -205,11 +199,11 @@ class CanvasClient:
         sep = "&" if "?" in url else "?"
         return url + sep + qs
 
-    def get_json(self, url: str, params: Optional[dict] = None) -> dict:
+    def get_json(self, url: str, params: dict | None = None) -> dict:
         body, _ = self._get_with_retry(self._attach_params(url, params))
         return json.loads(body)
 
-    def get_all(self, url: str, params: Optional[dict] = None) -> list[dict]:
+    def get_all(self, url: str, params: dict | None = None) -> list[dict]:
         return list(self._paginate(self._attach_params(url, params)))
 
     def get_current_user(self) -> User:
@@ -219,8 +213,8 @@ class CanvasClient:
     def get_courses(
         self,
         *,
-        enrollment_state: Optional[str] = None,
-        include: Optional[list] = None,
+        enrollment_state: str | None = None,
+        include: list | None = None,
         per_page: int = 100,
     ) -> list[Course]:
         per_page = min(per_page, _MAX_PER_PAGE)
@@ -232,7 +226,7 @@ class CanvasClient:
         items = self._get_list("/api/v1/courses", params)
         return [Course.from_api(d) for d in items]
 
-    def get_course(self, course_id: int, *, include: Optional[list] = None) -> Course:
+    def get_course(self, course_id: int, *, include: list | None = None) -> Course:
         params: dict = {}
         if include:
             params["include[]"] = include
@@ -243,8 +237,8 @@ class CanvasClient:
         self,
         course_id: int,
         *,
-        bucket: Optional[str] = None,
-        include: Optional[list] = None,
+        bucket: str | None = None,
+        include: list | None = None,
         per_page: int = 100,
     ) -> list[Assignment]:
         per_page = min(per_page, _MAX_PER_PAGE)
@@ -260,8 +254,8 @@ class CanvasClient:
         self,
         course_id: int,
         *,
-        user_id: Optional[str] = None,
-        include: Optional[list] = None,
+        user_id: str | None = None,
+        include: list | None = None,
     ) -> list[Enrollment]:
         params: dict = {"per_page": _MAX_PER_PAGE}
         if user_id is not None:
@@ -280,9 +274,7 @@ class CanvasClient:
         params: dict = {"per_page": _MAX_PER_PAGE}
         if only_announcements:
             params["only_announcements"] = True
-        items = self._get_list(
-            f"/api/v1/courses/{course_id}/discussion_topics", params
-        )
+        items = self._get_list(f"/api/v1/courses/{course_id}/discussion_topics", params)
         return [DiscussionTopic.from_api(d) for d in items]
 
     def get_modules(self, course_id: int) -> list[dict]:
@@ -297,7 +289,7 @@ class CanvasClient:
         self,
         *,
         context_codes: list,
-        start_date: Optional[str] = None,
+        start_date: str | None = None,
     ) -> list[DiscussionTopic]:
         params: dict = {"per_page": _MAX_PER_PAGE, "context_codes[]": context_codes}
         if start_date is not None:

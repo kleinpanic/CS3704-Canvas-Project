@@ -120,12 +120,10 @@ class InMemoryCalendarBackend(CalendarBackend):
         except ValueError:
             return True
         if ev_start.tzinfo is None:
-            ev_start = ev_start.replace(tzinfo=dt.timezone.utc)
+            ev_start = ev_start.replace(tzinfo=dt.UTC)
         if start and ev_start < start:
             return False
-        if end and ev_start > end:
-            return False
-        return True
+        return not (end and ev_start > end)
 
     def list_events(
         self,
@@ -137,9 +135,9 @@ class InMemoryCalendarBackend(CalendarBackend):
         start = dt.datetime.fromisoformat(start_iso.replace("Z", "+00:00")) if start_iso else None
         end = dt.datetime.fromisoformat(end_iso.replace("Z", "+00:00")) if end_iso else None
         if start and start.tzinfo is None:
-            start = start.replace(tzinfo=dt.timezone.utc)
+            start = start.replace(tzinfo=dt.UTC)
         if end and end.tzinfo is None:
-            end = end.replace(tzinfo=dt.timezone.utc)
+            end = end.replace(tzinfo=dt.UTC)
         out = []
         for ev in self._events.values():
             if not include_all_day and ev.get("all_day"):
@@ -159,7 +157,7 @@ class InMemoryCalendarBackend(CalendarBackend):
         calendar_id: str = "primary",
         exclude_weekends: bool = False,
     ) -> list[dict[str, Any]]:
-        now = dt.datetime.now(dt.timezone.utc)
+        now = dt.datetime.now(dt.UTC)
         end = now + dt.timedelta(days=horizon_days)
         events = self.list_events(start_iso=now.isoformat(), end_iso=end.isoformat(), include_all_day=False)
         busy: list[tuple[dt.datetime, dt.datetime]] = []
@@ -168,9 +166,9 @@ class InMemoryCalendarBackend(CalendarBackend):
                 s = dt.datetime.fromisoformat(str(ev["start_iso"]).replace("Z", "+00:00"))
                 e = dt.datetime.fromisoformat(str(ev["end_iso"]).replace("Z", "+00:00"))
                 if s.tzinfo is None:
-                    s = s.replace(tzinfo=dt.timezone.utc)
+                    s = s.replace(tzinfo=dt.UTC)
                 if e.tzinfo is None:
-                    e = e.replace(tzinfo=dt.timezone.utc)
+                    e = e.replace(tzinfo=dt.UTC)
                 busy.append((s, e))
         busy.sort()
 
@@ -310,8 +308,8 @@ class GoogleCalendarBackend(CalendarBackend):
         if self._service is not None:
             return self._service
         try:
-            from google.oauth2.credentials import Credentials
             from google.auth.transport.requests import Request
+            from google.oauth2.credentials import Credentials
             from google_auth_oauthlib.flow import InstalledAppFlow
             from googleapiclient.discovery import build
         except ImportError as e:
@@ -320,7 +318,8 @@ class GoogleCalendarBackend(CalendarBackend):
                 "pip install google-api-python-client google-auth-oauthlib google-auth-httplib2"
             ) from e
 
-        import json, os
+        import json
+        import os
 
         SCOPES = ["https://www.googleapis.com/auth/calendar"]
         creds = None
@@ -529,7 +528,7 @@ class ICalBackend(CalendarBackend):
             raise ImportError("ICalBackend requires: pip install recurring_ical_events") from e
 
         cal = self._load_cal()
-        now = dt.datetime.now(dt.timezone.utc)
+        now = dt.datetime.now(dt.UTC)
         t_start = dt.datetime.fromisoformat((start_iso or now.isoformat()).replace("Z", "+00:00"))
         t_end = dt.datetime.fromisoformat((end_iso or (now + dt.timedelta(days=14)).isoformat()).replace("Z", "+00:00"))
         events = recurring_ical_events.of(cal).between(t_start, t_end)
@@ -574,9 +573,9 @@ class ICalBackend(CalendarBackend):
                 s = dt.datetime.fromisoformat(str(ev["start_iso"]).replace("Z", "+00:00"))
                 e = dt.datetime.fromisoformat(str(ev["end_iso"]).replace("Z", "+00:00"))
                 if s.tzinfo is None:
-                    s = s.replace(tzinfo=dt.timezone.utc)
+                    s = s.replace(tzinfo=dt.UTC)
                 if e.tzinfo is None:
-                    e = e.replace(tzinfo=dt.timezone.utc)
+                    e = e.replace(tzinfo=dt.UTC)
                 busy.append((s, e))
         busy.sort()
 

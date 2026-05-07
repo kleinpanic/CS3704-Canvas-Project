@@ -1,11 +1,12 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
+from datetime import UTC, datetime
+
 import pytest
-from datetime import datetime, timezone
 
 
 @pytest.fixture
 def fixed_now():
-    return datetime(2026, 5, 10, 9, 0, 0, tzinfo=timezone.utc)
+    return datetime(2026, 5, 10, 9, 0, 0, tzinfo=UTC)
 
 
 @pytest.fixture

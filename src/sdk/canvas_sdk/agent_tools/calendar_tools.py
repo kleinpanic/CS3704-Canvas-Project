@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-__all__ = ["ListEvents", "FindFreeBlocks", "CreateEvent", "ModifyEvent", "DeleteEvent"]
+__all__ = ["CreateEvent", "DeleteEvent", "FindFreeBlocks", "ListEvents", "ModifyEvent"]
 
 
 def _adapter():

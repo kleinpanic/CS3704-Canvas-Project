@@ -1,8 +1,9 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 import json
+
 import pytest
 
-from canvas_sdk.agent_tools import REGISTRY, get_schemas, get_schema_json, dispatch
+from canvas_sdk.agent_tools import REGISTRY, dispatch, get_schema_json, get_schemas
 
 EXPECTED_NAMES = {
     "canvas.list_courses",
@@ -36,7 +37,7 @@ def test_registry_has_all_expected_names():
 
 def test_tool_name_matches_registry_key():
     for key, tool_class in REGISTRY.items():
-        assert tool_class.NAME == key, f"{tool_class.__name__}.NAME={tool_class.NAME!r} != registry key {key!r}"
+        assert key == tool_class.NAME, f"{tool_class.__name__}.NAME={tool_class.NAME!r} != registry key {key!r}"
 
 
 def test_get_schemas_returns_18():

@@ -2,13 +2,13 @@
 """Schema validation tests for canvas_tools — no network, no mocks, no canvas_tui calls."""
 
 from canvas_sdk.agent_tools.canvas_tools import (
-    ListCourses,
     GetAssignments,
     GetCourse,
+    GetGrades,
     GetSyllabus,
     GetTodo,
-    GetGrades,
     ListAnnouncements,
+    ListCourses,
     ListPlannerItems,
 )
 

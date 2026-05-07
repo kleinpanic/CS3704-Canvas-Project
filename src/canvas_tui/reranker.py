@@ -68,7 +68,7 @@ class AlwaysAReranker:
     def rank(self, query: str, items: list[CanvasItem]) -> list[CanvasItem]:
         if not items:
             return []
-        return [items[0]] + list(items[1:])
+        return [items[0], *list(items[1:])]
 
 
 # ── Pointwise reference item — same constant used in GemmaReranker/

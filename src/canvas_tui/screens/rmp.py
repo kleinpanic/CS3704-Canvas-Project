@@ -120,9 +120,7 @@ class RMPScreen(Screen):
         try:
             results = client.search_professor(query)
         except Exception as exc:
-            self.query_one("#rmp-details-panel", Static).update(
-                f"[red]Search failed:[/red] {exc}"
-            )
+            self.query_one("#rmp-details-panel", Static).update(f"[red]Search failed:[/red] {exc}")
             self.query_one("#rmp-details-panel", Static).display = True
             return
 
@@ -131,9 +129,7 @@ class RMPScreen(Screen):
         table.clear()
 
         if not results:
-            self.query_one("#rmp-details-panel", Static).update(
-                "[dim]No results found. Try a different name.[/dim]"
-            )
+            self.query_one("#rmp-details-panel", Static).update("[dim]No results found. Try a different name.[/dim]")
             self.query_one("#rmp-details-panel", Static).display = True
             self.query_one("#rmp-search-input", Input).display = True
             table.display = False

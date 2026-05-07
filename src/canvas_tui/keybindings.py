@@ -44,9 +44,7 @@ class Registry:
             for key, action, _ in entries:
                 pair = (screen, key)
                 if pair in seen and seen[pair] != action:
-                    conflicts.append(
-                        f"screen={screen!r}, key={key!r}: {seen[pair]!r} vs {action!r}"
-                    )
+                    conflicts.append(f"screen={screen!r}, key={key!r}: {seen[pair]!r} vs {action!r}")
                 else:
                     seen[pair] = action
         if conflicts:

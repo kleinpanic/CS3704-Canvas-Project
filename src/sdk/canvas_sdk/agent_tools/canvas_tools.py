@@ -127,9 +127,7 @@ class GetAssignments:
                 if due and due > cutoff:
                     continue
                 sub = item.extra_fields.get("submission") or {}
-                submitted = bool(
-                    sub.get("submitted_at") if isinstance(sub, dict) else None
-                )
+                submitted = bool(sub.get("submitted_at") if isinstance(sub, dict) else None)
                 if not include_submitted and submitted:
                     continue
                 results.append(
@@ -172,9 +170,7 @@ class GetCourse:
             include=["teachers", "term", "total_students"],
         )
         teachers_raw = course.extra_fields.get("teachers") or []
-        teachers = [
-            t.get("display_name", "") if isinstance(t, dict) else str(t) for t in teachers_raw
-        ]
+        teachers = [t.get("display_name", "") if isinstance(t, dict) else str(t) for t in teachers_raw]
         term_raw = course.extra_fields.get("term")
         term_name = term_raw.get("name") if isinstance(term_raw, dict) else term_raw
         return {
@@ -328,11 +324,7 @@ class ListAnnouncements:
         c = _client()
         course_ids = [int(x) for x in (args.get("course_ids") or [])]
         if not course_ids:
-            course_ids = [
-                course.id
-                for course in c.get_courses(enrollment_state="active", per_page=100)
-                if course.id
-            ]
+            course_ids = [course.id for course in c.get_courses(enrollment_state="active", per_page=100) if course.id]
         context_codes = [f"course_{cid}" for cid in course_ids]
         since = (dt.datetime.now(dt.UTC) - dt.timedelta(days=int(args.get("past_days", 7)))).isoformat()
         out = []

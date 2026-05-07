@@ -135,6 +135,7 @@ def load_config() -> Config:
     """Load config from .env, environment variables, then overlay file config."""
     _load_dotenv()
     from .config_env import get_canvas_base_url
+
     cfg = Config(
         base_url=get_canvas_base_url().rstrip("/"),
         token=os.environ.get("CANVAS_TOKEN", ""),
@@ -195,13 +196,6 @@ def _overlay_file_config(cfg: Config) -> None:
         "default_block_min": "default_block_min",
         "open_after_dl": "open_after_dl",
         "calcurse_import": "calcurse_import",
-        "calendar_backend": "calendar_backend",
-        "google_credentials_path": "google_credentials_path",
-        "google_token_path": "google_token_path",
-        "ical_path": "ical_path",
-        "ical_write_path": "ical_write_path",
-        "use_ai_reranker": "use_ai_reranker",
-        "model_path": "model_path",
         "llm_endpoint": "llm_endpoint",
         "llm_model": "llm_model",
         "llm_api_key": "llm_api_key",
