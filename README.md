@@ -29,10 +29,13 @@ See [Quick Start](docs/QUICKSTART.md) · [Examples](examples/) · [Public Roadma
 [![Security](https://img.shields.io/github/actions/workflow/status/kleinpanic/CS3704-Canvas-Project/security.yml?branch=main&label=Security)](https://github.com/kleinpanic/CS3704-Canvas-Project/actions/workflows/security.yml)
 [![Pages](https://img.shields.io/github/actions/workflow/status/kleinpanic/CS3704-Canvas-Project/pages.yml?branch=main&label=Pages)](https://github.com/kleinpanic/CS3704-Canvas-Project/actions/workflows/pages.yml)
 [![Release](https://img.shields.io/github/actions/workflow/status/kleinpanic/CS3704-Canvas-Project/release.yml?label=Release)](https://github.com/kleinpanic/CS3704-Canvas-Project/actions/workflows/release.yml)
+
 <!-- codecov badge: removed pending codecov.io registration; see Phase 5/8 for restoration when CODECOV_TOKEN is wired -->
-<br>
+
 [![PyPI canvas-sdk](https://img.shields.io/pypi/v/canvas-sdk?label=canvas-sdk)](https://pypi.org/project/canvas-sdk/)
+
 <!-- canvas-tui badge restored when #177 ships -->
+
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/canvas-sdk)](https://pypi.org/project/canvas-sdk/)
 [![ghcr.io](https://img.shields.io/badge/ghcr.io-canvas--tui-2496ED?logo=docker&logoColor=white)](https://github.com/kleinpanic/CS3704-Canvas-Project/pkgs/container/canvas-tui)
 <br>
