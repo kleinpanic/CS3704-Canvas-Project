@@ -5,10 +5,7 @@ on:
     tags:
       - "v[0-9]+.[0-9]+.[0-9]+*"
 
-permissions:
-  contents: write
-  id-token: write
-  actions: write
+permissions: read-all
 
 concurrency:
   group: release-${{ github.ref }}
@@ -298,6 +295,8 @@ jobs:
       - build-sdk-macos
       - build-extension
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Harden runner
         uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450  # v2
@@ -418,7 +417,7 @@ jobs:
 
   generate-sbom:
     name: Generate SBOM
-    needs: [release, publish-pypi, build-sdk-linux]
+    needs: [release, build-sdk-linux]
     if: ${{ !contains(needs.build-sdk-linux.outputs.version, '-') }}
     runs-on: ubuntu-latest
     permissions:
@@ -449,9 +448,40 @@ jobs:
           tag_name: ${{ github.ref_name }}
           files: sbom.cyclonedx.json
 
+  sigstore-sign:
+    name: Sign wheel + sdist with Sigstore
+    needs: [release, build-sdk-linux]
+    if: ${{ !contains(needs.build-sdk-linux.outputs.version, '-') }}
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: write
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450  # v2
+        with:
+          egress-policy: audit
+
+      - name: Download SDK artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8
+        with:
+          name: sdk-linux
+          path: dist/
+
+      - name: Sign with Sigstore
+        uses: sigstore/gh-action-sigstore-python@f514d46b907ebcd5bedc05145c03b69c1edd8b46  # v3.0.0
+        with:
+          inputs: dist/*.whl dist/*.tar.gz
+
+      - name: Attach signatures to GH Release
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65  # v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: dist/*.sigstore.json
+
   slsa-provenance:
     name: SLSA Provenance
-    needs: [release, publish-pypi, build-sdk-linux]
+    needs: [release, build-sdk-linux]
     if: ${{ !contains(needs.build-sdk-linux.outputs.version, '-') }}
     permissions:
       id-token: write

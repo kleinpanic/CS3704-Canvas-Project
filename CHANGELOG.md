@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [unreleased]
+
+### Security — v2.1 Phase 2: OSSF Scorecard Score Lift
+
+- Workflow permissions scope-downs across 8 workflows: top-level `permissions: read-all` + job-level write grants only where required. Closes the OSSF Token-Permissions check (was 0/10).
+- `release.yml` hardening: top-level perms narrowed; SBOM and SLSA-provenance jobs decoupled from `publish-pypi` failures; new `sigstore-sign` job (SHA-pinned `sigstore/gh-action-sigstore-python@f514d46b`, v3.0.0) signs both wheel and sdist artifacts.
+- New `scorecard-gate.yml` PR-gating workflow: runs Scorecard CLI v5.1.1 (SHA-verified tarball) on every PR to `main`, fails the build if score drops below configurable floor (default 6.5). Self-aware bootstrap detection skips enforcement when the gate workflow itself is modified.
+- Docker base-image SHA pinning (manifest-list digests preserve linux/arm64 build): `docker/canvas-tui/Dockerfile` and `hf-space-pii/Dockerfile`.
+- `hf-space/requirements.txt`: `gradio==5.7.1` → `gradio>=6.7.0` (closes GHSA-39mp-8hj3-5c49 path-traversal CVE plus 3 other open critical/high alerts).
+- `pyproject.toml`: `gradio-client` floor aligned to `>=2.2` (gradio 6.7.0 companion).
+- 9 stale Dependabot alerts dismissed as `tolerable_risk` (8 against zombie bare `requirements.txt` path, 1 with no upstream fix).
+- `.github/workflows/docker.yml` build-push job: `contents: read` added (was implicitly `none` after job-level perm narrowing — broke `actions/checkout`).
+
+### Notes
+
+- SCORECARD_READ_TOKEN repo secret created out-of-band 2026-05-07T04:09:55Z; should be rotated post-merge (was pasted in plaintext during a prior orchestration session).
+- Signed-Releases score (currently 0/10) lifts to 7/10 only on next stable release ship; Plan 06 of this milestone covers the post-merge release cut + Scorecard manual dispatch + score verification.
+
 ## [2.0.0] - 2026-05-06
 
 ### Public-Contribution Hardening — 12-phase milestone

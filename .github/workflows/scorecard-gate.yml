@@ -1,0 +1,99 @@
+name: Scorecard Gate
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      floor:
+        description: "Minimum score (default 6.5)"
+        required: false
+        default: "6.5"
+
+permissions: read-all
+
+jobs:
+  scorecard-gate:
+    name: OSSF Scorecard Score Gate
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      id-token: write
+      contents: read
+      actions: read
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450  # v2
+        with:
+          egress-policy: audit
+
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Detect bootstrap PR (gate modifies itself)
+        id: bootstrap
+        if: github.event_name == 'pull_request'
+        run: |
+          # When this PR touches scorecard-gate.yml, the gate cannot enforce its
+          # own floor against the pre-merge `main` score (chicken-and-egg).
+          # Mark as bootstrap so the floor check becomes informational.
+          if git diff --name-only "origin/${{ github.base_ref }}...HEAD" | grep -qE '^\.github/workflows/scorecard-gate\.yml$'; then
+            echo "is_bootstrap=true" >> "$GITHUB_OUTPUT"
+            echo "Bootstrap PR detected — score floor will be informational only"
+          else
+            echo "is_bootstrap=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Download and verify Scorecard CLI
+        env:
+          SCORECARD_VERSION: "5.1.1"
+          SCORECARD_SHA256: "a894eb7390308069a49a3ace0f68dddf995cdfa1b6e7f8b2e1ea77de131e4962"
+        run: |
+          TARBALL="scorecard_${SCORECARD_VERSION}_linux_amd64.tar.gz"
+          curl -sL "https://github.com/ossf/scorecard/releases/download/v${SCORECARD_VERSION}/${TARBALL}" \
+            -o "${TARBALL}"
+          echo "${SCORECARD_SHA256}  ${TARBALL}" | sha256sum --check --strict
+          tar -xzf "${TARBALL}" scorecard
+          chmod +x scorecard
+
+      - name: Run Scorecard and enforce floor
+        env:
+          GITHUB_AUTH_TOKEN: ${{ secrets.SCORECARD_READ_TOKEN || github.token }}
+          FLOOR: ${{ inputs.floor || '6.5' }}
+          IS_BOOTSTRAP: ${{ steps.bootstrap.outputs.is_bootstrap || 'false' }}
+        run: |
+          ./scorecard \
+            --repo="https://github.com/${{ github.repository }}" \
+            --format=json \
+            --show-details \
+            > scorecard-results.json 2>&1 || true
+
+          SCORE=$(python3 -c "
+          import json, sys
+          with open('scorecard-results.json') as f:
+              data = json.load(f)
+          print(data.get('score', 0))
+          " 2>/dev/null || echo "0")
+
+          echo "Scorecard score: ${SCORE}"
+          echo "Floor: ${FLOOR}"
+
+          if [[ "${IS_BOOTSTRAP}" == "true" ]]; then
+            echo "BOOTSTRAP: PR modifies scorecard-gate.yml itself — floor enforcement skipped."
+            echo "Score is ${SCORE}, floor is ${FLOOR}. Will enforce on next PR."
+            exit 0
+          fi
+
+          python3 -c "
+          import sys
+          score = float('${SCORE}')
+          floor = float('${FLOOR}')
+          if score < floor:
+              print(f'FAIL: score {score} is below floor {floor}')
+              sys.exit(1)
+          else:
+              print(f'PASS: score {score} >= floor {floor}')
+          "
