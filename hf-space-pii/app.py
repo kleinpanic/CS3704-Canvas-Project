@@ -40,8 +40,14 @@ except Exception as _load_err:
 # Label maps and target fields — copied from anon_worker_piiranha.py
 # ---------------------------------------------------------------------------
 
-_PERSON_LABELS = {"I-GIVENNAME", "I-SURNAME", "I-USERNAME"}
-_LOC_LABELS = {"I-CITY", "I-STREET", "I-BUILDINGNUM", "I-ZIPCODE"}
+# Piiranha is loaded with `aggregation_strategy="simple"`, which collapses
+# adjacent same-class tokens AND DROPS the BIO prefix from `entity_group`.
+# Live verification: POST /entities returns `entity_group: "EMAIL"`, "USERNAME"
+# etc. — NOT "I-EMAIL" / "I-USERNAME". The previous I- prefix in these sets
+# meant /scrub never matched any entity → silent no-op (registry={}).
+# Adding EMAIL to person-class so emails get @PERSON_N tokenized too.
+_PERSON_LABELS = {"GIVENNAME", "SURNAME", "USERNAME", "EMAIL"}
+_LOC_LABELS = {"CITY", "STREET", "BUILDINGNUM", "ZIPCODE"}
 
 _TARGET_FIELDS = {"content", "text", "final_answer"}
 
