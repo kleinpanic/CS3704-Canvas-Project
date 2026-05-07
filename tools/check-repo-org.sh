@@ -55,7 +55,7 @@ while IFS= read -r dockerfile; do
         echo "WARN [repo-org]: Dockerfile '${dockerfile}' is outside docker/ + hf-space*/. Move it or update ALLOWLIST policy." >&2
         warn_count=$((warn_count + 1))
     fi
-done < <(find . -name 'Dockerfile*' -not -path './.git/*' -not -path './.venv/*' -not -path './.planning/*' -type f)
+done < <(find . -name 'Dockerfile*' -not -path './.git/*' -not -path './.venv/*' -not -path './.planning/*' -not -path './.claude/*' -type f)
 
 # === Check 4: pyproject.toml outside src/sdk/ + repo root ===
 while IFS= read -r pyproject; do
@@ -69,7 +69,7 @@ while IFS= read -r pyproject; do
             warn_count=$((warn_count + 1))
             ;;
     esac
-done < <(find . -name 'pyproject.toml' -not -path './.git/*' -not -path './.venv/*' -not -path './.planning/*' -not -path './node_modules/*' -type f)
+done < <(find . -name 'pyproject.toml' -not -path './.git/*' -not -path './.venv/*' -not -path './.planning/*' -not -path './node_modules/*' -not -path './.claude/*' -type f)
 
 if [ "${warn_count}" -gt 0 ]; then
     echo "" >&2

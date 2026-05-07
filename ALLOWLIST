@@ -27,6 +27,7 @@ Makefile                # Tooling shortcuts
 MANIFEST.in             # Python sdist file inclusions
 README.md               # Project entry point
 ROADMAP.md              # Public-facing roadmap (separate from .planning/ROADMAP.md)
+SECURITY.md             # Vulnerability disclosure policy
 ALLOWLIST               # This file (self-reference for completeness)
 pyproject.toml          # Root Python project (canvas_tui workspace root)
 requirements.txt        # Tooling/CI minimal install only — NOT a runtime dep manifest
@@ -50,6 +51,7 @@ tools                   # Repo tooling (linters, hooks, checkers)
 
 # === Hidden top-level entries with rationale ===
 .all-contributorsrc     # All-Contributors bot config
+.claude                 # Claude Code session/worktree state (local dev convenience; gitignored when needed)
 .czrc                   # Commitizen commit-message linter config
 .devcontainer           # GitHub Codespaces devcontainer config
 .editorconfig           # Cross-editor formatting rules
