@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Bumped `transformers >= 4.53.0` and `torch >= 2.8.0` across `requirements.txt`, `hf-space/requirements.txt`, and `hf-space-pii/requirements.txt`. Closes ~26 of the 28 open MEDIUM-severity Dependabot alerts (multiple CVEs in transformers 4.4x and torch 2.6.x). Phase 2 hardening closed all critical+high; this closes the medium-severity tail. Some lows remain (RC versions only — `5.0.0rc3` and `2.7.1-rc1` — not pinning to RCs).
 
+### Improved — pii-scrub regex fallback layer (catches Piiranha v1 gaps)
+
+- `hf-space-pii/app.py`: added regex fallback layer for phone numbers and Title-Case person-name patterns. Piiranha v1 has known recall gaps on conversational sentences (e.g., misses "Alice Johnson" entirely; mis-labels "Bob Smith" as CITY). Regex fallback runs alongside the model's entity extraction; results are deduplicated against model entities (overlap-skip). Phone-number regex covers US formats: 540-231-1234, (540) 231-1234, +1-540-231-1234, 540.231.1234, 5402311234. Name regex catches Title-Case First+Last with stopwords for months, days, courses, and common false positives. Both add `@PERSON_N` tokens to the existing registry.
+
 ### Security — v2.1 Phase 2: OSSF Scorecard Score Lift
 
 - Workflow permissions scope-downs across 8 workflows: top-level `permissions: read-all` + job-level write grants only where required. Closes the OSSF Token-Permissions check (was 0/10).
