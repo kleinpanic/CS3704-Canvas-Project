@@ -41,7 +41,7 @@ updates:
 
   # HF Space (gradio app)
   - package-ecosystem: "pip"
-    directory: "/hf-space"
+    directory: "/huggingface/agent-demo"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
@@ -61,7 +61,7 @@ updates:
 
   # PII Scrub HF Space (FastAPI app)
   - package-ecosystem: "pip"
-    directory: "/hf-space-pii"
+    directory: "/huggingface/pii-scrub"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5

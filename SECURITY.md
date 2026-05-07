@@ -34,7 +34,7 @@ active disclosures. The timeline clock starts from the first private report rece
 - `canvas-sdk` Python package (`src/sdk/`)
 - `canvas-tui` Python TUI (`src/canvas_tui/`)
 - Cloudflare Worker proxy (`workers/`, `proxy/`)
-- HuggingFace Spaces (`hf-space/`, `hf-space-pii/`)
+- HuggingFace Spaces (`huggingface/agent-demo/`, `huggingface/pii-scrub/`)
 - GitHub Actions workflows (`.github/workflows/`)
 - Dataset pipeline scripts (`scripts/share_my_canvas.py`)
 

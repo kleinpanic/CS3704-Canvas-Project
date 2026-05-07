@@ -6,7 +6,7 @@ on:
   push:
     branches: [main]
     paths:
-      - "hf-space/**"
+      - "huggingface/agent-demo/**"
   workflow_dispatch:
 
 permissions:
@@ -31,13 +31,13 @@ jobs:
       - name: Install huggingface_hub
         run: pip install "huggingface_hub[cli]>=0.23"
 
-      - name: Upload hf-space/ to HuggingFace Space
+      - name: Upload huggingface/agent-demo/ to HuggingFace Space
         if: ${{ env.HAS_HF_TOKEN == 'true' }}
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           hf upload kleinpanic93/canvas-calendar-agent-demo \
-            hf-space/ . \
+            huggingface/agent-demo/ . \
             --repo-type space \
             --commit-message "deploy: ${{ github.sha }}"
 

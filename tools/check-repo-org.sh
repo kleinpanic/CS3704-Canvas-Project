@@ -4,7 +4,7 @@
 # Four checks against the repo's top-level structure:
 #   1. New top-level files/dirs not in ALLOWLIST
 #   2. New root-level *.md files not in ALLOWLIST (subset of 1, called out separately)
-#   3. New Dockerfile outside docker/ + hf-space*/
+#   3. New Dockerfile outside docker/ + huggingface/
 #   4. New pyproject.toml outside src/sdk/ + repo root
 #
 # WARNING MODE: emits warnings to stderr and ALWAYS exits 0.
@@ -51,8 +51,8 @@ done < <(find . -maxdepth 1 -name '*.md' -type f | sed 's|^\./||')
 # === Check 3: Dockerfile outside sanctioned dirs ===
 while IFS= read -r dockerfile; do
     [ -z "${dockerfile}" ] && continue
-    if ! [[ "${dockerfile}" =~ ^(./)?docker/ ]] && ! [[ "${dockerfile}" =~ ^(./)?hf-space ]]; then
-        echo "WARN [repo-org]: Dockerfile '${dockerfile}' is outside docker/ + hf-space*/. Move it or update ALLOWLIST policy." >&2
+    if ! [[ "${dockerfile}" =~ ^(./)?docker/ ]] && ! [[ "${dockerfile}" =~ ^(./)?huggingface/ ]]; then
+        echo "WARN [repo-org]: Dockerfile '${dockerfile}' is outside docker/ + huggingface/. Move it or update ALLOWLIST policy." >&2
         warn_count=$((warn_count + 1))
     fi
 done < <(find . -name 'Dockerfile*' -not -path './.git/*' -not -path './.venv/*' -not -path './.planning/*' -not -path './.claude/*' -type f)

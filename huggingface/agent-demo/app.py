@@ -105,7 +105,7 @@ def summarize_tool_results(tool_log: list[dict]) -> str:
 
 # ---------------------------------------------------------------------------
 # InMemoryCalendarBackend — duplicated from canvas_sdk.backends.calendar_adapter.
-# The HF Space deploy workflow only uploads hf-space/, so canvas_sdk is not
+# The HF Space deploy workflow only uploads huggingface/agent-demo/, so canvas_sdk is not
 # importable here. The contract is kept identical to the SDK class so behaviour
 # stays in lockstep with src/sdk/canvas_sdk/backends/calendar_adapter.py.
 # ---------------------------------------------------------------------------

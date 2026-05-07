@@ -7,29 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Changed — top-level Hugging Face directory consolidation
+
+- Consolidated `hf-space/` (canvas-calendar-agent-demo) and `hf-space-pii/` (canvas-pii-scrub) into a single top-level `huggingface/` parent. Each Space now lives at `huggingface/agent-demo/` and `huggingface/pii-scrub/`. Cleans up the top-level repo tree (was 2 entries, now 1) and groups all HF deployment surfaces under one umbrella.
+- Updated all internal references: `.github/workflows/deploy-{hf-space,pii-space}.yml`, `.github/dependabot.yml`, `.github/pull_request_template.md`, `Makefile`, `README.md`, `CONTRIBUTING.md`, `LICENSING.md`, `SECURITY.md`, `ALLOWLIST`, `tools/check-repo-org.sh`, `tests/test_pii_space_app.py`.
+- HF Space deploy targets (`https://huggingface.co/spaces/kleinpanic93/canvas-calendar-agent-demo` and `.../canvas-pii-scrub`) are unchanged — only the source path inside the repo changed.
+
 ### Security — v2.1 Dependabot medium-alert closure
 
-- Bumped `transformers >= 4.53.0` and `torch >= 2.8.0` across `requirements.txt`, `hf-space/requirements.txt`, and `hf-space-pii/requirements.txt`. Closes ~26 of the 28 open MEDIUM-severity Dependabot alerts (multiple CVEs in transformers 4.4x and torch 2.6.x). Phase 2 hardening closed all critical+high; this closes the medium-severity tail. Some lows remain (RC versions only — `5.0.0rc3` and `2.7.1-rc1` — not pinning to RCs).
+- Bumped `transformers >= 4.53.0` and `torch >= 2.8.0` across `requirements.txt`, `huggingface/agent-demo/requirements.txt`, and `huggingface/pii-scrub/requirements.txt`. Closes ~26 of the 28 open MEDIUM-severity Dependabot alerts (multiple CVEs in transformers 4.4x and torch 2.6.x). Phase 2 hardening closed all critical+high; this closes the medium-severity tail. Some lows remain (RC versions only — `5.0.0rc3` and `2.7.1-rc1` — not pinning to RCs).
 
 ### Improved — pii-scrub regex fallback layer (catches Piiranha v1 gaps)
 
-- `hf-space-pii/app.py`: added regex fallback layer for phone numbers and Title-Case person-name patterns. Piiranha v1 has known recall gaps on conversational sentences (e.g., misses "Alice Johnson" entirely; mis-labels "Bob Smith" as CITY). Regex fallback runs alongside the model's entity extraction; results are deduplicated against model entities (overlap-skip). Phone-number regex covers US formats: 540-231-1234, (540) 231-1234, +1-540-231-1234, 540.231.1234, 5402311234. Name regex catches Title-Case First+Last with stopwords for months, days, courses, and common false positives. Both add `@PERSON_N` tokens to the existing registry.
+- `huggingface/pii-scrub/app.py`: added regex fallback layer for phone numbers and Title-Case person-name patterns. Piiranha v1 has known recall gaps on conversational sentences (e.g., misses "Alice Johnson" entirely; mis-labels "Bob Smith" as CITY). Regex fallback runs alongside the model's entity extraction; results are deduplicated against model entities (overlap-skip). Phone-number regex covers US formats: 540-231-1234, (540) 231-1234, +1-540-231-1234, 540.231.1234, 5402311234. Name regex catches Title-Case First+Last with stopwords for months, days, courses, and common false positives. Both add `@PERSON_N` tokens to the existing registry.
 
 ### Security — v2.1 Phase 2: OSSF Scorecard Score Lift
 
 - Workflow permissions scope-downs across 8 workflows: top-level `permissions: read-all` + job-level write grants only where required. Closes the OSSF Token-Permissions check (was 0/10).
 - `release.yml` hardening: top-level perms narrowed; SBOM and SLSA-provenance jobs decoupled from `publish-pypi` failures; new `sigstore-sign` job (SHA-pinned `sigstore/gh-action-sigstore-python@f514d46b`, v3.0.0) signs both wheel and sdist artifacts.
 - New `scorecard-gate.yml` PR-gating workflow: runs Scorecard CLI v5.1.1 (SHA-verified tarball) on every PR to `main`, fails the build if score drops below configurable floor (default 6.5). Self-aware bootstrap detection skips enforcement when the gate workflow itself is modified.
-- Docker base-image SHA pinning (manifest-list digests preserve linux/arm64 build): `docker/canvas-tui/Dockerfile` and `hf-space-pii/Dockerfile`.
-- `hf-space/requirements.txt`: `gradio==5.7.1` → `gradio>=6.7.0` (closes GHSA-39mp-8hj3-5c49 path-traversal CVE plus 3 other open critical/high alerts).
+- Docker base-image SHA pinning (manifest-list digests preserve linux/arm64 build): `docker/canvas-tui/Dockerfile` and `huggingface/pii-scrub/Dockerfile`.
+- `huggingface/agent-demo/requirements.txt`: `gradio==5.7.1` → `gradio>=6.7.0` (closes GHSA-39mp-8hj3-5c49 path-traversal CVE plus 3 other open critical/high alerts).
 - `pyproject.toml`: `gradio-client` floor aligned to `>=2.2` (gradio 6.7.0 companion).
 - 9 stale Dependabot alerts dismissed as `tolerable_risk` (8 against zombie bare `requirements.txt` path, 1 with no upstream fix).
 - `.github/workflows/docker.yml` build-push job: `contents: read` added (was implicitly `none` after job-level perm narrowing — broke `actions/checkout`).
 
 ### Fixed — v2.1 Phase 2 hot-fix (post-merge regressions)
 
-- `hf-space-pii/Dockerfile`: HF Spaces' build parser rejected `FROM image@sha256:DIGEST  # tag-comment` with "FROM requires either one or three arguments". Standard `docker build` is lenient; HF's buildkit treats the inline comment as extra arguments. Fix: move `# tag:` comment to its own line above FROM. Same defensive fix applied to `docker/canvas-tui/Dockerfile`.
-- `hf-space/README.md`: bumped `sdk_version: 5.7.1` → `6.7.0` to resolve gradio resolver conflict between HF's pre-baked `gradio[oauth]==5.7.1` and our `gradio>=6.7.0` floor in `requirements.txt`.
+- `huggingface/pii-scrub/Dockerfile`: HF Spaces' build parser rejected `FROM image@sha256:DIGEST  # tag-comment` with "FROM requires either one or three arguments". Standard `docker build` is lenient; HF's buildkit treats the inline comment as extra arguments. Fix: move `# tag:` comment to its own line above FROM. Same defensive fix applied to `docker/canvas-tui/Dockerfile`.
+- `huggingface/agent-demo/README.md`: bumped `sdk_version: 5.7.1` → `6.7.0` to resolve gradio resolver conflict between HF's pre-baked `gradio[oauth]==5.7.1` and our `gradio>=6.7.0` floor in `requirements.txt`.
 
 ### Notes
 
@@ -49,16 +55,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Removed from public tree:** ghost root `package.json` (dated `v1.0.0`, no real consumer, `index.js` never existed) + paired `package-lock.json`. Class deliverables `IMPLEMENTATION.md` and `docs/CS3704-PM3-REVIEW.md` archived under `.planning/archive/v2.1-class-deliverables/` (out of public-facing tree; original content preserved in git history).
 - **New `ALLOWLIST` at repo root:** every sanctioned top-level file/directory listed with a one-line `# rationale` comment. Source of truth for repo-org policy.
-- **New `tools/check-repo-org.sh` warning hook:** 4 checks against repo top-level structure (entries off ALLOWLIST, root `*.md` unjustified, Dockerfile outside `docker/` + `hf-space*/`, `pyproject.toml` outside `src/sdk/` + repo root). Registered in `.pre-commit-config.yaml`. **WARNING MODE** — prints to stderr, always exits 0. Promotes to blocking after one milestone of stable usage.
+- **New `tools/check-repo-org.sh` warning hook:** 4 checks against repo top-level structure (entries off ALLOWLIST, root `*.md` unjustified, Dockerfile outside `docker/` + `huggingface/`, `pyproject.toml` outside `src/sdk/` + repo root). Registered in `.pre-commit-config.yaml`. **WARNING MODE** — prints to stderr, always exits 0. Promotes to blocking after one milestone of stable usage.
 - **PR template (`.github/pull_request_template.md`):** new "Repo Org Compliance" checklist section makes ALLOWLIST + repo-org-warn expectations explicit at PR-open time.
 
 ### Fixed — v2.1 Phase 4 hot-fix (live demo runtime regression)
 
-- `hf-space/app.py`: removed `type="messages"` from `gr.Chatbot(...)`. The Space build succeeded after the prior hot-fix (sdk_version + Dockerfile fixes) but crashed at startup because gradio 6.x removed the `type=` keyword (messages format is now default). Verified by reproducing the failure in a fresh venv with `gradio==6.7.0`.
+- `huggingface/agent-demo/app.py`: removed `type="messages"` from `gr.Chatbot(...)`. The Space build succeeded after the prior hot-fix (sdk_version + Dockerfile fixes) but crashed at startup because gradio 6.x removed the `type=` keyword (messages format is now default). Verified by reproducing the failure in a fresh venv with `gradio==6.7.0`.
 
 ### Fixed — v2.1 pii-scrub silent-no-op regression (pre-existing)
 
-- `hf-space-pii/app.py`: `_PERSON_LABELS` and `_LOC_LABELS` were checking for BIO-prefixed labels (`I-GIVENNAME`, `I-CITY`, etc.) but the model is loaded with `aggregation_strategy="simple"`, which collapses spans and drops the BIO prefix. The model returns `entity_group: "EMAIL"`, `"USERNAME"`, `"GIVENNAME"` etc. — never `"I-..."`. Result: `/scrub` always returned the input unchanged with `redactions: []` and `registry: {}` — a silent no-op for every request. `/entities` was unaffected (it returns the raw entity list without label-set filtering). Live-verified by hitting `/scrub` against `https://kleinpanic93-canvas-pii-scrub.hf.space/`. Fix: drop `I-` prefix from both label sets and add `EMAIL` to person-class.
+- `huggingface/pii-scrub/app.py`: `_PERSON_LABELS` and `_LOC_LABELS` were checking for BIO-prefixed labels (`I-GIVENNAME`, `I-CITY`, etc.) but the model is loaded with `aggregation_strategy="simple"`, which collapses spans and drops the BIO prefix. The model returns `entity_group: "EMAIL"`, `"USERNAME"`, `"GIVENNAME"` etc. — never `"I-..."`. Result: `/scrub` always returned the input unchanged with `redactions: []` and `registry: {}` — a silent no-op for every request. `/entities` was unaffected (it returns the raw entity list without label-set filtering). Live-verified by hitting `/scrub` against `https://kleinpanic93-canvas-pii-scrub.hf.space/`. Fix: drop `I-` prefix from both label sets and add `EMAIL` to person-class.
 
 ## [2.0.0] - 2026-05-06
 
