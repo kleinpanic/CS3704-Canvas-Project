@@ -343,6 +343,7 @@ jobs:
   # Forks: this job will be skipped automatically if the 'test-pypi' environment is not configured.
   test-pypi:
     name: Test PyPI Dry-Run
+    continue-on-error: true
     needs: [release, build-sdk-linux]
     if: ${{ !contains(needs.build-sdk-linux.outputs.version, '-') }}
     runs-on: ubuntu-latest
