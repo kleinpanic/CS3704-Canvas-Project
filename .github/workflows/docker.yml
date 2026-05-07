@@ -9,15 +9,15 @@ on:
       - 'docker/canvas-tui/**'
     tags: ['v*.*.*']
 
-permissions:
-  contents: read
-  packages: write
-  id-token: write
+permissions: read-all
 
 jobs:
   build-push:
     name: Build & Push
     runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      id-token: write
     steps:
       - name: Harden runner
         uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450  # v2
