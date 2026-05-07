@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Fixed — agent-demo: roll back gradio to 5.7.1 (stop-bleed)
+
+- `huggingface/agent-demo/{requirements.txt,README.md,app.py}`: rolled gradio back from 6.x to `5.7.1` and restored `type="messages"` on `gr.Chatbot`. Gradio 6.x was crashing the Space with chat_stream signature introspection bug despite the wiring matching. CVE GHSA-39mp-8hj3-5c49 (gradio path traversal HIGH) is not exposed in this Space — there are no filesystem-input components. Proper gradio 6 migration is a separate phase.
+
 ### Fixed — agent-demo gradio 6 API breakage + docker SBOM perms
 
 - `huggingface/agent-demo/app.py`: moved `theme=` and `css=` from `gr.Blocks(...)` constructor to `demo.launch(...)` per gradio 6.0 breaking change. The constructor warning was actually a hard error — Space crashed at startup.
