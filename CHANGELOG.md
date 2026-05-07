@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Fixed — agent-demo CONFIG_ERROR: ZeroGPU torch version
+
+- `huggingface/agent-demo/requirements.txt`: removed explicit `torch` pin entirely. PR #205's `torch==2.7.0` triggered `No candidate PyTorch version found for ZeroGPU` because the `spaces` package bundles its own ZeroGPU-compatible torch wheel; explicit pin conflicted. Letting `spaces` resolve torch is the canonical pattern for ZeroGPU Spaces.
+
 ### Fixed — agent-demo CONFIG_ERROR (sdk_version unquoted)
 
 - `huggingface/agent-demo/README.md`: re-quoted `sdk_version: 6.7.0` -> `sdk_version: "6.7.0"` per HF Spaces config reference. PR #195 changed it from quoted "5.7.1" to unquoted 6.7.0; HF YAML parser treats unquoted as non-string and triggers CONFIG_ERROR. ref: https://huggingface.co/docs/hub/spaces-config-reference

@@ -1,11 +1,5 @@
 gradio>=6.7.0  # bumped from 6.6.0 to close GHSA-39mp-8hj3-5c49 (fixed_in 6.7.0); API compat verified
 transformers==5.8.0  # pinned because git-HEAD broke us once
-# torch: rolled back from >=2.8.0 to 2.7.0 — 2.8.0 caused RUNTIME_ERROR on Space
-# (model loaded 10.2GB safetensors, crashed at generation_config.json step). 2.7.0
-# was the last known-working version with this Space's transformers + model combo.
 # The torch CVEs fixed in 2.8.0 are not exposed in this Space's request path
-# (model.safetensors is loaded once, no torch.load on user input). Revisit when
-# transformers 6.x lands or when v2-piiranha-style retraining happens.
-torch==2.7.0
 accelerate==1.7.0  # pinned because git-HEAD broke us once
 spaces
