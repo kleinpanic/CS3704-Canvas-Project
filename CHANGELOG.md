@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Fixed — Test PyPI Dry-Run no longer fails the release run
+
+- `.github/workflows/release.yml`: added `continue-on-error: true` to the Test PyPI Dry-Run job. test.pypi.org doesn'''t have a trusted publisher configured for this repo (separate maintainer click-op); the dry-run isn'''t a correctness gate for the real publish anyway. Allowing it to non-blocking-fail keeps release.yml runs clean while leaving the job in place for opt-in verification once test.pypi.org is wired.
+
 ### Fixed — bump pypa/gh-action-pypi-publish (twine bug)
 
 - `.github/workflows/release.yml`: bumped `pypa/gh-action-pypi-publish@ec4db0b4` -> `@cef22109` (latest release/v1). The pinned SHA was running an old twine that misread Metadata-Version 2.4 wheels with "Metadata is missing required fields: Name, Version". Wheels themselves were valid (verified by direct twine upload of the same artifact, canvas-sdk 2.0.5 + 2.0.8 LIVE on pypi.org). Action bump fixes the CI publish path.
