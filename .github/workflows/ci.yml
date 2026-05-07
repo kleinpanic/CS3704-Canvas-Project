@@ -18,10 +18,15 @@ jobs:
     name: Test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - name: Harden runner
+        uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450  # v2
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6
         with:
           python-version: "3.11"
           cache: pip
@@ -39,10 +44,15 @@ jobs:
     name: Coverage
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - name: Harden runner
+        uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450  # v2
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6
         with:
           python-version: "3.11"
           cache: pip
@@ -59,15 +69,9 @@ jobs:
         run: pytest tests/ -q --cov=canvas_tui --cov-report=term-missing
 
       - name: Coverage threshold
-        env:
-          PR_BODY: ${{ github.event.pull_request.body }}
         run: |
           if [ "${{ github.event_name }}" = "push" ]; then
             echo "Push to main — coverage threshold check skipped (see coverage.yml)"
-            exit 0
-          fi
-          if echo "$PR_BODY" | grep -qi "no-coverage-check"; then
-            echo "Coverage check bypassed by PR author"
             exit 0
           fi
           coverage report --fail-under=80
@@ -80,10 +84,15 @@ jobs:
       matrix:
         python-version: ["3.11", "3.12", "3.13"]
     steps:
-      - uses: actions/checkout@v6
+      - name: Harden runner
+        uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450  # v2
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
@@ -99,10 +108,15 @@ jobs:
     name: Dead Code Analysis
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - name: Harden runner
+        uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450  # v2
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6
         with:
           python-version: "3.11"
           cache: pip

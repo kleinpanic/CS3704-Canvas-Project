@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Professor matching logic.
 
 Matches Canvas instructor names against RateMyProfessors data
@@ -8,9 +9,9 @@ from __future__ import annotations
 
 import re
 import unicodedata
-from typing import Optional
+from collections.abc import Sequence
 
-from .models import ProfessorRating, MatchResult
+from .models import MatchResult, ProfessorRating
 
 # Suffixes and titles to strip during normalization
 _STRIP_SUFFIXES = {

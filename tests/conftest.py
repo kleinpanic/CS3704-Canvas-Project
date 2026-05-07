@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Shared test fixtures for Canvas TUI."""
 
 from __future__ import annotations
@@ -14,6 +15,18 @@ import pytest
 _repo_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_repo_root / "src"))
 sys.path.insert(0, str(_repo_root / "src" / "sdk"))
+
+# D-12: set required env vars at module level so collection-time imports of
+# config_env (and any module that eagerly reads env) don't sys.exit the runner.
+os.environ.setdefault("CANVAS_BASE_URL", "https://canvas.test.example")
+os.environ.setdefault("CANVAS_TOKEN", "test-token-fixture")
+
+
+@pytest.fixture(autouse=True, scope="session")
+def _canvas_env_defaults():
+    """Ensure required env vars are present for all tests (D-12)."""
+    os.environ.setdefault("CANVAS_BASE_URL", "https://canvas.test.example")
+    os.environ.setdefault("CANVAS_TOKEN", "test-token-fixture")
 
 
 @pytest.fixture

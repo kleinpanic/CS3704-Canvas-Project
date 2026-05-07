@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Disk-backed response cache with TTL for offline mode."""
 
 from __future__ import annotations

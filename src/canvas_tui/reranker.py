@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """
 canvas_tui.reranker — pluggable reranker for Canvas item priority sort.
 
@@ -67,7 +68,7 @@ class AlwaysAReranker:
     def rank(self, query: str, items: list[CanvasItem]) -> list[CanvasItem]:
         if not items:
             return []
-        return [items[0]] + list(items[1:])
+        return [items[0], *list(items[1:])]
 
 
 # ── Pointwise reference item — same constant used in GemmaReranker/

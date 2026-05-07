@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Calendar week view — items displayed in a 7-day grid."""
 
 from __future__ import annotations

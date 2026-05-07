@@ -4,11 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "canvas-sdk"
-version = "1.2.3"
-description = "Canvas LMS Python SDK"
+version = "2.0.0"
+description = "Pure-Python (stdlib only) Canvas LMS read-only client and agent SDK"
 readme = "README.md"
 requires-python = ">=3.9"
-dependencies = ["requests>=2.20", "arrow>=1.0", "pytz>=2019.1", "httpx>=0.24"]
+dependencies = ["httpx>=0.24"]
 
 [project.optional-dependencies]
 gemini = ["google-generativeai>=0.8"]

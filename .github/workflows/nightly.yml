@@ -14,8 +14,13 @@ jobs:
     outputs:
       tag: ${{ steps.tag.outputs.tag }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Harden runner
+        uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450  # v2
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6
         with:
           python-version: '3.12'
       - name: Build SDK wheel
@@ -39,7 +44,7 @@ jobs:
           git tag "$TAG"
           git push origin "$TAG"
       - name: Publish pre-release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65  # v2
         with:
           tag_name: ${{ steps.tag.outputs.tag }}
           name: 'Nightly ${{ steps.tag.outputs.tag }}'

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Study-planning tools — neuroscience-grounded heuristics exposed as agent functions.
 
 All implementations are pure Python with no external dependencies.
@@ -7,7 +8,7 @@ from __future__ import annotations
 
 import datetime as dt
 
-__all__ = ["SpacedSchedule", "SemesterSchedule", "DeepBlockSize", "ExamBracket"]
+__all__ = ["DeepBlockSize", "ExamBracket", "SemesterSchedule", "SpacedSchedule"]
 
 
 class SpacedSchedule:

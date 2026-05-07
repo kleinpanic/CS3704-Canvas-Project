@@ -1,10 +1,9 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Canvas-side tools — read-only access to courses, assignments, syllabi, TODOs."""
 
 from __future__ import annotations
 
-from typing import Any
-
-__all__ = ["ListCourses", "GetAssignments", "GetTodo", "GetSyllabus", "GetCourse"]
+__all__ = ["GetAssignments", "GetCourse", "GetSyllabus", "GetTodo", "ListCourses"]
 
 
 class ListCourses:

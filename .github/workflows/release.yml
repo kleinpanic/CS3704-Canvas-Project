@@ -20,9 +20,14 @@ jobs:
     outputs:
       ci_passed: ${{ steps.ci.result }}
     steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450  # v2
+        with:
+          egress-policy: audit
+
       - name: Check CI status
         id: ci
-        uses: actions/github-script@v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3  # v9
         with:
           script: |
             const run = await github.rest.actions.listWorkflowRuns({
@@ -76,7 +81,12 @@ jobs:
     needs: require-ci
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - name: Harden runner
+        uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450  # v2
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
         with:
           fetch-depth: 0
 
@@ -99,7 +109,7 @@ jobs:
             HEAD \
             -o "canvas-tracker-${VERSION}-source.zip"
 
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
         with:
           name: source-archives
           path: |
@@ -115,12 +125,18 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.meta.outputs.version }}
+      hashes: ${{ steps.hash.outputs.hashes }}
     steps:
-      - uses: actions/checkout@v6
+      - name: Harden runner
+        uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450  # v2
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6
         with:
           python-version: "3.12"
           cache: pip
@@ -148,7 +164,12 @@ jobs:
           find sdk-dist/ -name "canvas_sdk-*-py3-none-any.whl" \
             -exec mv {} "sdk-dist/canvas-sdk-${VERSION}-py3-none-any.whl" \;
 
-      - uses: actions/upload-artifact@v7
+      - name: Compute artifact hashes
+        id: hash
+        run: |
+          echo "hashes=$(sha256sum sdk-dist/*.whl sdk-dist/*.tar.gz | base64 -w0)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
         with:
           name: sdk-linux
           path: sdk-dist/
@@ -165,11 +186,16 @@ jobs:
     needs: require-ci
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v6
+      - name: Harden runner
+        uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450  # v2
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6
         with:
           python-version: "3.12"
 
@@ -193,78 +219,13 @@ jobs:
           tar -czf "canvas-sdk-${VERSION}-macos.tar.gz" \
             -C sdk-macos-dist/ "$(basename "$WHL")"
 
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
         with:
           name: sdk-macos
           path: canvas-sdk-*-macos.tar.gz
           retention-days: 7
 
-  # ──────────────────────────────────────────────────────────────────────────
-  # 3. canvas-tui assets
-  # TODO: src/canvas_tui/ does not have a pyproject.toml yet; this job is
-  #       commented out until the TUI is packaged. To re-enable:
-  #         1. Add src/canvas_tui/pyproject.toml with build metadata
-  #         2. Uncomment both build-tui and build-tui-macos jobs below
-  #         3. Add build-tui and build-tui-macos to the needs list of the
-  #            release job
-  # ──────────────────────────────────────────────────────────────────────────
-  # build-tui:
-  #   needs: require-ci
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v6
-  #       with:
-  #         fetch-depth: 0
-  #     - uses: actions/setup-python@v6
-  #       with:
-  #         python-version: "3.12"
-  #         cache: pip
-  #     - run: python -m pip install --upgrade pip build
-  #     - run: python -m build src/canvas_tui/ --outdir tui-dist/
-  #     - name: Rename artifacts to canonical names
-  #       env:
-  #         VERSION: ${{ steps.meta.outputs.version }}
-  #       run: |
-  #         find tui-dist/ -name "canvas_tui-*.tar.gz" \
-  #           -exec mv {} "tui-dist/canvas-tui-${VERSION}.tar.gz" \;
-  #         find tui-dist/ -name "canvas_tui-*-py3-none-any.whl" \
-  #           -exec mv {} "tui-dist/canvas-tui-${VERSION}-py3-none-any.whl" \;
-  #     - uses: actions/upload-artifact@v7
-  #       with:
-  #         name: tui-assets
-  #         path: tui-dist/
-  #         retention-days: 7
-  #
-  # build-tui-macos:
-  #   needs: require-ci
-  #   runs-on: macos-latest
-  #   steps:
-  #     - uses: actions/checkout@v6
-  #       with:
-  #         fetch-depth: 0
-  #     - uses: actions/setup-python@v6
-  #       with:
-  #         python-version: "3.12"
-  #     - run: python -m pip install --upgrade pip build
-  #     - name: Extract version
-  #       id: meta
-  #       run: |
-  #         VERSION=${GITHUB_REF#refs/tags/v}
-  #         echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-  #     - name: Build tui wheel on macOS
-  #       run: python -m build --wheel src/canvas_tui/ --outdir tui-macos-dist/
-  #     - name: Package macOS wheel as tar.gz
-  #       env:
-  #         VERSION: ${{ steps.meta.outputs.version }}
-  #       run: |
-  #         WHL=$(find tui-macos-dist/ -name "*.whl" | head -1)
-  #         tar -czf "canvas-tui-${VERSION}-macos.tar.gz" \
-  #           -C tui-macos-dist/ "$(basename "$WHL")"
-  #     - uses: actions/upload-artifact@v7
-  #       with:
-  #         name: tui-macos
-  #         path: canvas-tui-*-macos.tar.gz
-  #         retention-days: 7
+  # canvas-tui packaging not yet available — tracked in issue #177
 
   # ──────────────────────────────────────────────────────────────────────────
   # 4. Extension assets (.zip always; .crx only when EXTENSION_PEM secret set)
@@ -275,7 +236,12 @@ jobs:
     env:
       HAS_PEM: ${{ secrets.EXTENSION_PEM != '' }}
     steps:
-      - uses: actions/checkout@v6
+      - name: Harden runner
+        uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450  # v2
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
         with:
           fetch-depth: 0
 
@@ -314,7 +280,7 @@ jobs:
           npx crx3 -p extension.pem extension/ -o "canvas-tracker-extension-${VERSION}.crx"
           rm -f extension.pem
 
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
         with:
           name: extension-assets
           path: |
@@ -333,6 +299,11 @@ jobs:
       - build-extension
     runs-on: ubuntu-latest
     steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450  # v2
+        with:
+          egress-policy: audit
+
       - name: Extract version and pre-release flag
         id: meta
         run: |
@@ -345,7 +316,7 @@ jobs:
           fi
 
       - name: Download all artifacts
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8
         with:
           path: release-assets/
           merge-multiple: true
@@ -354,7 +325,7 @@ jobs:
         run: find release-assets/ -type f | sort
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65  # v2
         with:
           name: Release ${{ steps.meta.outputs.version }}
           generate_release_notes: true
@@ -369,20 +340,64 @@ jobs:
         run: |
           echo "::error::Release ${{ needs.build-sdk-linux.outputs.version }} failed. Check logs: https://github.com/${{ github.repository }}/actions/workflows/release.yml"
 
-  # Publishes stable releases (no pre-release suffixes) to PyPI via OIDC trusted publishing.
-  # No API token is needed here. Configure the PyPI project for trusted publishing first:
-  # https://docs.pypi.org/trusted-publishers/
-  publish-pypi:
+  # Publishes stable releases to Test PyPI first (OIDC dry-run gate).
+  # Requires trusted publisher configured at test.pypi.org. See docs/release-process.md.
+  # Forks: this job will be skipped automatically if the 'test-pypi' environment is not configured.
+  test-pypi:
+    name: Test PyPI Dry-Run
     needs: [release, build-sdk-linux]
+    if: ${{ !contains(needs.build-sdk-linux.outputs.version, '-') }}
+    runs-on: ubuntu-latest
+    environment:
+      name: test-pypi
+      url: https://test.pypi.org/project/canvas-sdk/${{ needs.build-sdk-linux.outputs.version }}/
+    permissions:
+      id-token: write
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450  # v2
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6
+        with:
+          python-version: "3.12"
+
+      - name: Build sdist + wheel
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build src/sdk/ --outdir dist/
+
+      - name: Publish to Test PyPI
+        uses: pypa/gh-action-pypi-publish@ec4db0b4ddc65acdf4bff5fa45ac92d78b56bdf0  # release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          skip-existing: true
+          packages-dir: dist/
+
+  # Publishes stable releases (no pre-release suffixes) to PyPI via OIDC trusted publishing.
+  # Requires trusted publisher configured at pypi.org. See docs/release-process.md.
+  # Forks: this job will be skipped automatically if the 'pypi' environment is not configured.
+  publish-pypi:
+    needs: [release, build-sdk-linux, test-pypi]
     if: ${{ !contains(needs.build-sdk-linux.outputs.version, '-') }}
     runs-on: ubuntu-latest
     environment:
       name: pypi
       url: https://pypi.org/project/canvas-sdk/${{ needs.build-sdk-linux.outputs.version }}/
+    permissions:
+      id-token: write
     steps:
-      - uses: actions/checkout@v4
+      - name: Harden runner
+        uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450  # v2
+        with:
+          egress-policy: audit
 
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6
         with:
           python-version: "3.12"
 
@@ -395,8 +410,55 @@ jobs:
           ls -la dist/
 
       - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@ec4db0b4ddc65acdf4bff5fa45ac92d78b56bdf0  # release/v1
         with:
           skip-existing: true
           packages-dir: dist/
-          password: ${{ secrets.PYPI_API_TOKEN }}
+
+
+  generate-sbom:
+    name: Generate SBOM
+    needs: [release, publish-pypi, build-sdk-linux]
+    if: ${{ !contains(needs.build-sdk-linux.outputs.version, '-') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450  # v2
+        with:
+          egress-policy: audit
+
+      - name: Download SDK artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8
+        with:
+          name: sdk-linux
+          path: dist/
+
+      - name: Generate SBOM
+        uses: anchore/sbom-action@e11c554f704a0b820cbf8c51673f6945e0731532  # v0.20.0
+        with:
+          artifact-name: sbom.cyclonedx.json
+          format: cyclonedx-json
+          path: dist/
+
+      - name: Attach SBOM to GH Release
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65  # v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: sbom.cyclonedx.json
+
+  slsa-provenance:
+    name: SLSA Provenance
+    needs: [release, publish-pypi, build-sdk-linux]
+    if: ${{ !contains(needs.build-sdk-linux.outputs.version, '-') }}
+    permissions:
+      id-token: write
+      contents: write
+      actions: read
+    # SLSA generator reusable workflow: pinned to semver per SLSA spec (SHA not valid here)
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.1.0
+    with:
+      base64-subjects: "${{ needs.build-sdk-linux.outputs.hashes }}"
+      upload-assets: true

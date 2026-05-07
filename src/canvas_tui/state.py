@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Thread-safe state manager for Canvas TUI."""
 
 from __future__ import annotations

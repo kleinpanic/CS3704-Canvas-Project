@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Tests for Canvas logo module."""
 
 from canvas_tui.logo import (

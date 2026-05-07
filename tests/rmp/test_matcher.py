@@ -1,12 +1,11 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Tests for professor name matching."""
 
-import pytest
-
 from canvas_tui.rmp.matcher import (
+    levenshtein_distance,
+    match_professor,
     normalize_name,
     parse_first_last,
-    match_professor,
-    levenshtein_distance,
 )
 from canvas_tui.rmp.models import ProfessorRating
 

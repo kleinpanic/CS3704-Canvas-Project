@@ -15,8 +15,13 @@ jobs:
   cleanup:
     runs-on: ubuntu-latest
     steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450  # v2
+        with:
+          egress-policy: audit
+
       - name: Clean old artifacts
-        uses: actions/github-script@v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3  # v9
         with:
           script: |
             const { repo } = context;
@@ -31,7 +36,7 @@ jobs:
 
             for (const artifact of artifacts.data.artifacts) {
               if (artifact.created_at && new Date(artifact.created_at).getTime() < sevenDaysAgo) {
-                console.log(`Deleting artifact: ${artifact.name} (${artifact.id}) — created ${artifact.created_at}`);
+                console.log(`Deleting artifact: ${artifact.name} (${artifact.id}) created ${artifact.created_at}`);
                 await github.rest.actions.deleteArtifact({
                   owner: repo.owner,
                   repo: repo.repo,
@@ -44,25 +49,36 @@ jobs:
             console.log(`Cleaned up ${deleted} artifact(s)`);
 
       - name: Clean old workflow runs
-        uses: actions/github-script@v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3  # v9
         with:
           script: |
-            // Keep last 20 runs for each workflow to preserve history
-            const workflows = ['ci.yml', 'release.yml', 'coverage.yml', 'security.yml'];
+            // Dynamically list all workflows in the repo
+            const workflows = await github.paginate(github.rest.actions.listRepoWorkflows, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              per_page: 100
+            });
+
+            const KEEP_LAST = 20;
+            // To protect a run: use the GitHub API to add 'protect-run' label when API supports it
 
             for (const wf of workflows) {
-              const runs = await github.rest.actions.listWorkflowRuns({
+              const runs = await github.paginate(github.rest.actions.listWorkflowRuns, {
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                workflow_id: wf,
+                workflow_id: wf.id,
                 per_page: 100
               });
 
-              // Group by branch/workflow — keep the 20 most recent for each
-              const toDelete = runs.data.workflow_runs.slice(20);
+              if (runs.length <= KEEP_LAST) {
+                console.log(`${wf.name}: ${runs.length} runs - under limit, skipping`);
+                continue;
+              }
+
+              const toDelete = runs.slice(KEEP_LAST);
 
               for (const run of toDelete) {
-                console.log(`Deleting run: ${wf} #${run.run_number} (${run.id})`);
+                console.log(`Deleting run: ${wf.name} #${run.run_number} (${run.id})`);
                 await github.rest.actions.deleteWorkflowRun({
                   owner: context.repo.owner,
                   repo: context.repo.repo,

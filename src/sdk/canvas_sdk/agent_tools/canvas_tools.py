@@ -1,6 +1,7 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Canvas-side agent tools — read access to courses, assignments, syllabus, grades, announcements.
 
-All tools use canvas_sdk.Canvas directly via CANVAS_TOKEN + CANVAS_BASE_URL env vars.
+All tools use canvas_sdk.CanvasClient directly via CANVAS_TOKEN + CANVAS_BASE_URL env vars.
 No canvas_tui dependency.
 """
 
@@ -10,30 +11,27 @@ import os
 from typing import Any
 
 __all__ = [
-    "ListCourses",
     "GetAssignments",
     "GetCourse",
+    "GetGrades",
     "GetSyllabus",
     "GetTodo",
-    "GetGrades",
     "ListAnnouncements",
+    "ListCourses",
     "ListPlannerItems",
 ]
 
 
 def _client():
-    from canvas_sdk import Canvas
+    from canvas_sdk import CanvasClient
 
-    base_url = os.environ.get("CANVAS_BASE_URL", "https://canvas.vt.edu")
+    base_url = os.environ.get("CANVAS_BASE_URL", "").strip()
+    if not base_url:
+        raise ValueError("CANVAS_BASE_URL must be set to your institution's Canvas URL")
     token = os.environ.get("CANVAS_TOKEN", "")
     if not token:
         raise RuntimeError("CANVAS_TOKEN environment variable is not set.")
-    return Canvas(base_url, token)
-
-
-def _obj_to_dict(obj, *keys) -> dict[str, Any]:
-    """Extract named attributes from a CanvasObject into a plain dict."""
-    return {k: getattr(obj, k, None) for k in keys}
+    return CanvasClient(base_url, token)
 
 
 class ListCourses:
@@ -61,13 +59,13 @@ class ListCourses:
             kwargs["enrollment_state"] = "active"
         return [
             {
-                "id": getattr(course, "id", None),
-                "name": getattr(course, "name", ""),
-                "course_code": getattr(course, "course_code", ""),
-                "credits": getattr(course, "credits", None),
-                "term": getattr(getattr(course, "term", None), "name", None)
-                if isinstance(getattr(course, "term", None), object)
-                else getattr(course, "term", None),
+                "id": course.id,
+                "name": course.name,
+                "course_code": course.course_code,
+                "credits": course.extra_fields.get("credits"),
+                "term": course.extra_fields.get("term", {}).get("name")
+                if isinstance(course.extra_fields.get("term"), dict)
+                else course.extra_fields.get("term"),
             }
             for course in c.get_courses(**kwargs)
         ]
@@ -112,40 +110,37 @@ class GetAssignments:
         if course_id:
             courses = [c.get_course(int(course_id))]
         else:
-            courses = list(c.get_courses(enrollment_state="active", per_page=100))
+            courses = c.get_courses(enrollment_state="active", per_page=100)
 
         results = []
         for course in courses:
-            cid = getattr(course, "id", None)
+            cid = course.id
             if not cid:
                 continue
-            for item in course.get_assignments(
+            for item in c.get_assignments(
+                cid,
                 bucket="upcoming",
                 include=["submission"],
                 per_page=100,
             ):
-                due = getattr(item, "due_at", None)
+                due = item.due_at
                 if due and due > cutoff:
                     continue
-                sub = getattr(item, "submission", {}) or {}
-                submitted = bool(
-                    sub.get("submitted_at") if isinstance(sub, dict) else getattr(sub, "submitted_at", None)
-                )
+                sub = item.extra_fields.get("submission") or {}
+                submitted = bool(sub.get("submitted_at") if isinstance(sub, dict) else None)
                 if not include_submitted and submitted:
                     continue
                 results.append(
                     {
-                        "id": getattr(item, "id", None),
-                        "title": getattr(item, "name", ""),
+                        "id": item.id,
+                        "title": item.name,
                         "course_id": cid,
                         "due_iso": due,
-                        "points_possible": getattr(item, "points_possible", 0),
-                        "submission_types": getattr(item, "submission_types", []),
+                        "points_possible": item.points_possible,
+                        "submission_types": item.submission_types,
                         "submitted": submitted,
-                        "late": sub.get("late", False) if isinstance(sub, dict) else getattr(sub, "late", False),
-                        "missing": sub.get("missing", False)
-                        if isinstance(sub, dict)
-                        else getattr(sub, "missing", False),
+                        "late": sub.get("late", False) if isinstance(sub, dict) else False,
+                        "missing": sub.get("missing", False) if isinstance(sub, dict) else False,
                     }
                 )
         return results
@@ -174,20 +169,18 @@ class GetCourse:
             int(args["course_id"]),
             include=["teachers", "term", "total_students"],
         )
-        teachers_raw = getattr(course, "teachers", []) or []
-        teachers = [
-            t.get("display_name", "") if isinstance(t, dict) else getattr(t, "display_name", "") for t in teachers_raw
-        ]
-        term_raw = getattr(course, "term", None)
-        term_name = term_raw.get("name") if isinstance(term_raw, dict) else getattr(term_raw, "name", None)
+        teachers_raw = course.extra_fields.get("teachers") or []
+        teachers = [t.get("display_name", "") if isinstance(t, dict) else str(t) for t in teachers_raw]
+        term_raw = course.extra_fields.get("term")
+        term_name = term_raw.get("name") if isinstance(term_raw, dict) else term_raw
         return {
-            "id": getattr(course, "id", None),
-            "name": getattr(course, "name", ""),
-            "course_code": getattr(course, "course_code", ""),
-            "credits": getattr(course, "credits", None),
+            "id": course.id,
+            "name": course.name,
+            "course_code": course.course_code,
+            "credits": course.extra_fields.get("credits"),
             "term": term_name,
             "instructors": teachers,
-            "total_students": getattr(course, "total_students", None),
+            "total_students": course.extra_fields.get("total_students"),
         }
 
 
@@ -214,7 +207,7 @@ class GetSyllabus:
 
         c = _client()
         course = c.get_course(int(args["course_id"]), include=["syllabus_body"])
-        raw = getattr(course, "syllabus_body", "") or ""
+        raw = course.syllabus_body or ""
         text = re.sub(r"<[^>]+>", " ", raw)
         text = html.unescape(text)
         return re.sub(r"\s{2,}", " ", text).strip()
@@ -235,15 +228,14 @@ class GetTodo:
         c = _client()
         out = []
         for item in c.get_todo_items():
+            assignment = item.assignment or {}
             out.append(
                 {
-                    "type": getattr(item, "type", None),
-                    "course_id": getattr(item, "course_id", None),
-                    "title": getattr(item, "assignment", {}).get("name", "")
-                    if isinstance(getattr(item, "assignment", None), dict)
-                    else getattr(getattr(item, "assignment", None), "name", ""),
-                    "due_iso": getattr(getattr(item, "assignment", None), "due_at", None),
-                    "points_possible": getattr(getattr(item, "assignment", None), "points_possible", None),
+                    "type": item.type,
+                    "course_id": item.course_id,
+                    "title": assignment.get("name", "") if isinstance(assignment, dict) else "",
+                    "due_iso": assignment.get("due_at") if isinstance(assignment, dict) else None,
+                    "points_possible": assignment.get("points_possible") if isinstance(assignment, dict) else None,
                 }
             )
         return out
@@ -276,20 +268,18 @@ class GetGrades:
         if course_id:
             courses = [c.get_course(int(course_id), include=["total_scores"])]
         else:
-            courses = list(
-                c.get_courses(
-                    enrollment_state="active",
-                    include=["total_scores"],
-                    per_page=100,
-                )
+            courses = c.get_courses(
+                enrollment_state="active",
+                include=["total_scores"],
+                per_page=100,
             )
         results = []
         for course in courses:
-            cid = getattr(course, "id", None)
-            enrollments = getattr(course, "enrollments", []) or []
+            cid = course.id
+            enrollments = course.extra_fields.get("enrollments") or []
             score = None
             for e in enrollments:
-                e_dict = e if isinstance(e, dict) else vars(e) if hasattr(e, "__dict__") else {}
+                e_dict = e if isinstance(e, dict) else {}
                 for k in ("computed_current_score", "current_score", "computed_final_score"):
                     v = e_dict.get(k)
                     if v is not None:
@@ -334,23 +324,20 @@ class ListAnnouncements:
         c = _client()
         course_ids = [int(x) for x in (args.get("course_ids") or [])]
         if not course_ids:
-            course_ids = [
-                getattr(course, "id")
-                for course in c.get_courses(enrollment_state="active", per_page=100)
-                if getattr(course, "id", None)
-            ]
+            course_ids = [course.id for course in c.get_courses(enrollment_state="active", per_page=100) if course.id]
         context_codes = [f"course_{cid}" for cid in course_ids]
         since = (dt.datetime.now(dt.UTC) - dt.timedelta(days=int(args.get("past_days", 7)))).isoformat()
         out = []
-        for ann in c.get_announcements(context_codes, start_date=since):
-            posted = getattr(ann, "posted_at", None)
+        for ann in c.get_announcements(context_codes=context_codes, start_date=since):
+            posted = ann.posted_at
+            context_code = ann.extra_fields.get("context_code", "")
             out.append(
                 {
-                    "id": getattr(ann, "id", None),
-                    "title": getattr(ann, "title", ""),
-                    "course_id": getattr(ann, "context_code", "").removeprefix("course_") or None,
+                    "id": ann.id,
+                    "title": ann.title,
+                    "course_id": context_code.removeprefix("course_") or None,
                     "posted_iso": posted,
-                    "message_preview": (getattr(ann, "message", "") or "")[:300],
+                    "message_preview": (ann.message or "")[:300],
                 }
             )
         return out
@@ -375,11 +362,11 @@ class ListPlannerItems:
         for note in c.get_planner_notes():
             out.append(
                 {
-                    "id": getattr(note, "id", None),
-                    "title": getattr(note, "title", ""),
-                    "todo_date": getattr(note, "todo_date", None),
-                    "course_id": getattr(note, "course_id", None),
-                    "details": getattr(note, "details", ""),
+                    "id": note.id,
+                    "title": note.title,
+                    "todo_date": note.todo_date,
+                    "course_id": note.course_id,
+                    "details": note.details,
                 }
             )
         return out

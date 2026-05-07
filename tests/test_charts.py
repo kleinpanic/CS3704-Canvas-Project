@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Tests for Rich-native chart rendering."""
 
 from rich.text import Text

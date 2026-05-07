@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Dashboard screen — landing page with logo, course scores, due-soon, trends.
 
 Layout (top-to-bottom):

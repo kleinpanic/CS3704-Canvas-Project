@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Agentic inference loop for the Canvas Calendar Agent.
 
 The loop drives a Gemma4-style model through the Canvas/Calendar/Study tool

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Tests for plot widgets — bar charts, braille plots, gauges, weight bars."""
 
 from canvas_tui.theme import get_theme

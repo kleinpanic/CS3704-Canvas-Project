@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Course overview screen — deep-dive into a single course.
 
 Inspired by GideonWolfe/canvas-tui's courseOverview.go:

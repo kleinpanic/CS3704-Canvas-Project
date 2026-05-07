@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Tests for _NopBackend in canvas_sdk.backends.calendar_adapter.
 
 Skipped entirely if the module is not yet present at canvas_sdk.backends.calendar_adapter.

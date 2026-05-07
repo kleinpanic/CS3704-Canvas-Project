@@ -1,0 +1,58 @@
+[
+  {
+    "id": 23456789,
+    "name": "CALS Ambassadors",
+    "course_code": "CALS",
+    "term": {"name": "Default Term"},
+    "assignments": [
+      {
+        "id": 99000001,
+        "name": "Fall 2025 Engagement",
+        "points_possible": 2.0,
+        "submission_types": ["online_quiz"],
+        "due_at": "2025-09-04T03:59:59Z",
+        "submission": {"submitted_at": "2025-09-03T00:00:00Z", "graded_at": "2025-09-05T00:00:00Z", "workflow_state": "graded"}
+      }
+    ]
+  },
+  {
+    "id": 34567891,
+    "name": "Data Structures and Algorithms",
+    "course_code": "CS_3114_202601",
+    "term": {"name": "2026 Spring"},
+    "assignments": [
+      {
+        "id": 99000002,
+        "name": "Pre-Course Survey on Experience with AI Tools",
+        "points_possible": 5.0,
+        "submission_types": ["external_tool"],
+        "due_at": "2026-01-31T04:00:00Z",
+        "submission": {"submitted_at": "2026-01-30T00:00:00Z", "graded_at": "2026-02-01T00:00:00Z", "workflow_state": "graded"}
+      },
+      {
+        "id": 99000003,
+        "name": "Project 1",
+        "points_possible": 125.0,
+        "submission_types": ["none"],
+        "due_at": "2026-02-14T04:00:00Z",
+        "submission": {"submitted_at": "2026-02-13T00:00:00Z", "graded_at": "2026-02-15T00:00:00Z", "workflow_state": "graded"}
+      }
+    ]
+  },
+  {
+    "id": 45678912,
+    "name": "Intermediate Software Design and Engineering",
+    "course_code": "CS_3704_21936_202601",
+    "term": {"name": "2026 Spring"},
+    "assignments": [
+      {
+        "id": 99000004,
+        "name": "HW0",
+        "points_possible": 100.0,
+        "submission_types": ["none"],
+        "due_at": "2026-01-31T04:59:59Z",
+        "submission": {"submitted_at": "2026-01-30T00:00:00Z", "graded_at": "2026-02-01T00:00:00Z", "workflow_state": "graded"}
+      }
+    ]
+  }
+]

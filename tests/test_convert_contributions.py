@@ -1,24 +1,24 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """
 Tests for scripts/convert_canvas_contributions.py
 
 Verifies type mapping, status calculation, deduplication, file conversion,
 and round-trip compatibility with share_my_canvas.py output.
 """
+
 from __future__ import annotations
 
 import json
 import sys
 from pathlib import Path
 
-import pytest
-
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
-import convert_canvas_contributions as cc  # noqa: E402
-import share_my_canvas as smc  # noqa: E402
-
+import convert_canvas_contributions as cc
+import share_my_canvas as smc
 
 # ── _item_type ─────────────────────────────────────────────────────────────────
+
 
 def test_item_type_quiz():
     assert cc._item_type(["online_quiz"]) == "QUIZ"
@@ -58,6 +58,7 @@ def test_item_type_takes_first_known():
 
 # ── _offset_to_status ──────────────────────────────────────────────────────────
 
+
 def test_status_overdue():
     assert cc._offset_to_status(-1) == "OVERDUE"
 
@@ -79,6 +80,7 @@ def test_status_zero():
 
 
 # ── _item_key ──────────────────────────────────────────────────────────────────
+
 
 def test_item_key_deterministic():
     k1 = cc._item_key("ASGN", "Homework 1", "@COURSE1")
@@ -116,6 +118,7 @@ def test_item_key_length():
 
 
 # ── convert_file ───────────────────────────────────────────────────────────────
+
 
 def _make_snapshot(tmp_path, **overrides):
     base = {
@@ -155,34 +158,60 @@ def test_convert_file_basic(tmp_path):
 
 def test_convert_file_skips_non_snapshot(tmp_path):
     f = tmp_path / "todo.jsonl"
-    f.write_text(json.dumps({"type": "todo_snapshot", "items": [], "contributor_id": "x", "collected_at": "2026-05-01T00:00:00Z"}) + "\n")
+    f.write_text(
+        json.dumps(
+            {"type": "todo_snapshot", "items": [], "contributor_id": "x", "collected_at": "2026-05-01T00:00:00Z"}
+        )
+        + "\n"
+    )
     items = cc.convert_file(f, set())
     assert items == []
 
 
 def test_convert_file_skips_zero_points(tmp_path):
-    f = _make_snapshot(tmp_path, assignments=[{
-        "name": "Ungraded", "due_at": "2026-06-01T00:00:00Z",
-        "points_possible": 0, "submission_types": ["none"],
-    }])
+    f = _make_snapshot(
+        tmp_path,
+        assignments=[
+            {
+                "name": "Ungraded",
+                "due_at": "2026-06-01T00:00:00Z",
+                "points_possible": 0,
+                "submission_types": ["none"],
+            }
+        ],
+    )
     items = cc.convert_file(f, set())
     assert items == []
 
 
 def test_convert_file_skips_null_points(tmp_path):
-    f = _make_snapshot(tmp_path, assignments=[{
-        "name": "No Points", "due_at": "2026-06-01T00:00:00Z",
-        "points_possible": None, "submission_types": ["online_upload"],
-    }])
+    f = _make_snapshot(
+        tmp_path,
+        assignments=[
+            {
+                "name": "No Points",
+                "due_at": "2026-06-01T00:00:00Z",
+                "points_possible": None,
+                "submission_types": ["online_upload"],
+            }
+        ],
+    )
     items = cc.convert_file(f, set())
     assert items == []
 
 
 def test_convert_file_skips_missing_title(tmp_path):
-    f = _make_snapshot(tmp_path, assignments=[{
-        "name": "", "due_at": "2026-06-01T00:00:00Z",
-        "points_possible": 100, "submission_types": ["online_upload"],
-    }])
+    f = _make_snapshot(
+        tmp_path,
+        assignments=[
+            {
+                "name": "",
+                "due_at": "2026-06-01T00:00:00Z",
+                "points_possible": 100,
+                "submission_types": ["online_upload"],
+            }
+        ],
+    )
     items = cc.convert_file(f, set())
     assert items == []
 
@@ -215,33 +244,61 @@ def test_convert_file_status_derived_from_offset(tmp_path):
 
 
 def test_convert_file_overdue_status(tmp_path):
-    f = _make_snapshot(tmp_path, assignments=[{
-        "name": "Old Homework",
-        "due_at": "2026-04-01T00:00:00Z",
-        "points_possible": 50,
-        "submission_types": ["online_upload"],
-    }])
+    f = _make_snapshot(
+        tmp_path,
+        assignments=[
+            {
+                "name": "Old Homework",
+                "due_at": "2026-04-01T00:00:00Z",
+                "points_possible": 50,
+                "submission_types": ["online_upload"],
+            }
+        ],
+    )
     items = cc.convert_file(f, set())
     assert items[0]["status"] == "OVERDUE"
 
 
 def test_convert_file_missing_due_defaults_to_3d(tmp_path):
-    f = _make_snapshot(tmp_path, assignments=[{
-        "name": "No Due Date",
-        "due_at": None,
-        "points_possible": 50,
-        "submission_types": ["online_upload"],
-    }])
+    f = _make_snapshot(
+        tmp_path,
+        assignments=[
+            {
+                "name": "No Due Date",
+                "due_at": None,
+                "points_possible": 50,
+                "submission_types": ["online_upload"],
+            }
+        ],
+    )
     items = cc.convert_file(f, set())
     assert items[0]["status"] == "3d"
 
 
 def test_convert_file_multiple_assignments(tmp_path):
-    f = _make_snapshot(tmp_path, assignments=[
-        {"name": "HW1", "due_at": "2026-06-01T00:00:00Z", "points_possible": 50, "submission_types": ["online_upload"]},
-        {"name": "HW2", "due_at": "2026-06-05T00:00:00Z", "points_possible": 75, "submission_types": ["online_quiz"]},
-        {"name": "HW3", "due_at": "2026-06-10T00:00:00Z", "points_possible": 100, "submission_types": ["discussion_topic"]},
-    ])
+    f = _make_snapshot(
+        tmp_path,
+        assignments=[
+            {
+                "name": "HW1",
+                "due_at": "2026-06-01T00:00:00Z",
+                "points_possible": 50,
+                "submission_types": ["online_upload"],
+            },
+            {
+                "name": "HW2",
+                "due_at": "2026-06-05T00:00:00Z",
+                "points_possible": 75,
+                "submission_types": ["online_quiz"],
+            },
+            {
+                "name": "HW3",
+                "due_at": "2026-06-10T00:00:00Z",
+                "points_possible": 100,
+                "submission_types": ["discussion_topic"],
+            },
+        ],
+    )
     items = cc.convert_file(f, set())
     assert len(items) == 3
     types = {i["type"] for i in items}
@@ -258,6 +315,7 @@ def test_convert_file_item_id_in_output(tmp_path):
 
 
 # ── Round-trip: share_my_canvas → convert_canvas_contributions ─────────────────
+
 
 def test_round_trip_compatible_with_share_my_canvas(tmp_path, monkeypatch):
     smc._COURSE_MAP.clear()

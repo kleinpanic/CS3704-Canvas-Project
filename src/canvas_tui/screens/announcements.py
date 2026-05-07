@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Announcements screens — list and detail views."""
 
 from __future__ import annotations

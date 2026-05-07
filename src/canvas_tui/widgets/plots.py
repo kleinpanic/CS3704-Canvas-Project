@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Terminal chart widgets — bar charts, braille line plots, progress gauges.
 
 All rendering uses Rich markup — no external charting libraries.

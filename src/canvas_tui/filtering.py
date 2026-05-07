@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Structured filtering and fuzzy search for Canvas TUI items."""
 
 from __future__ import annotations

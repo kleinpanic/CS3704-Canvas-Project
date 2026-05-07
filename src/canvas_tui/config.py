@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Configuration loading and validation for Canvas TUI."""
 
 from __future__ import annotations
@@ -13,7 +14,7 @@ from typing import Any
 class Config:
     """All configuration values with validated defaults."""
 
-    base_url: str = "https://canvas.vt.edu"
+    base_url: str = ""
     token: str = ""
     user_tz: str = "America/New_York"
     user_agent: str = "canvas-tui/0.5 (textual)"
@@ -133,8 +134,10 @@ def _load_dotenv() -> None:
 def load_config() -> Config:
     """Load config from .env, environment variables, then overlay file config."""
     _load_dotenv()
+    from .config_env import get_canvas_base_url
+
     cfg = Config(
-        base_url=os.environ.get("CANVAS_BASE_URL", "https://canvas.vt.edu").rstrip("/"),
+        base_url=get_canvas_base_url().rstrip("/"),
         token=os.environ.get("CANVAS_TOKEN", ""),
         user_tz=os.environ.get("TZ", "America/New_York"),
         user_agent=os.environ.get("CANVAS_UA", "canvas-tui/1.0 (textual)"),
@@ -193,13 +196,6 @@ def _overlay_file_config(cfg: Config) -> None:
         "default_block_min": "default_block_min",
         "open_after_dl": "open_after_dl",
         "calcurse_import": "calcurse_import",
-        "calendar_backend": "calendar_backend",
-        "google_credentials_path": "google_credentials_path",
-        "google_token_path": "google_token_path",
-        "ical_path": "ical_path",
-        "ical_write_path": "ical_write_path",
-        "use_ai_reranker": "use_ai_reranker",
-        "model_path": "model_path",
         "llm_endpoint": "llm_endpoint",
         "llm_model": "llm_model",
         "llm_api_key": "llm_api_key",

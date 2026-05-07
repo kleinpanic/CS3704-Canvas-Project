@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Analytics screen — full-screen chart visualization.
 
 Multiple panes of graphs: scatter, histogram, heatmap, line trends,
@@ -134,13 +135,11 @@ class AnalyticsScreen(Screen):
             if total_count > 0:
                 completion[lbl] = 100.0 * submitted / total_count
 
-        # 1. Score bar chart — responsive to pane size
         with contextlib.suppress(Exception):
             pw, ph = self._get_pane_size("chart-scores")
             chart = score_bar_chart(labels, scores, width=pw, height=max(ph, len(labels) + 4), title="Course Scores")
             self.query_one("#chart-scores", Static).update(chart)
 
-        # 2. Grade distribution histogram
         with contextlib.suppress(Exception):
             pw, ph = self._get_pane_size("chart-distribution")
             hist = grade_histogram(
@@ -148,7 +147,6 @@ class AnalyticsScreen(Screen):
             )
             self.query_one("#chart-distribution", Static).update(hist)
 
-        # 3. Multi-line trends
         with contextlib.suppress(Exception):
             pw, ph = self._get_pane_size("chart-trends")
             if course_pcts:
@@ -164,7 +162,6 @@ class AnalyticsScreen(Screen):
                     f"[{t.text_muted}]No trend data available[/{t.text_muted}]"
                 )
 
-        # 4. Scatter plot
         with contextlib.suppress(Exception):
             pw, ph = self._get_pane_size("chart-scatter")
             if all_x and all_scores:
@@ -175,7 +172,6 @@ class AnalyticsScreen(Screen):
                     f"[{t.text_muted}]No score data for scatter[/{t.text_muted}]"
                 )
 
-        # 5. Submission heatmap
         with contextlib.suppress(Exception):
             pw, ph = self._get_pane_size("chart-heatmap")
             heatmap_data = self._build_submission_heatmap()
@@ -188,7 +184,6 @@ class AnalyticsScreen(Screen):
                     f"[{t.text_muted}]No submission data — submit assignments to see activity patterns[/{t.text_muted}]"
                 )
 
-        # 6. Completion bullet chart — with 100% targets
         with contextlib.suppress(Exception):
             pw, ph = self._get_pane_size("chart-bullet")
             if completion:

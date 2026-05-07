@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Fast preference-hint tool — wraps the published Gemma-4 reranker GGUF.
 
 Used as a first-pass priority hint; richer context (syllabus, credit hours,
@@ -38,8 +39,8 @@ class PriorityHint:
     @staticmethod
     def call(args: dict) -> dict:
         try:
-            from canvas_tui.reranker import LocalReranker, RANK_PROMPT_FORMAT_SHA, RANK_PROMPT_TEMPLATE
             from canvas_tui.config import load_config
+            from canvas_tui.reranker import RANK_PROMPT_FORMAT_SHA, RANK_PROMPT_TEMPLATE, LocalReranker
         except ImportError:
             return {
                 "winner": None,

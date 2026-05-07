@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Syllabi screen — course list with preview panel."""
 
 from __future__ import annotations

@@ -1,13 +1,14 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 import datetime as dt
+
 import pytest
 
 from canvas_sdk.agent_tools.study_tools import (
-    SpacedSchedule,
-    SemesterSchedule,
     DeepBlockSize,
     ExamBracket,
+    SemesterSchedule,
+    SpacedSchedule,
 )
-
 
 # ---------------------------------------------------------------------------
 # SpacedSchedule
@@ -20,7 +21,7 @@ def test_spaced_schedule_returns_n_sessions(exam_iso):
 
 
 def test_spaced_schedule_all_sessions_before_exam(exam_iso):
-    exam_dt = dt.datetime(2026, 5, 22, 14, 0, 0, tzinfo=dt.timezone.utc)
+    exam_dt = dt.datetime(2026, 5, 22, 14, 0, 0, tzinfo=dt.UTC)
     result = SpacedSchedule.call({"exam_iso": exam_iso, "n_sessions": 3})
     for session in result:
         start = dt.datetime.fromisoformat(session["start_iso"])
@@ -43,13 +44,13 @@ def test_spaced_schedule_session_fields(exam_iso):
 
 
 def test_spaced_schedule_clamp_below_3():
-    exam = (dt.datetime.now(dt.timezone.utc) + dt.timedelta(days=20)).isoformat()
+    exam = (dt.datetime.now(dt.UTC) + dt.timedelta(days=20)).isoformat()
     result = SpacedSchedule.call({"exam_iso": exam, "n_sessions": 1})
     assert len(result) == 3
 
 
 def test_spaced_schedule_clamp_above_5():
-    exam = (dt.datetime.now(dt.timezone.utc) + dt.timedelta(days=20)).isoformat()
+    exam = (dt.datetime.now(dt.UTC) + dt.timedelta(days=20)).isoformat()
     result = SpacedSchedule.call({"exam_iso": exam, "n_sessions": 8})
     assert len(result) == 5
 
@@ -73,7 +74,7 @@ def test_spaced_schedule_end_after_start(exam_iso):
 
 
 def _future_iso(days):
-    return (dt.datetime.now(dt.timezone.utc) + dt.timedelta(days=days)).isoformat()
+    return (dt.datetime.now(dt.UTC) + dt.timedelta(days=days)).isoformat()
 
 
 def test_semester_schedule_returns_2_entries_for_2_deadlines():
@@ -233,7 +234,7 @@ def test_exam_bracket_returns_2_blocks():
 
 
 def test_exam_bracket_first_block_ends_15min_before_exam():
-    exam_start = dt.datetime(2026, 5, 22, 14, 0, 0, tzinfo=dt.timezone.utc)
+    exam_start = dt.datetime(2026, 5, 22, 14, 0, 0, tzinfo=dt.UTC)
     result = ExamBracket.call(
         {
             "exam_start_iso": "2026-05-22T14:00:00+00:00",
@@ -246,7 +247,7 @@ def test_exam_bracket_first_block_ends_15min_before_exam():
 
 
 def test_exam_bracket_second_block_starts_at_exam_end():
-    exam_end = dt.datetime(2026, 5, 22, 16, 0, 0, tzinfo=dt.timezone.utc)
+    exam_end = dt.datetime(2026, 5, 22, 16, 0, 0, tzinfo=dt.UTC)
     result = ExamBracket.call(
         {
             "exam_start_iso": "2026-05-22T14:00:00+00:00",
@@ -272,7 +273,7 @@ def test_exam_bracket_has_label_fields():
 
 def test_exam_bracket_first_block_review_duration():
     # default review_minutes=45; first block start = exam_start - 45 - 15 = exam_start - 60
-    exam_start = dt.datetime(2026, 5, 22, 14, 0, 0, tzinfo=dt.timezone.utc)
+    exam_start = dt.datetime(2026, 5, 22, 14, 0, 0, tzinfo=dt.UTC)
     result = ExamBracket.call(
         {
             "exam_start_iso": "2026-05-22T14:00:00+00:00",
@@ -285,7 +286,7 @@ def test_exam_bracket_first_block_review_duration():
 
 
 def test_exam_bracket_custom_review_minutes():
-    exam_start = dt.datetime(2026, 5, 22, 14, 0, 0, tzinfo=dt.timezone.utc)
+    exam_start = dt.datetime(2026, 5, 22, 14, 0, 0, tzinfo=dt.UTC)
     result = ExamBracket.call(
         {
             "exam_start_iso": "2026-05-22T14:00:00+00:00",

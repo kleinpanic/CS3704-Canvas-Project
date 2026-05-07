@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Grades screen — per-course grade breakdown with trend charts and what-if calculator."""
 
 from __future__ import annotations

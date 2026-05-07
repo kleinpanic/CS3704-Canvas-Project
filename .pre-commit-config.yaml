@@ -28,3 +28,12 @@ repos:
       - id: mypy
         additional_dependencies: [mypy, types-requests]
         args: [--ignore-missing-imports]
+
+  - repo: local
+    hooks:
+      - id: no-code-smell-markers
+        name: warn on XXX|FIXME|HACK
+        language: system
+        entry: bash tools/check-smell-markers.sh
+        pass_filenames: false
+        stages: [pre-commit]

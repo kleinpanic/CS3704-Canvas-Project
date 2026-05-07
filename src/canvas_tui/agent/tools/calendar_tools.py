@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Calendar tools — list, create, modify across Google Cal / Outlook / calcurses.
 
 The actual calendar backend is selected by Config.calendar_backend. All tools
@@ -6,10 +7,7 @@ here delegate to a single CalendarAdapter that abstracts the four backends.
 
 from __future__ import annotations
 
-import datetime as dt
-from typing import Any
-
-__all__ = ["ListEvents", "FindFreeBlocks", "CreateEvent", "ModifyEvent", "DeleteEvent"]
+__all__ = ["CreateEvent", "DeleteEvent", "FindFreeBlocks", "ListEvents", "ModifyEvent"]
 
 
 def _adapter():

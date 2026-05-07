@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Settings screen — theme, layout, keybindings, and data preferences."""
 
 from __future__ import annotations
@@ -5,7 +6,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from textual.app import ComposeResult
-from textual.containers import Horizontal, ScrollableContainer, Vertical
+from textual.containers import Horizontal, ScrollableContainer
 from textual.screen import Screen
 from textual.widgets import Button, Footer, Input, Label, Select, Static
 
@@ -146,19 +147,19 @@ class SettingsScreen(Screen[dict[str, Any] | None]):
             )
 
             yield Label("Sidebar width (columns)")
-            yield Input(str(cfg.sidebar_width), id="set-sidebar-width", placeholder="20–80")
+            yield Input(str(cfg.sidebar_width), id="set-sidebar-width", placeholder="20-80")
 
             # ── Data / timing ───────────────────────────────────────────
             yield Static("Data", classes="set-section-hdr")
 
             yield Label("Days ahead")
-            yield Input(str(cfg.days_ahead), id="set-days-ahead", placeholder="1–365")
+            yield Input(str(cfg.days_ahead), id="set-days-ahead", placeholder="1-365")
 
             yield Label("Past hours shown")
-            yield Input(str(cfg.past_hours), id="set-past-hours", placeholder="0–8760")
+            yield Input(str(cfg.past_hours), id="set-past-hours", placeholder="0-8760")
 
             yield Label("Auto-refresh interval (seconds)")
-            yield Input(str(cfg.auto_refresh_sec), id="set-auto-refresh", placeholder="30–3600")
+            yield Input(str(cfg.auto_refresh_sec), id="set-auto-refresh", placeholder="30-3600")
 
             # ── Downloads ───────────────────────────────────────────────
             yield Static("Downloads", classes="set-section-hdr")

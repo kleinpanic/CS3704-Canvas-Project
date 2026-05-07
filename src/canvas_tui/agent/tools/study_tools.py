@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Study-planning helpers — pure-code implementations of the
 neuroscience-grounded heuristics in the system prompt. Exposed as tools
 so the model can ask for a spaced-repetition schedule without having to
@@ -7,9 +8,8 @@ do the date arithmetic itself.
 from __future__ import annotations
 
 import datetime as dt
-from typing import Any
 
-__all__ = ["SpacedSchedule", "DeepBlockSize", "ExamBracket"]
+__all__ = ["DeepBlockSize", "ExamBracket", "SpacedSchedule"]
 
 
 class SpacedSchedule:

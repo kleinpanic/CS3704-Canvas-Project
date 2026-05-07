@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Tests for course management and ghost detection."""
 
 from canvas_tui.screens.courses import is_likely_ghost
