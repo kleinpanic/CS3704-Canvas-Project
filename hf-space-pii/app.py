@@ -58,6 +58,26 @@ _ROOM_PATTERN = re.compile(
     r"\s+\d{2,3}\b"
 )
 
+# Phone numbers — US-format heuristic (catches Piiranha v1 gaps).
+# Patterns: 540-231-1234, (540) 231-1234, +1-540-231-1234, 540.231.1234, 5402311234
+_PHONE_PATTERN = re.compile(
+    r"(?:\+?1[\s.\-]?)?\(?\d{3}\)?[\s.\-]?\d{3}[\s.\-]?\d{4}\b"
+)
+
+# Person-name heuristic — Title-Case word followed by Title-Case word, with
+# stopwords excluded. Aggressive but tunable. Stopwords cover months, days,
+# courses, and common false positives.
+_NAME_PATTERN = re.compile(
+    r"\b(?!(?:January|February|March|April|May|June|July|August|September|October|November|December"
+    r"|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday"
+    r"|Spring|Fall|Summer|Winter|Week|Chapter|Section|Unit|Hall|Building|Lab|Center|Annex|Room"
+    r"|Canvas|Calendar|Agent|TA|Professor|Doctor|Mr|Mrs|Ms|Dr"
+    r"|United|States|North|South|East|West|New|Main|First|Last|Final|Quiz|Exam"
+    r"|Office|Virginia|Tech|Course|Group|Team|Project|Student|Faculty"
+    r"|Due|Assignment|Homework|Lecture|Discussion|Recitation|Syllabus|Grade|Credit"
+    r")\b)[A-Z][a-z]{2,}\s+[A-Z][a-z]{2,}\b"
+)
+
 _MAX_BODY_BYTES = 2 * 1024 * 1024  # 2 MB
 
 
@@ -78,11 +98,35 @@ def _apply_room_regex(text: str, loc_reg: dict) -> list[tuple[int, int, str]]:
     return replacements
 
 
+def _apply_phone_regex(text: str, person_reg: dict) -> list[tuple[int, int, str]]:
+    replacements = []
+    for m in _PHONE_PATTERN.finditer(text):
+        raw = m.group()
+        if raw not in person_reg:
+            person_reg[raw] = f"@PERSON_{len(person_reg) + 1}"
+        replacements.append((m.start(), m.end(), person_reg[raw]))
+    return replacements
+
+
+def _apply_name_regex(text: str, person_reg: dict) -> list[tuple[int, int, str]]:
+    replacements = []
+    for m in _NAME_PATTERN.finditer(text):
+        raw = m.group()
+        if "@COURSE" in raw or "@PERSON" in raw or "@LOC" in raw:
+            continue
+        if raw not in person_reg:
+            person_reg[raw] = f"@PERSON_{len(person_reg) + 1}"
+        replacements.append((m.start(), m.end(), person_reg[raw]))
+    return replacements
+
+
 def _anon_text(text: str, person_reg: dict, loc_reg: dict) -> str:
     if text.startswith("<|tool_call>"):
         return text
 
     replacements = _apply_room_regex(text, loc_reg)
+    replacements += _apply_phone_regex(text, person_reg)
+    replacements += _apply_name_regex(text, person_reg)
 
     entities = _ner(text)
     for ent in entities:
