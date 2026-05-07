@@ -28,6 +28,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SCORECARD_READ_TOKEN repo secret created out-of-band 2026-05-07T04:09:55Z; should be rotated post-merge (was pasted in plaintext during a prior orchestration session).
 - Signed-Releases score (currently 0/10) lifts to 7/10 only on next stable release ship; Plan 06 of this milestone covers the post-merge release cut + Scorecard manual dispatch + score verification.
 
+### Documentation — v2.1 Phase 3: README Honesty + License Correction
+
+- README badges: removed broken canvas-tui PyPI badge (will restore when #177 ships); replaced dishonest mypy badge with `mypy-advisory` until Phase 9 promotes mypy to blocking; stripped Codecov badge (HTML comment placeholder until codecov.io registration).
+- README body claims corrected: CANVAS_BASE_URL no longer falsely marked "optional, defaults to VT"; Distribution table reflects truth (canvas-sdk live on PyPI v1.2.3; canvas-tui pending #177); footnote and Quick Start SDK version clarified.
+- License declarations corrected: root `package.json` `ISC` → `GPL-3.0-or-later`; `src/sdk/pyproject.toml` gains explicit `license` field; both `extension/manifest.json` and `extension/package.json` declare GPL-3.0-or-later.
+- `CODEOWNERS` dead path corrected: `/sdk/` → `/src/sdk/`.
+- New `LICENSING.md` documenting the HF Space `apache-2.0` exception and GPL-3.0-or-later canonicality across the codebase.
+- New `tools/check-readme-claims.py` linter (registered as pre-push hook) catches stale claims, badge regressions, and license declaration drift in CI.
+
 ## [2.0.0] - 2026-05-06
 
 ### Public-Contribution Hardening — 12-phase milestone

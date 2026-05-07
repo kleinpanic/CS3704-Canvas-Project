@@ -26,13 +26,15 @@ ERROR_MESSAGES = {"unknown", "invalid", "not found", "missing", "error"}
 def check_string_patterns(lines):
     failures = []
     for i, line in enumerate(lines, 1):
+        stripped = line.strip()
+        if stripped.startswith("<!--"):
+            continue
         for pattern, description in FAIL_PATTERNS:
             if pattern in line:
                 truncated = line.rstrip()[:80]
                 failures.append(f"FAIL [line {i:03d}]: {description}: {truncated}")
         for pattern, description in COMMENT_STRIPPED_PATTERNS:
-            stripped = line.strip()
-            if pattern in line and not stripped.startswith("<!--"):
+            if pattern in line:
                 truncated = line.rstrip()[:80]
                 failures.append(f"FAIL [line {i:03d}]: {description}: {truncated}")
     return failures
@@ -74,6 +76,7 @@ def main():
         warn = probe_badge(url)
         if warn:
             print(warn)
+            failures.append(warn)
 
     if failures:
         for f in failures:
