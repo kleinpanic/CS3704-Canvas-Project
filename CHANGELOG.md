@@ -44,6 +44,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **New `tools/check-repo-org.sh` warning hook:** 4 checks against repo top-level structure (entries off ALLOWLIST, root `*.md` unjustified, Dockerfile outside `docker/` + `hf-space*/`, `pyproject.toml` outside `src/sdk/` + repo root). Registered in `.pre-commit-config.yaml`. **WARNING MODE** — prints to stderr, always exits 0. Promotes to blocking after one milestone of stable usage.
 - **PR template (`.github/pull_request_template.md`):** new "Repo Org Compliance" checklist section makes ALLOWLIST + repo-org-warn expectations explicit at PR-open time.
 
+### Fixed — v2.1 Phase 4 hot-fix (live demo runtime regression)
+
+- `hf-space/app.py`: removed `type="messages"` from `gr.Chatbot(...)`. The Space build succeeded after the prior hot-fix (sdk_version + Dockerfile fixes) but crashed at startup because gradio 6.x removed the `type=` keyword (messages format is now default). Verified by reproducing the failure in a fresh venv with `gradio==6.7.0`.
+
 ## [2.0.0] - 2026-05-06
 
 ### Public-Contribution Hardening — 12-phase milestone

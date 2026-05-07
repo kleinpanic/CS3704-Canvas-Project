@@ -783,7 +783,8 @@ with gr.Blocks(theme=THEME, css=CUSTOM_CSS, title="Canvas Calendar Agent") as de
             </div>
             """)
             chatbot = gr.Chatbot(
-                type="messages",
+                # gradio 6.x: `type="messages"` is the default and the keyword
+                # was removed. Specifying it crashes the Space at startup.
                 height=440,
                 show_label=False,
                 avatar_images=None,
