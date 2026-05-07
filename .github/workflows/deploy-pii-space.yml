@@ -13,16 +13,20 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    if: ${{ secrets.HF_TOKEN != '' }}
+    env:
+      HAS_HF_TOKEN: ${{ secrets.HF_TOKEN != '' }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+        if: ${{ env.HAS_HF_TOKEN == 'true' }}
         with:
           fetch-depth: 0
 
       - name: Install huggingface_hub
+        if: ${{ env.HAS_HF_TOKEN == 'true' }}
         run: pip install "huggingface_hub[cli]>=0.23"
 
       - name: Upload hf-space-pii/ to HuggingFace Space
+        if: ${{ env.HAS_HF_TOKEN == 'true' }}
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
           GIT_SHA: ${{ github.sha }}
@@ -32,7 +36,13 @@ jobs:
             --repo-type space \
             --commit-message "deploy: $GIT_SHA"
 
+      - name: Fork notice (no HF_TOKEN)
+        if: ${{ env.HAS_HF_TOKEN != 'true' }}
+        run: |
+          echo "fork mode -- HF_TOKEN absent, deploy skipped. See CONTRIBUTING.md."
+
       - name: Smoke test - /health
+        if: ${{ env.HAS_HF_TOKEN == 'true' }}
         run: |
           SPACE="https://kleinpanic93-canvas-pii-scrub.hf.space"
           for i in 1 2 3; do
@@ -43,6 +53,7 @@ jobs:
           [ "$CODE" = "200" ] || { echo "/health did not return 200"; exit 1; }
 
       - name: Smoke test - /scrub
+        if: ${{ env.HAS_HF_TOKEN == 'true' }}
         run: |
           SPACE="https://kleinpanic93-canvas-pii-scrub.hf.space"
           RESP=$(curl -s -X POST "$SPACE/scrub" \
