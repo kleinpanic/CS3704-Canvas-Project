@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Fixed — release.yml build env explicitly pins setuptools>=70
+
+- `.github/workflows/release.yml`: all 4 `Install build deps` steps now do `pip install --upgrade --no-cache-dir pip build "setuptools>=70" wheel`. The previous `pip install --upgrade pip build` left setup-python's pre-cached old setuptools in place; combined with pip's cache, build was honoring an ancient setuptools that produced wheels with Metadata-Version 1.x. Explicit upgrade + no-cache forces fresh setuptools >= 70 (PEP 621-compliant) → wheels get Metadata-Version 2.4.
+
 ### Fixed — release.yml wheel rename violated PEP 427
 
 - `.github/workflows/release.yml`: removed the build-sdk-linux step that renamed `canvas_sdk-*.whl` → `canvas-sdk-*.whl`. PEP 427 mandates underscored package name in wheel filenames; the hyphenated form caused twine to parse the filename incorrectly and fail with "Metadata is missing required fields: Name, Version". Sdist rename to hyphenated form is preserved (sdist names are more permissive).
