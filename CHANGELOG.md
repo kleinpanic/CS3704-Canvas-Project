@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Fixed — dependabot-auto-merge removes unnecessary approve step
+
+- `.github/workflows/dependabot-auto-merge.yml`: removed the `gh pr review --approve` step — GitHub Actions cannot approve PRs when `require_code_owner_reviews` was set. Disabled code-owner-review requirement in branch protection (solo project; CI is the real gate). Auto-merge now triggers solely on required CI passing.
+
 ### Changed — Dependabot PRs now auto-approve and auto-merge
 
 - Added `.github/workflows/dependabot-auto-merge.yml`: approves and enables squash auto-merge for all Dependabot PRs when required checks pass. Eliminates manual review burden for dependency-only updates.
