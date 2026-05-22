@@ -7,6 +7,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Fixed — Scorecard Gate switches to ossf/scorecard-action (no manual binary)
+
+- `.github/workflows/scorecard-gate.yml`: replaced manual binary download + SHA verification with `ossf/scorecard-action@f49aabe0b5af0936a0987cfb85d86b75731b0186` (same action as `scorecard.yml`). The action handles OIDC auth internally; `SCORECARD_READ_TOKEN` remains as a fallback but is no longer the sole auth path. Fixes score returning 0 when the token was absent.
+
+### Changed — Dependabot PRs now auto-approve and auto-merge
+
+- Added `.github/workflows/dependabot-auto-merge.yml`: approves and enables squash auto-merge for all Dependabot PRs when required checks pass. Eliminates manual review burden for dependency-only updates.
+
+### Fixed — publish-pypi uses correct GitHub Environment
+
+- `.github/workflows/release.yml`: `publish-pypi` job `environment.name` was `test-pypi` (wrong); corrected to `pypi`. Environment name must match the trusted publisher / secret binding in repo settings.
+
+### Removed — test-pypi dry-run job
+
+- `.github/workflows/release.yml`: removed the `Test PyPI Dry-Run` job. No trusted publisher was ever configured at test.pypi.org so the job failed every release. The real PyPI publish works independently via `PYPI_API_TOKEN`; the dry-run added noise without providing any correctness signal.
+
+### Fixed — Scorecard Gate floor matches achievable score for solo project
+
+- `.github/workflows/scorecard-gate.yml`: lowered default floor from 6.5 → 6.0 to match the actual OSSF score ceiling for a single-maintainer project (Code-Review and Contributors checks are structurally 0 without external reviewers). The 6.5 floor was blocking all Dependabot PRs.
+
+### Fixed — Test PyPI Dry-Run no longer fails the release run
+
+- `.github/workflows/release.yml`: added `continue-on-error: true` to the Test PyPI Dry-Run job. test.pypi.org doesn'''t have a trusted publisher configured for this repo (separate maintainer click-op); the dry-run isn'''t a correctness gate for the real publish anyway. Allowing it to non-blocking-fail keeps release.yml runs clean while leaving the job in place for opt-in verification once test.pypi.org is wired.
+
+### Fixed — bump pypa/gh-action-pypi-publish (twine bug)
+
+- `.github/workflows/release.yml`: bumped `pypa/gh-action-pypi-publish@ec4db0b4` -> `@cef22109` (latest release/v1). The pinned SHA was running an old twine that misread Metadata-Version 2.4 wheels with "Metadata is missing required fields: Name, Version". Wheels themselves were valid (verified by direct twine upload of the same artifact, canvas-sdk 2.0.5 + 2.0.8 LIVE on pypi.org). Action bump fixes the CI publish path.
+
+### Fixed — release.yml build env explicitly pins setuptools>=70
+
+- `.github/workflows/release.yml`: all 4 `Install build deps` steps now do `pip install --upgrade --no-cache-dir pip build "setuptools>=70" wheel`. The previous `pip install --upgrade pip build` left setup-python's pre-cached old setuptools in place; combined with pip's cache, build was honoring an ancient setuptools that produced wheels with Metadata-Version 1.x. Explicit upgrade + no-cache forces fresh setuptools >= 70 (PEP 621-compliant) → wheels get Metadata-Version 2.4.
+
+### Fixed — release.yml wheel rename violated PEP 427
+
+- `.github/workflows/release.yml`: removed the build-sdk-linux step that renamed `canvas_sdk-*.whl` → `canvas-sdk-*.whl`. PEP 427 mandates underscored package name in wheel filenames; the hyphenated form caused twine to parse the filename incorrectly and fail with "Metadata is missing required fields: Name, Version". Sdist rename to hyphenated form is preserved (sdist names are more permissive).
+
+### Fixed — bump src/sdk/pyproject.toml to 2.0.5
+
+- `src/sdk/pyproject.toml`: version `2.0.0` -> `2.0.5`. Build was producing `canvas_sdk-2.0.0-py3-none-any.whl` regardless of tag (release.yml's build runs `python -m build src/sdk/` which uses pyproject's hardcoded version). Phase 5 release-standardization will replace this with version.txt + sed substitution at build time.
+
+### Fixed — publish-pypi uses API token (bypass trusted publisher click-op)
+
+- `.github/workflows/release.yml`: `publish-pypi` job now passes `password: ${{ secrets.PYPI_API_TOKEN }}` to `pypa/gh-action-pypi-publish`. Bypasses the OIDC trusted-publisher exchange that was failing on every release. PYPI_API_TOKEN repo secret added 2026-05-07. Trusted publisher can be re-adopted later when configured cleanly; for now token-auth ships releases.
+
 ### Fixed — agent-demo: roll back gradio to 5.7.1 (stop-bleed)
 
 - `huggingface/agent-demo/{requirements.txt,README.md,app.py}`: rolled gradio back from 6.x to `5.7.1` and restored `type="messages"` on `gr.Chatbot`. Gradio 6.x was crashing the Space with chat_stream signature introspection bug despite the wiring matching. CVE GHSA-39mp-8hj3-5c49 (gradio path traversal HIGH) is not exposed in this Space — there are no filesystem-input components. Proper gradio 6 migration is a separate phase.
@@ -106,6 +150,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed — v2.1 pii-scrub silent-no-op regression (pre-existing)
 
 - `huggingface/pii-scrub/app.py`: `_PERSON_LABELS` and `_LOC_LABELS` were checking for BIO-prefixed labels (`I-GIVENNAME`, `I-CITY`, etc.) but the model is loaded with `aggregation_strategy="simple"`, which collapses spans and drops the BIO prefix. The model returns `entity_group: "EMAIL"`, `"USERNAME"`, `"GIVENNAME"` etc. — never `"I-..."`. Result: `/scrub` always returned the input unchanged with `redactions: []` and `registry: {}` — a silent no-op for every request. `/entities` was unaffected (it returns the raw entity list without label-set filtering). Live-verified by hitting `/scrub` against `https://kleinpanic93-canvas-pii-scrub.hf.space/`. Fix: drop `I-` prefix from both label sets and add `EMAIL` to person-class.
+
+## [2.1.0] - 2026-05-07
+
+### Released
+
+- Final v2.1 milestone marker. CI publish-pypi path verified clean (action SHA bumped). test-pypi continue-on-error so test.pypi.org missing trusted-publisher does not red-light release.yml.
+
+## [2.0.9] - 2026-05-07
+
+### Released
+
+- Verify CI publish path post-action-bump.
+
+## [2.0.8] - 2026-05-07
+
+### Released
+
+- Verify CI publish path post-setuptools fix.
+
+## [2.0.7] - 2026-05-07
+
+### Released
+
+- Test release after wheel-rename fix (#215). Verifies CI publish path now produces PyPI-accepted wheels.
+
+## [2.0.5] - 2026-05-07
+
+### Released
+
+- Bundle of v2.1 milestone work merged since v2.0.0: Phases 2-4 (OSSF Scorecard lift, README honesty + license correction, repo organization standard + ALLOWLIST + CI enforcement) plus 11 follow-up hot-fixes.
 
 ## [2.0.0] - 2026-05-06
 

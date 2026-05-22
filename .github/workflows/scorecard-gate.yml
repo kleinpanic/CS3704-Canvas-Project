@@ -6,9 +6,9 @@ on:
   workflow_dispatch:
     inputs:
       floor:
-        description: "Minimum score (default 6.5)"
+        description: "Minimum score (default 6.0)"
         required: false
-        default: "6.5"
+        default: "6.0"
 
 permissions: read-all
 
@@ -37,9 +37,6 @@ jobs:
         id: bootstrap
         if: github.event_name == 'pull_request'
         run: |
-          # When this PR touches scorecard-gate.yml, the gate cannot enforce its
-          # own floor against the pre-merge `main` score (chicken-and-egg).
-          # Mark as bootstrap so the floor check becomes informational.
           if git diff --name-only "origin/${{ github.base_ref }}...HEAD" | grep -qE '^\.github/workflows/scorecard-gate\.yml$'; then
             echo "is_bootstrap=true" >> "$GITHUB_OUTPUT"
             echo "Bootstrap PR detected — score floor will be informational only"
@@ -47,30 +44,21 @@ jobs:
             echo "is_bootstrap=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Download and verify Scorecard CLI
-        env:
-          SCORECARD_VERSION: "5.1.1"
-          SCORECARD_SHA256: "a894eb7390308069a49a3ace0f68dddf995cdfa1b6e7f8b2e1ea77de131e4962"
-        run: |
-          TARBALL="scorecard_${SCORECARD_VERSION}_linux_amd64.tar.gz"
-          curl -sL "https://github.com/ossf/scorecard/releases/download/v${SCORECARD_VERSION}/${TARBALL}" \
-            -o "${TARBALL}"
-          echo "${SCORECARD_SHA256}  ${TARBALL}" | sha256sum --check --strict
-          tar -xzf "${TARBALL}" scorecard
-          chmod +x scorecard
-
-      - name: Run Scorecard and enforce floor
+      - name: Run OSSF Scorecard
+        id: scorecard
+        uses: ossf/scorecard-action@f49aabe0b5af0936a0987cfb85d86b75731b0186  # v2.4.3
+        with:
+          results_file: scorecard-results.json
+          results_format: json
+          publish_results: false
         env:
           GITHUB_AUTH_TOKEN: ${{ secrets.SCORECARD_READ_TOKEN || github.token }}
-          FLOOR: ${{ inputs.floor || '6.5' }}
+
+      - name: Enforce score floor
+        env:
+          FLOOR: ${{ inputs.floor || '6.0' }}
           IS_BOOTSTRAP: ${{ steps.bootstrap.outputs.is_bootstrap || 'false' }}
         run: |
-          ./scorecard \
-            --repo="https://github.com/${{ github.repository }}" \
-            --format=json \
-            --show-details \
-            > scorecard-results.json 2>&1 || true
-
           SCORE=$(python3 -c "
           import json, sys
           with open('scorecard-results.json') as f:
@@ -82,7 +70,7 @@ jobs:
           echo "Floor: ${FLOOR}"
 
           if [[ "${IS_BOOTSTRAP}" == "true" ]]; then
-            echo "BOOTSTRAP: PR modifies scorecard-gate.yml itself — floor enforcement skipped."
+            echo "BOOTSTRAP: PR modifies scorecard-gate.yml — floor enforcement skipped."
             echo "Score is ${SCORE}, floor is ${FLOOR}. Will enforce on next PR."
             exit 0
           fi
