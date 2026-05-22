@@ -193,7 +193,7 @@ def generate_mock_data(out_dir: Path):
     }
 
     upcoming = [
-        {"id": f"a_{a['id']}", "type": "Assignment",
+        {"id": f"a_{a['id']}", "type": "assignment",
          "title": a["name"], "course_id": a["course_id"],
          "assignment": {"due_at": a["due_at"], "points_possible": a["points_possible"]}}
         for cid, asgns in assignments_by_course.items() for a in asgns
@@ -320,28 +320,22 @@ def generate_mock_data(out_dir: Path):
         "Rodriguez": {"rating": 4.5, "difficulty": 3.7, "numRatings": 62},
     }
 
-    def w(filename, data):
-        path = out_dir / filename
-        with open(path, "w") as f:
-            json.dump({"ok": True, "data": data}, f)
-        print(f"  wrote {path}")
-
     out_dir.mkdir(parents=True, exist_ok=True)
-    w("courses.json", courses)
-    w("upcoming.json", upcoming)
-    w("todo.json", todo)
-    w("planner_notes.json", planner_notes)
-    w("dashboard_cards.json", dashboard_cards)
-    w("rmp.json", rmp_data)
+    save(out_dir, "courses.json", courses)
+    save(out_dir, "upcoming.json", upcoming)
+    save(out_dir, "todo.json", todo)
+    save(out_dir, "planner_notes.json", planner_notes)
+    save(out_dir, "dashboard_cards.json", dashboard_cards)
+    save(out_dir, "rmp.json", rmp_data)
 
     for cid in [131071, 131072, 131073]:
-        w(f"course_{cid}_assignments.json", assignments_by_course[cid])
-        w(f"course_{cid}_announcements.json", announcements_by_course[cid])
-        w(f"course_{cid}_modules.json", modules_by_course[cid])
-        w(f"course_{cid}_grades.json", grades_by_course[cid])
-        w(f"course_{cid}_files.json", files_by_course[cid])
-        w(f"course_{cid}_assignment_groups.json", assignment_groups_by_course[cid])
-        w(f"course_{cid}_syllabus.json", syllabus_by_course[cid])
+        save(out_dir, f"course_{cid}_assignments.json", assignments_by_course[cid])
+        save(out_dir, f"course_{cid}_announcements.json", announcements_by_course[cid])
+        save(out_dir, f"course_{cid}_modules.json", modules_by_course[cid])
+        save(out_dir, f"course_{cid}_grades.json", grades_by_course[cid])
+        save(out_dir, f"course_{cid}_files.json", files_by_course[cid])
+        save(out_dir, f"course_{cid}_assignment_groups.json", assignment_groups_by_course[cid])
+        save(out_dir, f"course_{cid}_syllabus.json", syllabus_by_course[cid])
 
     print(f"\nMock data written to {out_dir}/ (3 courses, dates relative to build time)")
 

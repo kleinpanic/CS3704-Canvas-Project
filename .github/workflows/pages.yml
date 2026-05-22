@@ -17,9 +17,6 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      HAS_CANVAS_TOKEN: ${{ secrets.CANVAS_API_TOKEN != '' }}
-      HAS_CANVAS_BASE_URL: ${{ secrets.CANVAS_BASE_URL != '' }}
     steps:
       - name: Harden runner
         uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450  # v2
