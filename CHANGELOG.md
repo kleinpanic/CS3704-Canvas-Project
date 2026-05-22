@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [2.2.0] - 2026-05-22
+
 ### Changed — .planning/ removed from git tracking
 
 - `.gitignore`: added `/.planning/` — the GSD workflow state directory is local planning tooling, not repo source. It should not appear in the public GitHub view.
