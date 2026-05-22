@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Changed — gitignore covers full docs-site/screenshots/ directory
+
+- `.gitignore`: broadened the screenshots pattern from `docs-site/screenshots/final-audit/` to `docs-site/screenshots/` — all local development screenshots are untracked artifacts, not source.
+
 ### Changed — Dependabot PRs now auto-approve and auto-merge
 
 - Added `.github/workflows/dependabot-auto-merge.yml`: approves and enables squash auto-merge for all Dependabot PRs when required checks pass. Eliminates manual review burden for dependency-only updates.
