@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `.github/workflows/dependabot-auto-merge.yml`: removed the `gh pr review --approve` step — GitHub Actions cannot approve PRs when `require_code_owner_reviews` was set. Disabled code-owner-review requirement in branch protection (solo project; CI is the real gate). Auto-merge now triggers solely on required CI passing.
 
+### Changed — gitignore covers full docs-site/screenshots/ directory
+
+- `.gitignore`: broadened the screenshots pattern from `docs-site/screenshots/final-audit/` to `docs-site/screenshots/` — all local development screenshots are untracked artifacts, not source.
+
 ### Changed — Pages demo uses mock Canvas data when no live token configured
 
 - `docs-site/fetch_canvas_data.py`: added `--mock` flag that generates realistic fake Canvas data (3 courses, upcoming assignments, modules, grades) with dates relative to build time. No `CANVAS_API_TOKEN` or `CANVAS_BASE_URL` needed in mock mode.
