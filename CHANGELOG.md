@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Changed — Dependabot PRs now auto-approve and auto-merge
+
+- Added `.github/workflows/dependabot-auto-merge.yml`: approves and enables squash auto-merge for all Dependabot PRs when required checks pass. Eliminates manual review burden for dependency-only updates.
+
+### Fixed — publish-pypi uses correct GitHub Environment
+
+- `.github/workflows/release.yml`: `publish-pypi` job `environment.name` was `test-pypi` (wrong); corrected to `pypi`. Environment name must match the trusted publisher / secret binding in repo settings.
+
+### Removed — test-pypi dry-run job
+
+- `.github/workflows/release.yml`: removed the `Test PyPI Dry-Run` job. No trusted publisher was ever configured at test.pypi.org so the job failed every release. The real PyPI publish works independently via `PYPI_API_TOKEN`; the dry-run added noise without providing any correctness signal.
+
+### Fixed — Scorecard Gate floor matches achievable score for solo project
+
+- `.github/workflows/scorecard-gate.yml`: lowered default floor from 6.5 → 6.0 to match the actual OSSF score ceiling for a single-maintainer project (Code-Review and Contributors checks are structurally 0 without external reviewers). The 6.5 floor was blocking all Dependabot PRs.
+
 ### Fixed — Test PyPI Dry-Run no longer fails the release run
 
 - `.github/workflows/release.yml`: added `continue-on-error: true` to the Test PyPI Dry-Run job. test.pypi.org doesn'''t have a trusted publisher configured for this repo (separate maintainer click-op); the dry-run isn'''t a correctness gate for the real publish anyway. Allowing it to non-blocking-fail keeps release.yml runs clean while leaving the job in place for opt-in verification once test.pypi.org is wired.

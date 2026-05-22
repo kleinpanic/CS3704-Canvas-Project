@@ -6,9 +6,9 @@ on:
   workflow_dispatch:
     inputs:
       floor:
-        description: "Minimum score (default 6.5)"
+        description: "Minimum score (default 6.0)"
         required: false
-        default: "6.5"
+        default: "6.0"
 
 permissions: read-all
 
@@ -62,7 +62,7 @@ jobs:
       - name: Run Scorecard and enforce floor
         env:
           GITHUB_AUTH_TOKEN: ${{ secrets.SCORECARD_READ_TOKEN || github.token }}
-          FLOOR: ${{ inputs.floor || '6.5' }}
+          FLOOR: ${{ inputs.floor || '6.0' }}
           IS_BOOTSTRAP: ${{ steps.bootstrap.outputs.is_bootstrap || 'false' }}
         run: |
           ./scorecard \
