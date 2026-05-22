@@ -131,7 +131,7 @@ def _anon_text(text: str, person_reg: dict, loc_reg: dict) -> str:
     entities = _ner(text)
     for ent in entities:
         raw = ent["word"]
-        label = ent["entity_group"]
+        label = ent["entity_group"].split("-", 1)[-1]  # strip BIO prefix (I-/B-)
         start = ent["start"]
         end = ent["end"]
         if "@COURSE" in raw:
