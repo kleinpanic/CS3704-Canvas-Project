@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `.gitignore`: added `/.planning/` — the GSD workflow state directory is local planning tooling, not repo source. It should not appear in the public GitHub view.
 - Class deliverables previously committed under `.planning/archive/v2.1-class-deliverables/` moved to `docs/deliverables/` so they remain tracked as course artifacts.
 
+### Fixed — Scorecard Gate switches to ossf/scorecard-action (no manual binary)
+
+- `.github/workflows/scorecard-gate.yml`: replaced manual binary download + SHA verification with `ossf/scorecard-action@f49aabe0b5af0936a0987cfb85d86b75731b0186` (same action as `scorecard.yml`). The action handles OIDC auth internally; `SCORECARD_READ_TOKEN` remains as a fallback but is no longer the sole auth path. Fixes score returning 0 when the token was absent.
+
 ### Changed — Dependabot PRs now auto-approve and auto-merge
 
 - Added `.github/workflows/dependabot-auto-merge.yml`: approves and enables squash auto-merge for all Dependabot PRs when required checks pass. Eliminates manual review burden for dependency-only updates.
