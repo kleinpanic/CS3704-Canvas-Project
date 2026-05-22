@@ -83,6 +83,9 @@ popup-grades-tab.png
 .playwright-mcp/
 
 
+# GSD workflow state (local planning artifacts, not repo source)
+/.planning/
+
 # Playwright audit screenshots (local QA artifacts)
 audit-*.png
 popup-after-overhaul.png

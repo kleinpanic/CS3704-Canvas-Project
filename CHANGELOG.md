@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Changed — .planning/ removed from git tracking
+
+- `.gitignore`: added `/.planning/` — the GSD workflow state directory is local planning tooling, not repo source. It should not appear in the public GitHub view.
+- Class deliverables previously committed under `.planning/archive/v2.1-class-deliverables/` moved to `docs/deliverables/` so they remain tracked as course artifacts.
+
 ### Changed — Dependabot PRs now auto-approve and auto-merge
 
 - Added `.github/workflows/dependabot-auto-merge.yml`: approves and enables squash auto-merge for all Dependabot PRs when required checks pass. Eliminates manual review burden for dependency-only updates.
