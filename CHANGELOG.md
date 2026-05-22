@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `.gitignore`: added `/.planning/` — the GSD workflow state directory is local planning tooling, not repo source. It should not appear in the public GitHub view.
 - Class deliverables previously committed under `.planning/archive/v2.1-class-deliverables/` moved to `docs/deliverables/` so they remain tracked as course artifacts.
 
+### Fixed — dependabot-auto-merge removes unnecessary approve step
+
+- `.github/workflows/dependabot-auto-merge.yml`: removed the `gh pr review --approve` step — GitHub Actions cannot approve PRs when `require_code_owner_reviews` was set. Disabled code-owner-review requirement in branch protection (solo project; CI is the real gate). Auto-merge now triggers solely on required CI passing.
+
 ### Changed — gitignore covers full docs-site/screenshots/ directory
 
 - `.gitignore`: broadened the screenshots pattern from `docs-site/screenshots/final-audit/` to `docs-site/screenshots/` — all local development screenshots are untracked artifacts, not source.
