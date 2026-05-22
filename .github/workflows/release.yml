@@ -338,59 +338,13 @@ jobs:
         run: |
           echo "::error::Release ${{ needs.build-sdk-linux.outputs.version }} failed. Check logs: https://github.com/${{ github.repository }}/actions/workflows/release.yml"
 
-  # Publishes stable releases to Test PyPI first (OIDC dry-run gate).
-  # Requires trusted publisher configured at test.pypi.org. See docs/release-process.md.
-  # Forks: this job will be skipped automatically if the 'test-pypi' environment is not configured.
-  test-pypi:
-    name: Test PyPI Dry-Run
-    continue-on-error: true
-    needs: [release, build-sdk-linux]
-    if: ${{ !contains(needs.build-sdk-linux.outputs.version, '-') }}
-    runs-on: ubuntu-latest
-    environment:
-      name: test-pypi
-      url: https://test.pypi.org/project/canvas-sdk/${{ needs.build-sdk-linux.outputs.version }}/
-    permissions:
-      id-token: write
-    steps:
-      - name: Harden runner
-        uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450  # v2
-        with:
-          egress-policy: audit
-
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
-
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6
-        with:
-          python-version: "3.12"
-
-      - name: Build sdist + wheel
-        run: |
-          python -m pip install --upgrade --no-cache-dir pip build "setuptools>=70" wheel
-          python -m build src/sdk/ --outdir dist/
-
-      - name: Publish to Test PyPI
-        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b  # release/v1
-        with:
-          repository-url: https://test.pypi.org/legacy/
-          skip-existing: true
-          packages-dir: dist/
-
-  # Publishes stable releases (no pre-release suffixes) to PyPI via OIDC trusted publishing.
-  # Requires trusted publisher configured at pypi.org. See docs/release-process.md.
-  # Forks: this job will be skipped automatically if the 'pypi' environment is not configured.
+  # Publishes stable releases (no pre-release suffixes) to PyPI via API token.
   publish-pypi:
-    # `test-pypi` removed from `needs:` — TestPyPI's trusted-publisher config is
-    # a separate maintainer click-op (test.pypi.org/manage/account/publishing/)
-    # and was blocking v2.0.1 publish-pypi (skipped because test-pypi failed).
-    # The dry-run is a defense-in-depth check, not a correctness gate; pypi.org
-    # has its own trusted publisher already configured. test-pypi job remains
-    # in the workflow for opt-in verification but no longer gates publish-pypi.
     needs: [release, build-sdk-linux]
     if: ${{ !contains(needs.build-sdk-linux.outputs.version, '-') }}
     runs-on: ubuntu-latest
     environment:
-      name: test-pypi
+      name: pypi
       url: https://pypi.org/project/canvas-sdk/${{ needs.build-sdk-linux.outputs.version }}/
     permissions:
       id-token: write
