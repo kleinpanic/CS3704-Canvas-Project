@@ -86,9 +86,9 @@ popup-grades-tab.png
 # GSD workflow state (local planning artifacts, not repo source)
 /.planning/
 
-# Playwright audit screenshots (local QA artifacts)
+# Local QA / development screenshots (not part of the source)
 audit-*.png
 popup-after-overhaul.png
 popup-grades-view.png
 popup-no-token.png
-docs-site/screenshots/final-audit/
+docs-site/screenshots/

@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `.gitignore`: added `/.planning/` — the GSD workflow state directory is local planning tooling, not repo source. It should not appear in the public GitHub view.
 - Class deliverables previously committed under `.planning/archive/v2.1-class-deliverables/` moved to `docs/deliverables/` so they remain tracked as course artifacts.
 
+### Changed — gitignore covers full docs-site/screenshots/ directory
+
+- `.gitignore`: broadened the screenshots pattern from `docs-site/screenshots/final-audit/` to `docs-site/screenshots/` — all local development screenshots are untracked artifacts, not source.
+
 ### Changed — Pages demo uses mock Canvas data when no live token configured
 
 - `docs-site/fetch_canvas_data.py`: added `--mock` flag that generates realistic fake Canvas data (3 courses, upcoming assignments, modules, grades) with dates relative to build time. No `CANVAS_API_TOKEN` or `CANVAS_BASE_URL` needed in mock mode.
