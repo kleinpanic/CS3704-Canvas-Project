@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Changed — Pages demo uses mock Canvas data when no live token configured
+
+- `docs-site/fetch_canvas_data.py`: added `--mock` flag that generates realistic fake Canvas data (3 courses, upcoming assignments, modules, grades) with dates relative to build time. No `CANVAS_API_TOKEN` or `CANVAS_BASE_URL` needed in mock mode.
+- `.github/workflows/pages.yml`: replaced conditional skip logic with live-or-mock dispatch — demo always has data. Live mode activates only when both `CANVAS_API_TOKEN` and `CANVAS_BASE_URL` secrets are set; otherwise falls back to `--mock`.
+
+### Removed — HuggingFace Space deployments
+
+- Deleted `.github/workflows/deploy-hf-space.yml` and `deploy-pii-space.yml`. Canvas API token access was revoked by the host institution; the Spaces are no longer maintained. The PII scrub regex self-test remains in the Pages build.
+
 ### Changed — Dependabot PRs now auto-approve and auto-merge
 
 - Added `.github/workflows/dependabot-auto-merge.yml`: approves and enables squash auto-merge for all Dependabot PRs when required checks pass. Eliminates manual review burden for dependency-only updates.

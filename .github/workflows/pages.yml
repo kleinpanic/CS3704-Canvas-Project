@@ -20,7 +20,6 @@ jobs:
     env:
       HAS_CANVAS_TOKEN: ${{ secrets.CANVAS_API_TOKEN != '' }}
       HAS_CANVAS_BASE_URL: ${{ secrets.CANVAS_BASE_URL != '' }}
-      HAS_HF_TOKEN: ${{ secrets.HF_TOKEN != '' }}
     steps:
       - name: Harden runner
         uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450  # v2
@@ -57,46 +56,26 @@ jobs:
           sed -i 's|<script src="chrome_shim.js"></script>|<script src="chrome_shim_prod.js"></script>|g' \
             site/extension/src/popup/index.html
 
-      # HF token lives in CF Worker secret (see proxy/) -- not in GH Actions.
-      # Live iframe Canvas calls now also route through the CF Worker (/canvas route,
-      # CANVAS_TOKEN secret). The build-time snapshot fetch below still uses the GHA
-      # secret until fetch_canvas_data.py is moved behind the Worker.
-
-      # PII scrub regex sanity check -- fail the build if regexes regress.
-      # Self-test does no live HTTP; CANVAS_BASE_URL just satisfies the env-required check.
+      # PII scrub regex sanity check — self-test does no live HTTP.
       - name: PII scrub self-test
-        env:
-          CANVAS_BASE_URL: ${{ secrets.CANVAS_BASE_URL || 'https://canvas.example.edu' }}
         run: |
           python3 docs-site/fetch_canvas_data.py --self-test
 
-      # Pre-fetch live Canvas data and bake as static JSON (PII-scrubbed).
-      # Skip gracefully when CANVAS_BASE_URL secret is unset (forks; or maintainer
-      # hasn't configured it yet). The site still publishes; data is just static.
-      - name: Fetch Canvas data snapshot
-        if: ${{ env.HAS_CANVAS_TOKEN == 'true' && env.HAS_CANVAS_BASE_URL == 'true' }}
+      # Populate site/data/ with Canvas data (live or mock).
+      # Live mode: requires CANVAS_API_TOKEN + CANVAS_BASE_URL secrets.
+      # Mock mode: generates realistic fake data for the demo — no token needed.
+      - name: Fetch Canvas data (live or mock)
         env:
           CANVAS_TOKEN: ${{ secrets.CANVAS_API_TOKEN }}
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
           CANVAS_BASE_URL: ${{ secrets.CANVAS_BASE_URL }}
-          HAS_CANVAS_BASE_URL: ${{ secrets.CANVAS_BASE_URL != '' }}
         run: |
-          python3 docs-site/fetch_canvas_data.py --out site/data
-
-      - name: Skip notice (CANVAS_BASE_URL secret unset)
-        if: ${{ env.HAS_CANVAS_TOKEN == 'true' }}
-        env:
-          HAS_CANVAS_BASE_URL: ${{ secrets.CANVAS_BASE_URL != '' }}
-        run: |
-          if [ "$HAS_CANVAS_BASE_URL" != "true" ]; then
-            echo "CANVAS_BASE_URL secret not configured -- skipping live fetch."
-            echo "Set it in repo Settings -> Secrets -> Actions to enable live data."
+          if [ -n "$CANVAS_TOKEN" ] && [ -n "$CANVAS_BASE_URL" ]; then
+            echo "Live mode: fetching real Canvas data"
+            python3 docs-site/fetch_canvas_data.py --out site/data
+          else
+            echo "Mock mode: CANVAS_API_TOKEN or CANVAS_BASE_URL not configured — using demo data"
+            python3 docs-site/fetch_canvas_data.py --mock --out site/data
           fi
-
-      - name: Skip notice (fork - no CANVAS_API_TOKEN)
-        if: ${{ env.HAS_CANVAS_TOKEN != 'true' }}
-        run: |
-          echo "fork: skipping Canvas data fetch (CANVAS_API_TOKEN not configured); see CONTRIBUTING.md"
 
       # Place the Tailwind homepage at site root
       - name: Install homepage
