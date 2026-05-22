@@ -19,18 +19,6 @@ jobs:
         with:
           egress-policy: audit
 
-      - name: Fetch Dependabot metadata
-        id: meta
-        uses: dependabot/fetch-metadata@08eff52bf64351f401fb50d4972fa95b9f2c2d1b  # v2
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Approve PR
-        run: gh pr review --approve "$PR_URL"
-        env:
-          PR_URL: ${{ github.event.pull_request.html_url }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Enable auto-merge (squash)
         run: gh pr merge --auto --squash "$PR_URL"
         env:
