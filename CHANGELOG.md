@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+### Changed — gitignore covers full docs-site/screenshots/ directory
+
+- `.gitignore`: broadened the screenshots pattern from `docs-site/screenshots/final-audit/` to `docs-site/screenshots/` — all local development screenshots are untracked artifacts, not source.
+
 ### Changed — Pages demo uses mock Canvas data when no live token configured
 
 - `docs-site/fetch_canvas_data.py`: added `--mock` flag that generates realistic fake Canvas data (3 courses, upcoming assignments, modules, grades) with dates relative to build time. No `CANVAS_API_TOKEN` or `CANVAS_BASE_URL` needed in mock mode.
