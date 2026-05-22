@@ -3,8 +3,10 @@
 CI script: pre-fetch Canvas API data and save as static JSON for the live demo.
 
 Usage:
-  CANVAS_TOKEN=<token> python3 docs-site/fetch_canvas_data.py --out site/data
-  python3 docs-site/fetch_canvas_data.py --self-test   # regex + Piiranha mock self-test
+  CANVAS_TOKEN=<token> CANVAS_BASE_URL=https://canvas.school.edu \
+      python3 docs-site/fetch_canvas_data.py --out site/data
+  python3 docs-site/fetch_canvas_data.py --mock --out site/data   # fake data, no token needed
+  python3 docs-site/fetch_canvas_data.py --self-test              # regex + Piiranha mock self-test
 
 Output files (all in --out dir):
   courses.json
@@ -30,12 +32,10 @@ import sys
 import urllib.error
 import urllib.parse
 import urllib.request
+from datetime import datetime, timedelta
 from pathlib import Path
 
-CANVAS_BASE = (os.environ.get("CANVAS_BASE_URL") or sys.exit(
-    "ERROR: CANVAS_BASE_URL must be set; was previously hardcoded to canvas.vt.edu\n"
-    "  e.g. export CANVAS_BASE_URL=https://canvas.yourschool.edu"
-)).rstrip("/") + "/api/v1"
+CANVAS_BASE = os.environ.get("CANVAS_BASE_URL", "https://canvas.example.edu").rstrip("/") + "/api/v1"
 TOKEN = os.environ.get("CANVAS_TOKEN") or os.environ.get("CANVAS_API_TOKEN", "")
 HF_TOKEN = os.environ.get("HF_TOKEN", "")
 
@@ -151,16 +151,215 @@ def self_test():
     print("scrub self-test (Piiranha mock) PASSED")
 
 
+def generate_mock_data(out_dir: Path):
+    now = datetime.now()
+    fmt = "%Y-%m-%dT%H:%M:%SZ"
+
+    def due(days): return (now + timedelta(days=days)).strftime(fmt)
+
+    courses = [
+        {"id": 131071, "name": "CS 3704: Software Design and Engineering",
+         "course_code": "CS 3704", "enrollment_state": "active",
+         "teachers": [{"display_name": "Emily Williams"}]},
+        {"id": 131072, "name": "CS 3744: Introduction to Human-Computer Interaction",
+         "course_code": "CS 3744", "enrollment_state": "active",
+         "teachers": [{"display_name": "David Chen"}]},
+        {"id": 131073, "name": "MATH 2224: Multivariable Calculus",
+         "course_code": "MATH 2224", "enrollment_state": "active",
+         "teachers": [{"display_name": "Maria Rodriguez"}]},
+    ]
+
+    assignments_by_course = {
+        131071: [
+            {"id": 901, "name": "Project 3 — API Integration", "course_id": 131071,
+             "due_at": due(5), "points_possible": 100, "submission_types": ["online_upload"]},
+            {"id": 902, "name": "Homework 8 — Design Patterns", "course_id": 131071,
+             "due_at": due(2), "points_possible": 20, "submission_types": ["online_upload"]},
+            {"id": 903, "name": "Quiz 4 — SOLID Principles", "course_id": 131071,
+             "due_at": due(9), "points_possible": 15, "submission_types": ["online_quiz"]},
+        ],
+        131072: [
+            {"id": 904, "name": "Usability Study Report", "course_id": 131072,
+             "due_at": due(4), "points_possible": 75, "submission_types": ["online_upload"]},
+            {"id": 905, "name": "Prototype Critique Peer Review", "course_id": 131072,
+             "due_at": due(7), "points_possible": 25, "submission_types": ["online_upload"]},
+        ],
+        131073: [
+            {"id": 906, "name": "Problem Set 11 — Partial Derivatives", "course_id": 131073,
+             "due_at": due(1), "points_possible": 30, "submission_types": ["online_upload"]},
+            {"id": 907, "name": "Midterm Exam 2", "course_id": 131073,
+             "due_at": due(12), "points_possible": 100, "submission_types": ["on_paper"]},
+        ],
+    }
+
+    upcoming = [
+        {"id": f"a_{a['id']}", "type": "assignment",
+         "title": a["name"], "course_id": a["course_id"],
+         "assignment": {"due_at": a["due_at"], "points_possible": a["points_possible"]}}
+        for cid, asgns in assignments_by_course.items() for a in asgns
+    ]
+
+    todo = [
+        {"type": "submitting", "assignment": a, "context_name": next(
+            c["name"] for c in courses if c["id"] == a["course_id"])}
+        for cid, asgns in assignments_by_course.items()
+        for a in asgns[:2]
+    ]
+
+    announcements_by_course = {
+        131071: [
+            {"id": 801, "title": "Office Hours Changed This Week",
+             "message": "Office hours moved to Thursday 3-5 PM due to faculty meeting.",
+             "posted_at": (now - timedelta(days=2)).strftime(fmt)},
+            {"id": 802, "title": "Project 3 Clarification",
+             "message": "You may use any REST API for Project 3, not just Canvas. See Piazza for examples.",
+             "posted_at": (now - timedelta(days=1)).strftime(fmt)},
+        ],
+        131072: [
+            {"id": 803, "title": "Guest Speaker Next Tuesday",
+             "message": "We will have a UX designer from Figma joining us virtually on Tuesday.",
+             "posted_at": (now - timedelta(days=3)).strftime(fmt)},
+        ],
+        131073: [
+            {"id": 804, "title": "Midterm 2 Coverage",
+             "message": "Midterm 2 covers Chapters 11–14: partial derivatives, multiple integrals, and line integrals.",
+             "posted_at": (now - timedelta(days=1)).strftime(fmt)},
+        ],
+    }
+
+    modules_by_course = {
+        131071: [
+            {"id": 501, "name": "Week 12 — API Design Patterns", "position": 12,
+             "completed_at": None, "state": "started"},
+            {"id": 502, "name": "Week 13 — Testing & CI/CD", "position": 13,
+             "completed_at": None, "state": "unlocked"},
+        ],
+        131072: [
+            {"id": 503, "name": "Module 5 — User Research Methods", "position": 5,
+             "completed_at": (now - timedelta(days=5)).strftime(fmt), "state": "completed"},
+            {"id": 504, "name": "Module 6 — Prototyping & Wireframing", "position": 6,
+             "completed_at": None, "state": "started"},
+        ],
+        131073: [
+            {"id": 505, "name": "Chapter 11 — Partial Derivatives", "position": 11,
+             "completed_at": (now - timedelta(days=7)).strftime(fmt), "state": "completed"},
+            {"id": 506, "name": "Chapter 12 — Multiple Integrals", "position": 12,
+             "completed_at": None, "state": "started"},
+        ],
+    }
+
+    grades_by_course = {
+        131071: [{"type": "StudentEnrollment", "grades": {"current_score": 87.5, "current_grade": "B+"}}],
+        131072: [{"type": "StudentEnrollment", "grades": {"current_score": 91.0, "current_grade": "A-"}}],
+        131073: [{"type": "StudentEnrollment", "grades": {"current_score": 78.3, "current_grade": "C+"}}],
+    }
+
+    files_by_course = {
+        131071: [
+            {"id": 701, "filename": "lecture_12_api_design.pdf", "display_name": "Lecture 12 Slides",
+             "size": 2048000, "updated_at": (now - timedelta(days=3)).strftime(fmt)},
+            {"id": 702, "filename": "project3_requirements.pdf", "display_name": "Project 3 Requirements",
+             "size": 512000, "updated_at": (now - timedelta(days=5)).strftime(fmt)},
+        ],
+        131072: [
+            {"id": 703, "filename": "heuristic_eval_template.docx", "display_name": "Heuristic Evaluation Template",
+             "size": 128000, "updated_at": (now - timedelta(days=6)).strftime(fmt)},
+        ],
+        131073: [
+            {"id": 704, "filename": "ch12_multiple_integrals.pdf", "display_name": "Chapter 12 Notes",
+             "size": 1024000, "updated_at": (now - timedelta(days=4)).strftime(fmt)},
+        ],
+    }
+
+    assignment_groups_by_course = {
+        131071: [
+            {"id": 301, "name": "Homework", "group_weight": 20,
+             "assignments": assignments_by_course[131071][:2]},
+            {"id": 302, "name": "Projects", "group_weight": 50,
+             "assignments": [assignments_by_course[131071][0]]},
+        ],
+        131072: [
+            {"id": 303, "name": "Reports", "group_weight": 40,
+             "assignments": assignments_by_course[131072]},
+        ],
+        131073: [
+            {"id": 304, "name": "Problem Sets", "group_weight": 30,
+             "assignments": [assignments_by_course[131073][0]]},
+            {"id": 305, "name": "Exams", "group_weight": 60,
+             "assignments": [assignments_by_course[131073][1]]},
+        ],
+    }
+
+    syllabus_by_course = {
+        131071: {"id": 131071, "name": "CS 3704: Software Design and Engineering",
+                 "syllabus_body": "<p>This course covers intermediate software design principles...</p>"},
+        131072: {"id": 131072, "name": "CS 3744: Introduction to Human-Computer Interaction",
+                 "syllabus_body": "<p>Students learn HCI fundamentals: user research, prototyping...</p>"},
+        131073: {"id": 131073, "name": "MATH 2224: Multivariable Calculus",
+                 "syllabus_body": "<p>Topics: partial derivatives, multiple integrals, line integrals...</p>"},
+    }
+
+    planner_notes = [
+        {"id": 201, "title": "Review lecture notes before Midterm 2", "todo_date": due(10)},
+        {"id": 202, "title": "Start Project 3 API integration early", "todo_date": due(3)},
+    ]
+
+    dashboard_cards = [
+        {"id": c["id"], "shortName": c["course_code"], "originalName": c["name"],
+         "courseCode": c["course_code"], "enrollmentState": "active",
+         "color": "#1a73e8" if i == 0 else "#34a853" if i == 1 else "#ea4335"}
+        for i, c in enumerate(courses)
+    ]
+
+    rmp_data = {
+        "Emily Williams": {"rating": 4.2, "difficulty": 3.1, "numRatings": 47},
+        "Williams": {"rating": 4.2, "difficulty": 3.1, "numRatings": 47},
+        "David Chen": {"rating": 3.9, "difficulty": 2.8, "numRatings": 31},
+        "Chen": {"rating": 3.9, "difficulty": 2.8, "numRatings": 31},
+        "Maria Rodriguez": {"rating": 4.5, "difficulty": 3.7, "numRatings": 62},
+        "Rodriguez": {"rating": 4.5, "difficulty": 3.7, "numRatings": 62},
+    }
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    save(out_dir, "courses.json", courses)
+    save(out_dir, "upcoming.json", upcoming)
+    save(out_dir, "todo.json", todo)
+    save(out_dir, "planner_notes.json", planner_notes)
+    save(out_dir, "dashboard_cards.json", dashboard_cards)
+    save(out_dir, "rmp.json", rmp_data)
+
+    for cid in [131071, 131072, 131073]:
+        save(out_dir, f"course_{cid}_assignments.json", assignments_by_course[cid])
+        save(out_dir, f"course_{cid}_announcements.json", announcements_by_course[cid])
+        save(out_dir, f"course_{cid}_modules.json", modules_by_course[cid])
+        save(out_dir, f"course_{cid}_grades.json", grades_by_course[cid])
+        save(out_dir, f"course_{cid}_files.json", files_by_course[cid])
+        save(out_dir, f"course_{cid}_assignment_groups.json", assignment_groups_by_course[cid])
+        save(out_dir, f"course_{cid}_syllabus.json", syllabus_by_course[cid])
+
+    print(f"\nMock data written to {out_dir}/ (3 courses, dates relative to build time)")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="site/data", help="Output directory")
     ap.add_argument("--self-test", action="store_true",
                     help="Run regex self-test and exit (no network calls)")
+    ap.add_argument("--mock", action="store_true",
+                    help="Generate realistic fake data without a Canvas token")
     args = ap.parse_args()
 
     if args.self_test:
         self_test()
         return
+
+    if args.mock:
+        generate_mock_data(Path(args.out))
+        return
+
+    if not os.environ.get("CANVAS_BASE_URL"):
+        print("ERROR: CANVAS_BASE_URL must be set (e.g. https://canvas.yourschool.edu)", file=sys.stderr)
+        sys.exit(1)
 
     if not TOKEN:
         print("ERROR: CANVAS_TOKEN or CANVAS_API_TOKEN env var not set", file=sys.stderr)
