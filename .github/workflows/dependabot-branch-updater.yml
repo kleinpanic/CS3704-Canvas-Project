@@ -1,0 +1,40 @@
+name: Dependabot Branch Updater
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-behind-prs:
+    name: Rebase BEHIND Dependabot PRs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450  # v2
+        with:
+          egress-policy: audit
+
+      - name: Update BEHIND Dependabot branches
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -e
+          PAGER='' gh pr list \
+            --author "dependabot[bot]" \
+            --state open \
+            --json number \
+            --jq '.[].number' | while read PR; do
+            STATE=$(gh api "repos/$REPO/pulls/$PR" --jq '.mergeable_state')
+            if [ "$STATE" = "behind" ] || [ "$STATE" = "blocked" ]; then
+              echo "Updating PR #$PR (state=$STATE)"
+              gh api "repos/$REPO/pulls/$PR/update-branch" \
+                --method PUT || echo "PR #$PR update skipped"
+            else
+              echo "PR #$PR state=$STATE — skipping"
+            fi
+          done
