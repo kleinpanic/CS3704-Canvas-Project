@@ -1,4 +1,4 @@
-name: Dependabot Branch Updater
+name: Branch Updater
 
 on:
   push:
@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   update-behind-prs:
-    name: Rebase BEHIND Dependabot PRs
+    name: Rebase all BEHIND open PRs
     runs-on: ubuntu-latest
     steps:
       - name: Harden runner
@@ -18,14 +18,13 @@ jobs:
         with:
           egress-policy: audit
 
-      - name: Update BEHIND Dependabot branches
+      - name: Update BEHIND branches
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
         run: |
           set -e
           PAGER='' gh pr list \
-            --author "dependabot[bot]" \
             --state open \
             --json number \
             --jq '.[].number' | while read PR; do
