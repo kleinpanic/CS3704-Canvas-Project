@@ -1,7 +1,6 @@
 name: Cleanup Artifacts
 
-# Runs weekly to clean up old workflow artifacts.
-# GitHub caps at 10 GB; proactive cleanup keeps costs low and UI clean.
+# Runs weekly to clean up old workflow artifacts, runs, and nightly tags.
 on:
   schedule:
     - cron: "0 6 * * 0"  # every Sunday at 06:00 UTC
@@ -14,6 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       actions: write
+      contents: write
     steps:
       - name: Harden runner
         uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450  # v2
@@ -52,7 +52,6 @@ jobs:
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3  # v9
         with:
           script: |
-            // Dynamically list all workflows in the repo
             const workflows = await github.paginate(github.rest.actions.listRepoWorkflows, {
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -60,7 +59,6 @@ jobs:
             });
 
             const KEEP_LAST = 20;
-            // To protect a run: use the GitHub API to add 'protect-run' label when API supports it
 
             for (const wf of workflows) {
               const runs = await github.paginate(github.rest.actions.listWorkflowRuns, {
@@ -75,9 +73,7 @@ jobs:
                 continue;
               }
 
-              const toDelete = runs.slice(KEEP_LAST);
-
-              for (const run of toDelete) {
+              for (const run of runs.slice(KEEP_LAST)) {
                 console.log(`Deleting run: ${wf.name} #${run.run_number} (${run.id})`);
                 await github.rest.actions.deleteWorkflowRun({
                   owner: context.repo.owner,
@@ -86,3 +82,47 @@ jobs:
                 });
               }
             }
+
+      - name: Prune nightly tags older than 7 days
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3  # v9
+        with:
+          script: |
+            const KEEP_DAYS = 7;
+            const cutoff = Date.now() - KEEP_DAYS * 24 * 60 * 60 * 1000;
+
+            const tags = await github.paginate(github.rest.repos.listTags, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              per_page: 100
+            });
+
+            let pruned = 0;
+            for (const tag of tags.filter(t => t.name.startsWith('nightly-'))) {
+              const match = tag.name.match(/^nightly-(\d{8})-/);
+              if (!match) continue;
+              const d = match[1];
+              const tagDate = new Date(`${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6,8)}`).getTime();
+              if (tagDate >= cutoff) continue;
+
+              // Delete associated GitHub release if present
+              try {
+                const rels = await github.rest.repos.listReleases({
+                  owner: context.repo.owner, repo: context.repo.repo, per_page: 100
+                });
+                const rel = rels.data.find(r => r.tag_name === tag.name);
+                if (rel) await github.rest.repos.deleteRelease({
+                  owner: context.repo.owner, repo: context.repo.repo, release_id: rel.id
+                });
+              } catch (_) {}
+
+              await github.rest.git.deleteRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: `tags/${tag.name}`
+              });
+
+              console.log(`Pruned: ${tag.name}`);
+              pruned++;
+            }
+
+            console.log(`Pruned ${pruned} nightly tag(s) older than ${KEEP_DAYS} days`);
