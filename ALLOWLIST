@@ -58,7 +58,6 @@ tools                   # Repo tooling (linters, hooks, checkers)
 .github                 # GitHub Actions workflows + templates + community files
 .gitignore              # Standard
 .planning               # GSD planning artifacts (gitignored except .planning/archive/ for class deliverables)
-.coderabbit.yaml        # CodeRabbit AI code review configuration
 .pre-commit-config.yaml # Pre-commit hook registry
 .readthedocs.yaml       # ReadTheDocs build config
 .yamllint.yml           # YAML lint config
