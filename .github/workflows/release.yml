@@ -106,7 +106,7 @@ jobs:
             HEAD \
             -o "canvas-tracker-${VERSION}-source.zip"
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7
         with:
           name: source-archives
           path: |
@@ -165,7 +165,7 @@ jobs:
         run: |
           echo "hashes=$(sha256sum sdk-dist/*.whl sdk-dist/*.tar.gz | base64 -w0)" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7
         with:
           name: sdk-linux
           path: sdk-dist/
@@ -215,7 +215,7 @@ jobs:
           tar -czf "canvas-sdk-${VERSION}-macos.tar.gz" \
             -C sdk-macos-dist/ "$(basename "$WHL")"
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7
         with:
           name: sdk-macos
           path: canvas-sdk-*-macos.tar.gz
@@ -276,7 +276,7 @@ jobs:
           npx crx3 -p extension.pem extension/ -o "canvas-tracker-extension-${VERSION}.crx"
           rm -f extension.pem
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7
         with:
           name: extension-assets
           path: |
