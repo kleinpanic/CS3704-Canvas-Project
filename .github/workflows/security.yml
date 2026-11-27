@@ -35,7 +35,7 @@ jobs:
         with:
           languages: ${{ matrix.language }}
       - uses: github/codeql-action/autobuild@e46ed2cbd01164d986452f91f178727624ae40d7  # v4
-      - uses: github/codeql-action/analyze@e46ed2cbd01164d986452f91f178727624ae40d7  # v4
+      - uses: github/codeql-action/analyze@1bd86f2fdb4b86187fa4059f16f31a3202acc9ea  # v4
         with:
           category: "/language:${{ matrix.language }}"
 
